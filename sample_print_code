@@ -1,0 +1,42 @@
+        ORG $2000         ; Program start address
+
+LOVE:   .BYTE $4C, $4F, $56, $45   ; "L", "O", "V", "E" in ATASCII
+COLORS: .BYTE $14, $28, $3A, $4C   ; Four color values for cycling
+
+        ; Set up Graphics 0
+        LDA #0            ; Graphics 0 mode
+        STA $D400         ; Store to DLI register (ANTIC)
+        LDA #$2C          ; Default screen memory pointer (low byte)
+        STA $58           ; Store to shadow register
+        LDA #$04          ; Default screen memory pointer (high byte)
+        STA $59           ; Store to shadow register
+
+        ; Display "LOVE"
+        LDY #0            ; Y=0, index for letters
+DisplayLoop:
+        LDA LOVE,Y        ; Load letter from memory
+        STA ($58),Y       ; Store to screen memory
+        INY               ; Next letter
+        CPY #4            ; Has Y reached 4?
+        BNE DisplayLoop   ; If not, repeat loop
+
+        ; Color cycling loop
+        LDX #0            ; X=0, index for colors
+ColorLoop:
+        LDA COLORS,X      ; Load color value
+        STA $D01A         ; Set background color (COLBAK)
+        JSR Delay         ; Call delay subroutine
+        INX               ; Next color
+        CPX #4            ; Has X reached 4?
+        BNE ColorLoop     ; If not, repeat loop
+        LDX #0            ; Reset color index
+        JMP ColorLoop     ; Keep cycling colors
+
+Delay:  ; Simple delay loop
+        LDY #255
+DelayInner:
+        DEY
+        BNE DelayInner
+        RTS
+
+        RTS               ; Return (not reached)
