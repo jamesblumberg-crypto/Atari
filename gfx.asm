@@ -1,4 +1,4 @@
-	.local gfx
+	org charset
 	; char 0
 	.byte %00000000
 	.byte %00000000
@@ -1151,4 +1151,3 @@
 	.byte %00000000
 	.byte %00000000
 	.byte %00000000
-	.endl
