@@ -18,307 +18,555 @@ Source: main.asm
     16
     17 					org $2000
     18
-    19 = 3000			map     = $3000 ; Map
-    20 = 4000			charset = $4000 ; Character Set
-    21 = 5000			pmg     = $5000 ; Player Missile Data
-    22 = 6000			canvas  = $6000 ; Screen buffer
+    19 = 3000			map     	= $3000 ; Map
+    20 = 4000			charset 	= $4000 ; Character Set
+    21 = 5000			pmg     	= $5000 ; Player Missle Data
+    22 = 6000			screen  	= $6000 ; Screen buffer
     23
-    24 = 0001			stick_up 	= %0001
-    25 = 0002			stick_down 	= %0010
-    26 = 0004			stick_left 	= %0100
+    24 = 0001			stick_up    = %0001
+    25 = 0002			stick_down  = %0010 
+    26 = 0004			stick_left  = %0100
     27 = 0008			stick_right = %1000
     28
-    29 FFFF> 2000-21B9> 20 65 + 	setup_screen()
-    30 2003 20 B0 20			setup_colors()
-    31 2006 A9 40 8D F4 02		mva #>charset CHBAS
-    32 200B 20 DE 20			clear_pmg()
-    33 200E 20 F2 20			load_pmg()
-    34 2011 20 12 21			setup_pmg()
-    35 2014 20 35 21			copy_map_to_canvas()
-    36
-    37 2017			game
-    38 2017 AD 78 02			lda STICK0
-    39 201A 29 01			and #stick_up
-    40 201C F0 18			beq up
-    41
-    42 201E AD 78 02			lda STICK0
-    43 2021 29 02			and #stick_down
-    44 2023 F0 1E			beq down
+    29 = 0092			map_ptr 	= $92
+    30 = 0094			screen_ptr 	= $94
+    31 = 0096			player_x	= $96
+    32 = 0097			player_y	= $97
+    33 = 0098			tmp			= $98
+    34 = 009A			up_tile		= $9a
+    35 = 009B			down_tile	= $9b
+    36 = 009C			left_tile	= $9c
+    37 = 009D			right_tile	= $9d
+    38 = 009E			on_tile		= $9e
+    39
+    40 = 0028			screen_char_width = 40
+    41 = 0013			screen_width = 19
+    42 = 000B			screen_height = 11
+    43 = 0031			map_width = 49
+    44 = 0031			map_height = 49
     45
-    46 2025 AD 78 02			lda STICK0
-    47 2028 29 08			and #stick_right
-    48 202A F0 24			beq right
+    46 FFFF> 2000-25FD> A9 10		lda #16
+    47 2002 85 96			sta player_x
+    48 2004 85 97			sta player_y
     49
-    50 202C AD 78 02			lda STICK0
-    51 202F 29 04			and #stick_left
-    52 2031 F0 2A			beq left
-    53
-    54 2033 4C 17 20			jmp game
-    55
-    56 2036			up
-    57 					delay #10
-    57 				 LDX# 10\ JSR DELAY
-    57 2036 A2 0A		 LDX# 10
-    57 2038 20 6A 20		 JSR DELAY
-    58 					scroll_lu #$80
-    58 				 LDA# $80\ JSR SCROLL_LU
-    58 203B A9 80		 LDA# $80
-    58 203D 20 92 20		 JSR SCROLL_LU
-    59 2040 4C 17 20			jmp game
-    60
-    61 2043			down
-    62 					delay #10
-    62 				 LDX# 10\ JSR DELAY
-    62 2043 A2 0A		 LDX# 10
-    62 2045 20 6A 20		 JSR DELAY
-    63 					scroll_rd #$80
-    63 				 LDA# $80\ JSR SCROLL_RD
-    63 2048 A9 80		 LDA# $80
-    63 204A 20 74 20		 JSR SCROLL_RD
-    64 204D 4C 17 20			jmp game
-    65
-    66 2050			right
-    67 					delay #10
-    67 				 LDX# 10\ JSR DELAY
-    67 2050 A2 0A		 LDX# 10
-    67 2052 20 6A 20		 JSR DELAY
-    68 					scroll_rd #2
-    68 				 LDA# 2\ JSR SCROLL_RD
-    68 2055 A9 02		 LDA# 2
-    68 2057 20 74 20		 JSR SCROLL_RD
-    69 205A 4C 17 20			jmp game
+    50 2006 20 BF 25			setup_screen()
+    51 2009 20 A1 20			setup_colors()
+    52 200C A9 40 8D F4 02		mva #>charset CHBAS
+    53 2011 20 CF 20			clear_pmg()
+    54 2014 20 E3 20			load_pmg()
+    55 2017 20 03 21			setup_pmg()
+    56
+    57 201A			game
+    58 201A 20 23 20			read_joystick()
+    59 201D 20 66 21			blit_screen()
+    60 2020 4C 1A 20			jmp game
+    61
+    62 2023			.proc read_joystick
+    63 2023 AD 78 02			lda STICK0
+    64 2026 29 01			and #stick_up
+    65 2028 F0 18			beq move_up
+    66
+    67 202A AD 78 02			lda STICK0
+    68 202D 29 02			and #stick_down
+    69 202F F0 26			beq move_down
     70
-    71 205D			left
-    72 					delay #10
-    72 				 LDX# 10\ JSR DELAY
-    72 205D A2 0A		 LDX# 10
-    72 205F 20 6A 20		 JSR DELAY
-    73 					scroll_lu #2
-    73 				 LDA# 2\ JSR SCROLL_LU
-    73 2062 A9 02		 LDA# 2
-    73 2064 20 92 20		 JSR SCROLL_LU
-    74 2067 4C 17 20			jmp game
-    75
-    76 				* --------------------------------------- *
-    77 				* Proc: delay                             *
-    78 				* Scroll real-time clock                  *
-    79 				* --------------------------------------- *	
-    80 206A			.proc delay (.byte x) .reg
-    81 206A			start
-    82 206A A5 14			lda RTCLK2
-    83 206C			wait
-    84 206C C5 14			cmp RTCLK2
-    85 206E F0 FC			beq wait
-    86
-    87 2070 CA				dex
-    88 2071 D0 F7			bne start
-    89
-    90 2073 60				rts
-    91 					.endp
-    92
-    93 				* --------------------------------------- *
-    94 				* Proc: scroll_rd                         *
-    95 				* Scroll right or down                    *
-    96 				* --------------------------------------- *
-    97 2074			.proc scroll_rd (.byte a) .reg
-    98 = 0092			tmp = $92
-    99 2074 85 92			sta tmp
+    71 2031 AD 78 02			lda STICK0
+    72 2034 29 04			and #stick_left
+    73 2036 F0 34			beq move_left
+    74
+    75 2038 AD 78 02			lda STICK0
+    76 203B 29 08			and #stick_right
+    77 203D F0 42			beq move_right
+    78
+    79 203F 4C 96 20			jmp done
+    80
+    81 2042			move_up
+    82 2042 A5 9A			lda up_tile
+    83 2044 C9 01			cmp #1
+    84 2046 F0 4E			beq done
+    85 					delay #5
+    85 				 LDX# 5\ JSR DELAY
+    85 2048 A2 05		 LDX# 5
+    85 204A 20 97 20		 JSR DELAY
+    86 204D A5 97			lda player_y
+    87 204F 38 E9 01			sub #1
+    88 2052 85 97			sta player_y
+    89 2054 4C 96 20			jmp done
+    90
+    91 2057			move_down
+    92 2057 A5 9B			lda down_tile
+    93 2059 C9 01			cmp #1
+    94 205B F0 39			beq done
+    95 					delay #5
+    95 				 LDX# 5\ JSR DELAY
+    95 205D A2 05		 LDX# 5
+    95 205F 20 97 20		 JSR DELAY
+    96 2062 A5 97			lda player_y
+    97 2064 18 69 01			add #1
+    98 2067 85 97			sta player_y
+    99 2069 4C 96 20			jmp done
    100
-   101 2076 A0 0C			ldy #12
-   102 2078 A2 04			ldx #4
-   103
-   104 207A			loop
-   105 207A 18				clc
-   106 207B BD 70 21			lda setup_screen.dlist,x
-   107 207E 65 92			adc tmp
-   108 2080 9D 70 21			sta setup_screen.dlist,x
-   109 2083 E8				inx
-   110 2084 BD 70 21			lda setup_screen.dlist,x
-   111 2087 69 00			adc #0
-   112 2089 9D 70 21			sta setup_screen.dlist,x
-   113 208C E8				inx
-   114 208D E8				inx
-   115 208E 88				dey
-   116 208F D0 E9			bne loop
-   117
-   118 2091 60				rts
-   119 					.endp
+   101 206C			move_left
+   102 206C A5 9C			lda left_tile
+   103 206E C9 01			cmp #1
+   104 2070 F0 24			beq done
+   105 					delay #5
+   105 				 LDX# 5\ JSR DELAY
+   105 2072 A2 05		 LDX# 5
+   105 2074 20 97 20		 JSR DELAY
+   106 2077 A5 96			lda player_x
+   107 2079 38 E9 01			sub #1
+   108 207C 85 96			sta player_x
+   109 207E 4C 96 20			jmp done
+   110
+   111 2081			move_right
+   112 2081 A5 9D			lda right_tile
+   113 2083 C9 01			cmp #1
+   114 2085 F0 0F			beq done
+   115 					delay #5
+   115 				 LDX# 5\ JSR DELAY
+   115 2087 A2 05		 LDX# 5
+   115 2089 20 97 20		 JSR DELAY
+   116 208C A5 96			lda player_x
+   117 208E 18 69 01			add #1
+   118 2091 85 96			sta player_x
+   119 2093 4C 96 20			jmp done
    120
-   121 				* --------------------------------------- *
-   122 				* Proc: scroll_lu                         *
-   123 				* Scroll left or up                       *
-   124 				* --------------------------------------- *
-   125 2092			.proc scroll_lu (.byte a) .reg
-   126 = 0092			tmp = $92
-   127 2092 85 92			sta tmp
-   128
-   129 2094 A0 0C			ldy #12
-   130 2096 A2 04			ldx #4
-   131
-   132 2098			loop
-   133 2098 38				sec
-   134 2099 BD 70 21			lda setup_screen.dlist, x
-   135 209C E5 92			sbc tmp
-   136 209E 9D 70 21			sta setup_screen.dlist,x
-   137 20A1 E8				inx
-   138 20A2 BD 70 21			lda setup_screen.dlist,x
-   139 20A5 E9 00			sbc #0
-   140 20A7 9D 70 21			sta setup_screen.dlist,x
-   141 20AA E8				inx
-   142 20AB E8				inx
-   143 20AC 88				dey
-   144 20AD D0 E9			bne loop
-   145 20AF 60				rts
-   146 					.endp
-   147 				* --------------------------------------- *
-   148 				* Proc: setup_colors                      *
-   149 				* Sets up colors                          *
-   150 				* --------------------------------------- *
-   151 20B0			.proc setup_colors
-   152 = 0006			med_gray = $06
-   153 = 000A			lt_gray = $0a
-   154 = 00C2			green = $c2
-   155 = 0022			brown = $22
-   156 = 0000			black = $00
-   157 = 002C			peach = $2c
-   158 = 0080			blue = $80
-   159
-   160 					; Character Set Colors
-   161 20B0 A9 06 8D C4 02		mva #med_gray COLOR0 ; %01
-   162 20B5 A9 0A 8D C5 02		mva #lt_gray COLOR1  ; %10
-   163 20BA A9 C2 8D C6 02		mva #green COLOR2	 ; %11
-   164 20BF A9 22 8D C7 02		mva #brown COLOR3    ; %11 (inverse)
-   165 20C4 A9 00 8D C8 02		mva #black COLOR4    ; %00
-   166
-   167 					; Player-Missile Colors
-   168 20C9 A9 22 8D C0 02		mva #brown PCOLR0
-   169 20CE A9 2C 8D C1 02		mva #peach PCOLR1
-   170 20D3 A9 80 8D C2 02		mva #blue PCOLR2
-   171 20D8 A9 00 8D C3 02		mva #black PCOLR3
-   172
-   173 20DD 60				rts
-   174 					.endp
-   175
-   176 				* --------------------------------------- *
-   177 				* Proc: clear_pmg                         *
-   178 				* Clears memory for Player-Missile Gfx    *
-   179 				* --------------------------------------- *
-   180 20DE			.proc clear_pmg
-   181 = 5200			pmg_p0 = pmg + $200
-   182 = 5280			pmg_p1 = pmg + $280
-   183 = 5300			pmg_p2 = pmg + $300
-   184 = 5380			pmg_p3 = pmg + $380
-   185
-   186 20DE A2 80			ldx #$80
-   187 20E0 A9 00			lda #0
-   188 20E2			loop
-   189 20E2 CA				dex
-   190 20E3 9D 00 52			sta pmg_p0,x
-   191 20E6 9D 80 52			sta pmg_p1,x
-   192 20E9 9D 00 53			sta pmg_p2,x
-   193 20EC 9D 80 53			sta pmg_p3,x
-   194 20EF D0 F1			bne loop
-   195 20F1 60				rts
-   196 					.endp
-   197
-   198 				* --------------------------------------- *
-   199 				* Proc: load_pmg                          *
-   200 				* Load PMG Graphics                       *
-   201 				* --------------------------------------- *
-   202 20F2			.proc load_pmg
-   203 = 5200			pmg_p0 = pmg + $200
-   204 = 5280			pmg_p1 = pmg + $280
-   205 = 5300			pmg_p2 = pmg + $300
-   206 = 5380			pmg_p3 = pmg + $380
-   207
-   208 20F2 A2 00			ldx #0
-   209 20F4			loop
-   210 20F4 BD 9A 21 9D 40 52		mva pmgdata,x pmg_p0+64,x
-   211 20FA BD A2 21 9D C0 52		mva pmgdata+8,x pmg_p1+64,x
-   212 2100 BD AA 21 9D 40 53		mva pmgdata+16,x pmg_p2+64,x
-   213 2106 BD B2 21 9D C0 53		mva pmgdata+24,x pmg_p3+64,x
-   214 210C E8				inx
-   215 210D E0 08			cpx #8
-   216 210F D0 E3			bne loop
-   217 2111 60				rts
-   218 					.endp
-   219
-   220 				* --------------------------------------- *
-   221 				* Proc: setup_pmg                         *
-   222 				* Sets up Player-Missile Graphics System  *
-   223 				* --------------------------------------- *
-   224 2112			.proc setup_pmg
-   225 2112 A9 50 8D 07 D4		mva #>pmg PMBASE
-   226 2117 A9 2E 8D 2F 02		mva #46 SDMCTL ; Single Line resolution
-   227 211C A9 03 8D 1D D0		mva #3 GRACTL  ; Enable PMG
-   228 2121 A9 01 8D 6F 02		mva #1 GRPRIOR ; Give players priority
-   229 2126 A9 78			lda #120
-   230 2128 8D 00 D0			sta HPOSP0
-   231 212B 8D 01 D0			sta HPOSP1
-   232 212E 8D 02 D0			sta HPOSP2
-   233 2131 8D 03 D0			sta HPOSP3
-   234 2134 60				rts
-   235 					.endp
-   236
-   237 				* --------------------------------------- *
-   238 				* Macro: blit_row                         *
-   239 				* Copies one line of map to screen        *
-   240 				* --------------------------------------- *
-   241 				.macro blit_row map, screen
-   242 					ldx #0
-   243 					ldy #0
-   244 				loop
-   245 					lda :map,x
-   246 					asl
-   247 					sta :screen,y
-   248 					iny
-   249 					clc
-   250 					adc #1
-   251 					sta :screen,y
-   252 					iny
-   253 					inx
-   254 					cpx #20
-   255 					bne loop
+   121 2096			done
+   122 2096 60				rts
+   123 					.endp
+   124
+   125 				* --------------------------------------- *
+   126 				* Proc: delay                             *
+   127 				* Uses Real-time clock to delay x/60 secs *
+   128 				* --------------------------------------- *
+   129 2097			.proc delay (.byte x) .reg
+   130 2097			start
+   131 2097 A5 14			lda RTCLK2
+   132 2099			wait
+   133 2099 C5 14			cmp RTCLK2
+   134 209B F0 FC			beq wait
+   135
+   136 209D CA				dex
+   137 209E D0 F7			bne start
+   138
+   139 20A0 60				rts
+   140 					.endp
+   141
+   142 				* --------------------------------------- *
+   143 				* Proc: setup_colors                      *
+   144 				* Sets up colors                          *
+   145 				* --------------------------------------- *
+   146 20A1			.proc setup_colors
+   147 = 0006			med_gray = $06
+   148 = 000A			lt_gray = $0a
+   149 = 00C2			green = $c2
+   150 = 0022			brown = $22
+   151 = 0000			black = $00
+   152 = 002C			peach = $2c
+   153 = 0080			blue = $80
+   154
+   155 					; Character Set Colors
+   156 20A1 A9 06 8D C4 02		mva #med_gray COLOR0 ; %01
+   157 20A6 A9 0A 8D C5 02		mva #lt_gray COLOR1  ; %10
+   158 20AB A9 C2 8D C6 02		mva #green COLOR2	 ; %11
+   159 20B0 A9 22 8D C7 02		mva #brown COLOR3    ; %11 (inverse)
+   160 20B5 A9 00 8D C8 02		mva #black COLOR4    ; %00
+   161
+   162 					; Player-Missile Colors
+   163 20BA A9 22 8D C0 02		mva #brown PCOLR0
+   164 20BF A9 2C 8D C1 02		mva #peach PCOLR1
+   165 20C4 A9 80 8D C2 02		mva #blue PCOLR2
+   166 20C9 A9 00 8D C3 02		mva #black PCOLR3
+   167
+   168 20CE 60				rts
+   169 					.endp
+   170
+   171 				* --------------------------------------- *
+   172 				* Proc: clear_pmg                         *
+   173 				* Clears memory for Player-Missile Gfx    *
+   174 				* --------------------------------------- *
+   175 20CF			.proc clear_pmg
+   176 = 5200			pmg_p0 = pmg + $200
+   177 = 5280			pmg_p1 = pmg + $280
+   178 = 5300			pmg_p2 = pmg + $300
+   179 = 5380			pmg_p3 = pmg + $380
+   180
+   181 20CF A2 80			ldx #$80
+   182 20D1 A9 00			lda #0
+   183 20D3			loop
+   184 20D3 CA				dex
+   185 20D4 9D 00 52			sta pmg_p0,x
+   186 20D7 9D 80 52			sta pmg_p1,x
+   187 20DA 9D 00 53			sta pmg_p2,x
+   188 20DD 9D 80 53			sta pmg_p3,x
+   189 20E0 D0 F1			bne loop
+   190 20E2 60				rts
+   191 					.endp
+   192
+   193 				* --------------------------------------- *
+   194 				* Proc: load_pmg                          *
+   195 				* Load PMG Graphics                       *
+   196 				* --------------------------------------- *
+   197 20E3			.proc load_pmg
+   198 = 5200			pmg_p0 = pmg + $200
+   199 = 5280			pmg_p1 = pmg + $280
+   200 = 5300			pmg_p2 = pmg + $300
+   201 = 5380			pmg_p3 = pmg + $380
+   202
+   203 20E3 A2 00			ldx #0
+   204 20E5			loop
+   205 20E5 BD DE 25 9D 40 52		mva pmgdata,x pmg_p0+64,x
+   206 20EB BD E6 25 9D C0 52		mva pmgdata+8,x pmg_p1+64,x
+   207 20F1 BD EE 25 9D 40 53		mva pmgdata+16,x pmg_p2+64,x
+   208 20F7 BD F6 25 9D C0 53		mva pmgdata+24,x pmg_p3+64,x
+   209 20FD E8				inx
+   210 20FE E0 08			cpx #8
+   211 2100 D0 E3			bne loop
+   212 2102 60				rts
+   213 					.endp
+   214
+   215 				* --------------------------------------- *
+   216 				* Proc: setup_pmg                         *
+   217 				* Sets up Player-Missile Graphics System  *
+   218 				* --------------------------------------- *
+   219 2103			.proc setup_pmg
+   220 2103 A9 50 8D 07 D4		mva #>pmg PMBASE
+   221 2108 A9 2E 8D 2F 02		mva #46 SDMCTL ; Single Line resolution
+   222 210D A9 03 8D 1D D0		mva #3 GRACTL  ; Enable PMG
+   223 2112 A9 01 8D 6F 02		mva #1 GRPRIOR ; Give players priority
+   224 2117 A9 78			lda #120
+   225 2119 8D 00 D0			sta HPOSP0
+   226 211C 8D 01 D0			sta HPOSP1
+   227 211F 8D 02 D0			sta HPOSP2
+   228 2122 8D 03 D0			sta HPOSP3
+   229 2125 60				rts
+   230 					.endp
+   231
+   232 				.macro blit_tile
+   233 					lda (map_ptr),y			; Load the tile from the map
+   234 					asl						; Multiply by two to get left character
+   235 					sta (screen_ptr),y		; Store the left character
+   236 					inc screen_ptr			; Advance the screen pointer
+   237 					add #1					; Add one to get right character
+   238 					sta (screen_ptr),y		; Store the right character
+   239 					adw map_ptr #1			; Advance the map pointer
+   240 					adw screen_ptr #1		; Advance the screen pointer	
+   241 					.endm
+   242
+   243 				.macro blit_circle_line body, map_space, screen_space
+   244 					adw map_ptr #:map_space
+   245 					adw screen_ptr #:screen_space
+   246 					ldx #:body
+   247 				loop
+   248 					blit_tile()
+   249 					dex
+   250 					bne loop
+   251 				
+   252 					adw map_ptr #:map_space
+   253 					adw map_ptr #(map_width - screen_width)
+   254 					adw screen_ptr #:screen_space
+   255 					adw screen_ptr #(screen_char_width - screen_width * 2)
    256 					.endm
    257
-   258 				* --------------------------------------- *
-   259 				* Proc: copy_map_to_canvas                *
-   260 				* Copies map to canvas with interpolation *
-   261 				* --------------------------------------- *
-   262 2135			.proc copy_map_to_canvas
-   263 = 0092			map_ptr = $92
-   264 = 0094			canvas_ptr = $94
-   265
-   266 2135 A9 00 85 92 A9 30 + 	mwa #map map_ptr
-   267 213D A9 00 85 94 A9 60 + 	mwa #canvas canvas_ptr
-   268
-   269 2145 A0 00			ldy #0
-   270 2147			loop
-   271 2147 B1 92			lda (map_ptr),y
-   272 2149 0A				asl
-   273 214A 91 94			sta (canvas_ptr),y
-   274
-   275 214C E6 94			inc canvas_ptr
-   276 214E D0 02			bne next
-   277 2150 E6 95			inc canvas_ptr+1
-   278
-   279 2152			next
-   280 2152 18 69 01			add #1
-   281 2155 91 94			sta (canvas_ptr),y
-   282 2157 C8				iny
-   283 2158 D0 ED			bne loop
-   284
-   285 215A E6 93			inc map_ptr+1
-   286 215C E6 95			inc canvas_ptr+1
+   258 2126			.proc map_offset
+   259 2126 A9 00 85 92 A9 30 + 	mwa #map map_ptr
+   260 212E A9 00 85 94 A9 60 + 	mwa #screen screen_ptr
+   261
+   262 					; Shift vertically for player's y position
+   263 2136 A5 97			lda player_y
+   264 2138 38 E9 05			sub #(screen_height / 2)
+   265 213B 38 E9 01			sub #1
+   266 213E A8				tay
+   267 213F			loop
+   268 213F 18 A5 92 69 31 85 + 	adw map_ptr #map_width
+   269 214A 88				dey
+   270 214B D0 F2			bne loop
+   271
+   272 					; Shift horizontally for player's x position
+   273 214D A5 96			lda player_x
+   274 214F 38 E9 09			sub #(screen_width / 2)
+   275 2152 85 98			sta tmp
+   276 2154 A9 00			lda #0
+   277 2156 85 99			sta tmp + 1
+   278 2158 18 A5 92 65 98 85 + 	adw map_ptr tmp
+   279
+   280 2165 60				rts
+   281 					.endp
+   282
+   283 2166			.proc blit_screen
+   284 2166 20 26 21			map_offset()
+   285
+   286 2169 A0 00			ldy #0
    287
-   288 215E A5 93			lda map_ptr+1
-   289 2160 C9 40			cmp #>(map + $1000)
-   290 2162 D0 E3			bne loop
-   291
-   292 2164 60				rts
-   293 					.endp
-   294
-   295 2165				icl 'hardware.asm'
+   288 					; 2 Blank lines
+   289 216B 18 A5 94 69 50 85 + 	adw screen_ptr #(screen_char_width * 2)
+   290 2176 18 A5 92 69 62 85 + 	adw map_ptr #(map_width * 2)
+   291 					
+   292 					; Top 3 lines of the circle
+   293 2181				blit_circle_line 5, 7, 14
+Macro: BLIT_CIRCLE_LINE [Source: main.asm]
+     1 2181 18 A5 92 69 07 85 + 	adw map_ptr #7
+     2 218C 18 A5 94 69 0E 85 + 	adw screen_ptr #14
+     3 2197 A2 05			ldx #5
+     4 2199			loop
+     1 2199 B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 219B 0A				asl						; Multiply by two to get left character
+     3 219C 91 94			sta (screen_ptr),y		; Store the left character
+     4 219E E6 94			inc screen_ptr			; Advance the screen pointer
+     5 21A0 18 69 01			add #1					; Add one to get right character
+     6 21A3 91 94			sta (screen_ptr),y		; Store the right character
+     7 21A5 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 21B0 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+Source: main.asm
+     6 21BB CA				dex
+     7 21BC D0 DB			bne loop
+     9 21BE 18 A5 92 69 07 85 + 	adw map_ptr #7
+    10 21C9 18 A5 92 69 1E 85 + 	adw map_ptr #(map_width - screen_width)
+    11 21D4 18 A5 94 69 0E 85 + 	adw screen_ptr #14
+    12 21DF 18 A5 94 69 02 85 + 	adw screen_ptr #(screen_char_width - screen_width * 2)
+Source: main.asm
+   294 21EA				blit_circle_line 7, 6, 12
+Macro: BLIT_CIRCLE_LINE [Source: main.asm]
+     1 21EA 18 A5 92 69 06 85 + 	adw map_ptr #6
+     2 21F5 18 A5 94 69 0C 85 + 	adw screen_ptr #12
+     3 2200 A2 07			ldx #7
+     4 2202			loop
+     1 2202 B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 2204 0A				asl						; Multiply by two to get left character
+     3 2205 91 94			sta (screen_ptr),y		; Store the left character
+     4 2207 E6 94			inc screen_ptr			; Advance the screen pointer
+     5 2209 18 69 01			add #1					; Add one to get right character
+     6 220C 91 94			sta (screen_ptr),y		; Store the right character
+     7 220E 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 2219 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+Source: main.asm
+     6 2224 CA				dex
+     7 2225 D0 DB			bne loop
+     9 2227 18 A5 92 69 06 85 + 	adw map_ptr #6
+    10 2232 18 A5 92 69 1E 85 + 	adw map_ptr #(map_width - screen_width)
+    11 223D 18 A5 94 69 0C 85 + 	adw screen_ptr #12
+    12 2248 18 A5 94 69 02 85 + 	adw screen_ptr #(screen_char_width - screen_width * 2)
+Source: main.asm
+   295 2253				blit_circle_line 9, 5, 10
+Macro: BLIT_CIRCLE_LINE [Source: main.asm]
+     1 2253 18 A5 92 69 05 85 + 	adw map_ptr #5
+     2 225E 18 A5 94 69 0A 85 + 	adw screen_ptr #10
+     3 2269 A2 09			ldx #9
+     4 226B			loop
+     1 226B B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 226D 0A				asl						; Multiply by two to get left character
+     3 226E 91 94			sta (screen_ptr),y		; Store the left character
+     4 2270 E6 94			inc screen_ptr			; Advance the screen pointer
+     5 2272 18 69 01			add #1					; Add one to get right character
+     6 2275 91 94			sta (screen_ptr),y		; Store the right character
+     7 2277 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 2282 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+Source: main.asm
+     6 228D CA				dex
+     7 228E D0 DB			bne loop
+     9 2290 18 A5 92 69 05 85 + 	adw map_ptr #5
+    10 229B 18 A5 92 69 1E 85 + 	adw map_ptr #(map_width - screen_width)
+    11 22A6 18 A5 94 69 0A 85 + 	adw screen_ptr #10
+    12 22B1 18 A5 94 69 02 85 + 	adw screen_ptr #(screen_char_width - screen_width * 2)
+Source: main.asm
+   296
+   297 					; Line above the player
+   298 22BC 18 A5 92 69 09 85 + 	adw map_ptr #9				; Advance to the tile above the player
+   299 22C7 B1 92			lda (map_ptr),y				; Load in the tile
+   300 22C9 85 9A			sta up_tile					; Store the tile
+   301 22CB 38 A5 92 E9 09 85 + 	sbw map_ptr #9				; Undo math
+   302 22D6				blit_circle_line 9, 5, 10
+Macro: BLIT_CIRCLE_LINE [Source: main.asm]
+     1 22D6 18 A5 92 69 05 85 + 	adw map_ptr #5
+     2 22E1 18 A5 94 69 0A 85 + 	adw screen_ptr #10
+     3 22EC A2 09			ldx #9
+     4 22EE			loop
+     1 22EE B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 22F0 0A				asl						; Multiply by two to get left character
+     3 22F1 91 94			sta (screen_ptr),y		; Store the left character
+     4 22F3 E6 94			inc screen_ptr			; Advance the screen pointer
+     5 22F5 18 69 01			add #1					; Add one to get right character
+     6 22F8 91 94			sta (screen_ptr),y		; Store the right character
+     7 22FA 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 2305 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+Source: main.asm
+     6 2310 CA				dex
+     7 2311 D0 DB			bne loop
+     9 2313 18 A5 92 69 05 85 + 	adw map_ptr #5
+    10 231E 18 A5 92 69 1E 85 + 	adw map_ptr #(map_width - screen_width)
+    11 2329 18 A5 94 69 0A 85 + 	adw screen_ptr #10
+    12 2334 18 A5 94 69 02 85 + 	adw screen_ptr #(screen_char_width - screen_width * 2)
+Source: main.asm
+   303
+   304 233F 18 A5 92 69 08 85 + 	adw map_ptr #8				; Advance to the tile to the left of the player
+   305 234A B1 92			lda (map_ptr),y				; Load in the tile
+   306 234C 85 9C			sta left_tile				; Store the tile
+   307 234E 18 A5 92 69 01 85 + 	adw map_ptr #1				; Advance to the tile that the player is on
+   308 2359 B1 92			lda (map_ptr),y				; Load in the tile
+   309 235B 85 9E			sta on_tile					; Store the tile
+   310 235D 18 A5 92 69 01 85 + 	adw map_ptr #1				; Advance to the tile to the right of the player
+   311 2368 B1 92			lda (map_ptr),y				; Load in the tile
+   312 236A 85 9D			sta right_tile				; Store the tile
+   313 236C 38 A5 92 E9 0A 85 + 	sbw map_ptr #10				; Undo math
+   314 2377				blit_circle_line 9, 5, 10
+Macro: BLIT_CIRCLE_LINE [Source: main.asm]
+     1 2377 18 A5 92 69 05 85 + 	adw map_ptr #5
+     2 2382 18 A5 94 69 0A 85 + 	adw screen_ptr #10
+     3 238D A2 09			ldx #9
+     4 238F			loop
+     1 238F B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 2391 0A				asl						; Multiply by two to get left character
+     3 2392 91 94			sta (screen_ptr),y		; Store the left character
+     4 2394 E6 94			inc screen_ptr			; Advance the screen pointer
+     5 2396 18 69 01			add #1					; Add one to get right character
+     6 2399 91 94			sta (screen_ptr),y		; Store the right character
+     7 239B 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 23A6 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+Source: main.asm
+     6 23B1 CA				dex
+     7 23B2 D0 DB			bne loop
+     9 23B4 18 A5 92 69 05 85 + 	adw map_ptr #5
+    10 23BF 18 A5 92 69 1E 85 + 	adw map_ptr #(map_width - screen_width)
+    11 23CA 18 A5 94 69 0A 85 + 	adw screen_ptr #10
+    12 23D5 18 A5 94 69 02 85 + 	adw screen_ptr #(screen_char_width - screen_width * 2)
+Source: main.asm
+   315
+   316 					; Line below the player
+   317 23E0 18 A5 92 69 09 85 + 	adw map_ptr #9				; Advance to the tile below the player
+   318 23EB B1 92			lda (map_ptr),y				; Load in the tile
+   319 23ED 85 9B			sta down_tile				; Store the tile
+   320 23EF 38 A5 92 E9 09 85 + 	sbw map_ptr #9				; Undo math
+   321 23FA				blit_circle_line 9, 5, 10
+Macro: BLIT_CIRCLE_LINE [Source: main.asm]
+     1 23FA 18 A5 92 69 05 85 + 	adw map_ptr #5
+     2 2405 18 A5 94 69 0A 85 + 	adw screen_ptr #10
+     3 2410 A2 09			ldx #9
+     4 2412			loop
+     1 2412 B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 2414 0A				asl						; Multiply by two to get left character
+     3 2415 91 94			sta (screen_ptr),y		; Store the left character
+     4 2417 E6 94			inc screen_ptr			; Advance the screen pointer
+     5 2419 18 69 01			add #1					; Add one to get right character
+     6 241C 91 94			sta (screen_ptr),y		; Store the right character
+     7 241E 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 2429 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+Source: main.asm
+     6 2434 CA				dex
+     7 2435 D0 DB			bne loop
+     9 2437 18 A5 92 69 05 85 + 	adw map_ptr #5
+    10 2442 18 A5 92 69 1E 85 + 	adw map_ptr #(map_width - screen_width)
+    11 244D 18 A5 94 69 0A 85 + 	adw screen_ptr #10
+    12 2458 18 A5 94 69 02 85 + 	adw screen_ptr #(screen_char_width - screen_width * 2)
+Source: main.asm
+   322 					
+   323 					; Bottom 3 lines of the circle
+   324 2463				blit_circle_line 9, 5, 10
+Macro: BLIT_CIRCLE_LINE [Source: main.asm]
+     1 2463 18 A5 92 69 05 85 + 	adw map_ptr #5
+     2 246E 18 A5 94 69 0A 85 + 	adw screen_ptr #10
+     3 2479 A2 09			ldx #9
+     4 247B			loop
+     1 247B B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 247D 0A				asl						; Multiply by two to get left character
+     3 247E 91 94			sta (screen_ptr),y		; Store the left character
+     4 2480 E6 94			inc screen_ptr			; Advance the screen pointer
+     5 2482 18 69 01			add #1					; Add one to get right character
+     6 2485 91 94			sta (screen_ptr),y		; Store the right character
+     7 2487 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 2492 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+Source: main.asm
+     6 249D CA				dex
+     7 249E D0 DB			bne loop
+     9 24A0 18 A5 92 69 05 85 + 	adw map_ptr #5
+    10 24AB 18 A5 92 69 1E 85 + 	adw map_ptr #(map_width - screen_width)
+    11 24B6 18 A5 94 69 0A 85 + 	adw screen_ptr #10
+    12 24C1 18 A5 94 69 02 85 + 	adw screen_ptr #(screen_char_width - screen_width * 2)
+Source: main.asm
+   325 24CC				blit_circle_line 7, 6, 12
+Macro: BLIT_CIRCLE_LINE [Source: main.asm]
+     1 24CC 18 A5 92 69 06 85 + 	adw map_ptr #6
+     2 24D7 18 A5 94 69 0C 85 + 	adw screen_ptr #12
+     3 24E2 A2 07			ldx #7
+     4 24E4			loop
+     1 24E4 B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 24E6 0A				asl						; Multiply by two to get left character
+     3 24E7 91 94			sta (screen_ptr),y		; Store the left character
+     4 24E9 E6 94			inc screen_ptr			; Advance the screen pointer
+     5 24EB 18 69 01			add #1					; Add one to get right character
+     6 24EE 91 94			sta (screen_ptr),y		; Store the right character
+     7 24F0 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 24FB 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+Source: main.asm
+     6 2506 CA				dex
+     7 2507 D0 DB			bne loop
+     9 2509 18 A5 92 69 06 85 + 	adw map_ptr #6
+    10 2514 18 A5 92 69 1E 85 + 	adw map_ptr #(map_width - screen_width)
+    11 251F 18 A5 94 69 0C 85 + 	adw screen_ptr #12
+    12 252A 18 A5 94 69 02 85 + 	adw screen_ptr #(screen_char_width - screen_width * 2)
+Source: main.asm
+   326 2535				blit_circle_line 5, 7, 14
+Macro: BLIT_CIRCLE_LINE [Source: main.asm]
+     1 2535 18 A5 92 69 07 85 + 	adw map_ptr #7
+     2 2540 18 A5 94 69 0E 85 + 	adw screen_ptr #14
+     3 254B A2 05			ldx #5
+     4 254D			loop
+     1 254D B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 254F 0A				asl						; Multiply by two to get left character
+     3 2550 91 94			sta (screen_ptr),y		; Store the left character
+     4 2552 E6 94			inc screen_ptr			; Advance the screen pointer
+     5 2554 18 69 01			add #1					; Add one to get right character
+     6 2557 91 94			sta (screen_ptr),y		; Store the right character
+     7 2559 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 2564 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+Source: main.asm
+     6 256F CA				dex
+     7 2570 D0 DB			bne loop
+     9 2572 18 A5 92 69 07 85 + 	adw map_ptr #7
+    10 257D 18 A5 92 69 1E 85 + 	adw map_ptr #(map_width - screen_width)
+    11 2588 18 A5 94 69 0E 85 + 	adw screen_ptr #14
+    12 2593 18 A5 94 69 02 85 + 	adw screen_ptr #(screen_char_width - screen_width * 2)
+Source: main.asm
+   327 259E 60				rts
+   328 				.endp
+   329
+   330
+   331 				* --------------------------------------- *
+   332 				* Proc: copy_map_to_screen                *
+   333 				* Copies map to screen with interpolation *
+   334 				* --------------------------------------- *
+   335 259F			.proc copy_map_to_screen
+   336
+   337
+   338
+   339
+   340 259F A0 00			ldy #0
+   341 25A1			loop
+   342 25A1 B1 92			lda (map_ptr),y
+   343 25A3 0A				asl
+   344 25A4 91 94			sta (screen_ptr),y
+   345
+   346 25A6 E6 94			inc screen_ptr
+   347 25A8 D0 02			bne next
+   348 25AA E6 95			inc screen_ptr+1
+   349
+   350 25AC			next
+   351 25AC 18 69 01			add #1
+   352 25AF 91 94			sta (screen_ptr),y
+   353 25B1 C8				iny
+   354 25B2 D0 ED			bne loop
+   355
+   356 25B4 E6 93			inc map_ptr+1
+   357 25B6 E6 95			inc screen_ptr+1
+   358
+   359 25B8 A5 93			lda map_ptr+1
+   360 25BA C9 40			cmp #>(map + $1000)
+   361 25BC D0 E3			bne loop
+   362
+   363 25BE 60				rts
+   364 					.endp
+   365
+   366 25BF				icl 'hardware.asm'
 Source: hardware.asm
      1 = 0230			SDLSTL = $0230  ; Display list starting address
      2 = 02F4			CHBAS  = $02f4  ; CHaracter BAse Register
@@ -345,13 +593,13 @@ Source: hardware.asm
     23 = 0012			RTCLK0 = $0012  ; Real Time Clock low byte
     24 = 0013			RTCLK1 = $0013  ; Real Time Clock high byte 
     25 = 0014			RTCLK2 = $0014  ; Real Time Clock control byte
-   296 2165				icl 'dlist.asm'
+   367 25BF				icl 'dlist.asm'
 Source: dlist.asm
      1 				* --------------------------------------- *
      2 				* Proc: setup_screen                      *
      3 				* Sets up the display list for the screen *
      4 				* --------------------------------------- *
-     5 2165			.proc setup_screen
+     5 25BF			.proc setup_screen
      6 = 0070			blank8 = $70    ; 8 blank lines
      7 = 0040			lms = $40	    ; Load Memory Scan
      8 = 0041			jvb = $41	    ; Jump while vertical blank
@@ -359,139 +607,116 @@ Source: dlist.asm
     10 = 0002			antic2 = 2      ; Antic mode 2
     11 = 0005			antic5 = 5	    ; Antic mode 5
     12
-    13 2165 A9 70 8D 30 02 A9 + 	mwa #dlist SDLSTL
-    14 216F 60				rts
+    13 25BF A9 CA 8D 30 02 A9 + 	mwa #dlist SDLSTL
+    14 25C9 60				rts
     15
-    16 2170			dlist
-    17 2170 70 70 70			.byte blank8, blank8, blank8
-    18 2173 45 00 60			.byte antic5 + lms, $00, $60
-    19 2176 45 80 60			.byte antic5 + lms, $80, $60
-    20 2179 45 00 61			.byte antic5 + lms, $00, $61
-    21 217C 45 80 61			.byte antic5 + lms, $80, $61
-    22 217F 45 00 62			.byte antic5 + lms, $00, $62
-    23 2182 45 80 62			.byte antic5 + lms, $80, $62
-    24 2185 45 00 63			.byte antic5 + lms, $00, $63
-    25 2188 45 80 63			.byte antic5 + lms, $80, $63
-    26 218B 45 00 64			.byte antic5 + lms, $00, $64
-    27 218E 45 80 64			.byte antic5 + lms, $80, $64
-    28 2191 45 00 65			.byte antic5 + lms, $00, $65
-    29 2194 45 80 65			.byte antic5 + lms, $80, $65
-    30 2197 41 70 21			.byte jvb, <dlist, >dlist
-    31 					.endp
-   297 219A				icl 'pmgdata.asm'
+    16 25CA			dlist
+    17 25CA 70 70 70			.byte blank8, blank8, blank8
+    18 25CD 45 00 60			.byte antic5 + lms, <screen, >screen
+    19 25D0 05 05 05 05 05		.byte antic5, antic5, antic5, antic5, antic5
+    20 25D5 05 05 05 05 05 05		.byte antic5, antic5, antic5, antic5, antic5, antic5
+    21 25DB 41 CA 25			.byte jvb, <dlist, >dlist
+    22 					.endp
+   368 25DE				icl 'pmgdata.asm'
 Source: pmgdata.asm
-     1 219A			pmgdata
+     1 25DE			pmgdata
      2 					; PCOLR0 (Brown)
-     3 219A 3C				.byte %00111100
-     4 219B 40				.byte %01000000
-     5 219C 40				.byte %01000000
-     6 219D 00				.byte %00000000
-     7 219E 00				.byte %00000000
-     8 219F 00				.byte %00000000
-     9 21A0 00				.byte %00000000
-    10 21A1 00				.byte %00000000
+     3 25DE 3C				.byte %00111100
+     4 25DF 40				.byte %01000000
+     5 25E0 40				.byte %01000000
+     6 25E1 00				.byte %00000000
+     7 25E2 00				.byte %00000000
+     8 25E3 00				.byte %00000000
+     9 25E4 00				.byte %00000000
+    10 25E5 00				.byte %00000000
     11
     12 					; PCOLR1 (Peach)
-    13 21A2 00				.byte %00000000
-    14 21A3 3C				.byte %00111100
-    15 21A4 28				.byte %00101000
-    16 21A5 3C				.byte %00111100
-    17 21A6 00				.byte %00000000
-    18 21A7 81				.byte %10000001
-    19 21A8 00				.byte %00000000
-    20 21A9 00				.byte %00000000
+    13 25E6 00				.byte %00000000
+    14 25E7 3C				.byte %00111100
+    15 25E8 28				.byte %00101000
+    16 25E9 3C				.byte %00111100
+    17 25EA 00				.byte %00000000
+    18 25EB 81				.byte %10000001
+    19 25EC 00				.byte %00000000
+    20 25ED 00				.byte %00000000
     21
     22 					; PCOLR2 (Blue)
-    23 21AA 00				.byte %00000000
-    24 21AB 00				.byte %00000000
-    25 21AC 00				.byte %00000000
-    26 21AD 00				.byte %00000000
-    27 21AE 7E				.byte %01111110
-    28 21AF 3C				.byte %00111100
-    29 21B0 24				.byte %00100100
-    30 21B1 00				.byte %00000000
+    23 25EE 00				.byte %00000000
+    24 25EF 00				.byte %00000000
+    25 25F0 00				.byte %00000000
+    26 25F1 00				.byte %00000000
+    27 25F2 7E				.byte %01111110
+    28 25F3 3C				.byte %00111100
+    29 25F4 24				.byte %00100100
+    30 25F5 00				.byte %00000000
     31
     32 					; PCOLR3 (Black)
-    33 21B2 00				.byte %00000000
-    34 21B3 00				.byte %00000000
-    35 21B4 14				.byte %00010100
-    36 21B5 00				.byte %00000000
-    37 21B6 00				.byte %00000000
-    38 21B7 00				.byte %00000000
-    39 21B8 00				.byte %00000000
-    40 21B9 24				.byte %00100100
-   298 21BA				icl 'map.asm'
+    33 25F6 00				.byte %00000000
+    34 25F7 00				.byte %00000000
+    35 25F8 14				.byte %00010100
+    36 25F9 00				.byte %00000000
+    37 25FA 00				.byte %00000000
+    38 25FB 00				.byte %00000000
+    39 25FC 00				.byte %00000000
+    40 25FD 24				.byte %00100100
+   369 25FE				icl 'map.asm'
 Source: map.asm
-     1 21BA			    org map
-     2 3000-43FF> 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-     3 3040 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-     4 3080 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-     5 30C0 00 00 00 00 00 01 +     .byte 0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-     6 3100 00 00 00 00 00 01 +     .byte 0,0,0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-     7 3140 00 00 00 00 00 01 +     .byte 0,0,0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-     8 3180 00 00 00 00 00 01 +     .byte 0,0,0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-     9 31C0 00 00 00 00 00 01 +     .byte 0,0,0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    10 3200 00 00 00 00 00 01 +     .byte 0,0,0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    11 3240 00 00 00 00 00 01 +     .byte 0,0,0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    12 3280 00 00 00 00 00 01 +     .byte 0,0,0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    13 32C0 00 00 00 00 00 01 +     .byte 0,0,0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    14 3300 00 00 00 00 00 01 +     .byte 0,0,0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    15 3340 00 00 00 00 00 01 +     .byte 0,0,0,0,0,1,1,1,1,1,1,1,1,3,1,0,0,0,0,0,0,1,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    16 3380 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,1,2,1,0,0,0,0,0,0,1,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    17 33C0 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,1,2,1,0,0,0,0,0,0,1,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    18 3400 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,1,2,1,1,1,1,1,1,1,1,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    19 3440 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,2,2,2,2,2,2,3,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    20 3480 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    21 34C0 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    22 3500 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    23 3540 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    24 3580 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    25 35C0 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    26 3600 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    27 3640 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    28 3680 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    29 36C0 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    30 3700 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    31 3740 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    32 3780 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    33 37C0 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    34 3800 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    35 3840 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    36 3880 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    37 38C0 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    38 3900 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    39 3940 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    40 3980 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    41 39C0 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    42 3A00 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    43 3A40 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    44 3A80 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    45 3AC0 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    46 3B00 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    47 3B40 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    48 3B80 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    49 3BC0 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    50 3C00 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    51 3C40 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    52 3C80 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    53 3CC0 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    54 3D00 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    55 3D40 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    56 3D80 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    57 3DC0 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    58 3E00 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    59 3E40 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    60 3E80 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    61 3EC0 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    62 3F00 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    63 3F40 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    64 3F80 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    65 3FC0 00 00 00 00 00 00 +     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-   299 4000				icl 'gfx.asm'
+     1 25FE			    org map
+     2 				     
+     3 3000-3960> 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+     4 3031 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+     5 3062 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+     6 3093 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+     7 30C4 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+     8 30F5 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+     9 3126 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+    10 3157 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+    11 3188 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+    12 31B9 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    13 31EA 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    14 321B 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    15 324C 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    16 327D 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    17 32AE 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    18 32DF 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    19 3310 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,4,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    20 3341 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    21 3372 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    22 33A3 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    23 33D4 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    24 3405 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    25 3436 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    26 3467 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    27 3498 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+    28 34C9 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    29 34FA 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    30 352B 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    31 355C 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    32 358D 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    33 35BE 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    34 35EF 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    35 3620 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    36 3651 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    37 3682 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    38 36B3 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    39 36E4 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    40 3715 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    41 3746 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    42 3777 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1
+    43 37A8 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+    44 37D9 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+    45 380A 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+    46 383B 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+    47 386C 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+    48 389D 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+    49 38CE 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+    50 38FF 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+    51 3930 01 01 01 01 01 01 +      .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+   370 3961				icl 'gfx.asm'
 Source: gfx.asm
-     1 4000				org charset
+     1 3961				org charset
      2 					; char 0
-     3 4000 00				.byte %00000000
+     3 4000-43FF> 00			.byte %00000000
      4 4001 00				.byte %00000000
      5 4002 00				.byte %00000000
      6 4003 00				.byte %00000000
@@ -1642,5 +1867,3 @@ Source: gfx.asm
   1151 43FD 00				.byte %00000000
   1152 43FE 00				.byte %00000000
   1153 43FF 00				.byte %00000000
-   300 					
-   301 					
