@@ -1,0 +1,86 @@
+mads 2.1.7
+Source: main.asm
+     1 				; EdVenture - An Adventure in Atari 8-Bit Assembly
+     2 				; github.com/edsalisbury/edventure
+     3 				; Mission: EdPossible
+     4 				; youtube.com/MissionEdPossible
+     5 				; Assemble in MADS: mads -l -t main.asm
+     6 				; Video 3: Fun with character sets!
+     7
+     8 					org $2000
+     9
+    10 = 0230			SDLSTL = $0230  ; Display list starting address
+    11 = 02F4			CHBAS = $02f4   ; CHaracter BAse Register
+    12 = 02C4			COLOR0 = $02C4  ; Color for $01
+    13 = 02C5			COLOR1 = $02C5  ; Color for $10
+    14 = 02C6			COLOR2 = $02C6  ; Color for $11 (normal)
+    15 = 02C7			COLOR3 = $02C7  ; Color for $11 (inverse)
+    16 = 02C8			COLOR4 = $02C8  ; Color for %00 (background)
+    17
+    18
+    19 = 3C00			charset = $3c00 ; Character Set
+    20 = 4000			screen = $4000  ; Screen buffer
+    21 = 0070			blank8 = $70    ; 8 blank lines
+    22 = 0040			lms = $40	    ; Load Memory Scan
+    23 = 0041			jvb = $41	    ; Jump while vertical blank
+    24
+    25 = 0002			antic2 = 2      ; Antic mode 2
+    26 = 0005			antic5 = 5	    ; Antic mode 5
+    27
+    28 				; Load display list
+    29 FFFF> 2000-2051> A9 2C + 	mwa #dlist SDLSTL
+    30
+    31 				; Set up character set
+    32 200A A9 3C 8D F4 02		mva #>charset CHBAS
+    33
+    34 200F A2 00			ldx #0
+    35 2011			loop
+    36 2011 BD 42 20 9D 00 3C		mva chars,x charset,x
+    37 2017 E8				inx
+    38 2018 E0 10			cpx #16
+    39 201A D0 F5			bne loop
+    40
+    41 201C A0 00			ldy #0
+    42 201E			loop2
+    43 201E B9 40 20 99 00 40		mva scene,y screen,y
+    44 2024 C8				iny
+    45 2025 C0 02			cpy #2
+    46 2027 D0 F5			bne loop2
+    47
+    48 2029 4C 29 20			jmp *
+    49
+    50 				; Display List
+    51 202C			dlist
+    52 202C 70 70 70			.byte blank8, blank8, blank8
+    53 202F 45 00 40			.byte antic5 + lms, <screen, >screen
+    54 2032 05 05 05 05 05 05		.byte antic5, antic5, antic5, antic5, antic5, antic5
+    55 2038 05 05 05 05 05		.byte antic5, antic5, antic5, antic5, antic5
+    56 203D 41 2C 20			.byte jvb, <dlist, >dlist
+    57
+    58 				; %00 = 0
+    59 				; %01 = 1
+    60 				; %10 = 2
+    61 				; %11 = 3
+    62
+    63 2040			scene
+    64 2040 00 01			.byte " !"
+    65
+    66 2042			chars
+    67 2042 00				.byte %00000000
+    68 2043 01				.byte %00000001
+    69 2044 06				.byte %00000110
+    70 2045 1B				.byte %00011011
+    71 2046 1B				.byte %00011011
+    72 2047 06				.byte %00000110
+    73 2048 01				.byte %00000001
+    74 2049 00				.byte %00000000
+    75
+    76 204A 00				.byte %00000000
+    77 204B 40				.byte %01000000
+    78 204C 90				.byte %10010000
+    79 204D E4				.byte %11100100
+    80 204E E4				.byte %11100100
+    81 204F 90				.byte %10010000
+    82 2050 40				.byte %01000000
+    83 2051 00				.byte %00000000
+    84 					
