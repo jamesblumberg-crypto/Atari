@@ -3,37 +3,49 @@
 ; Mission: EdPossible
 ; youtube.com/MissionEdPossible
 ; Assemble in MADS: mads -l -t main.asm
-; Episode 12: Torchlight View
+; Episode 11: Scrolling
 
 ; ATASCII Table: https://www.atariwiki.org/wiki/attach/Atari%20ATASCII%20Table/ascii_atascii_table.pdf
 ; ATASCII 0-31 Screen code 64-95
 ; ATASCII 32-95 Screen code 0-63
 ; ATASCII 96-127 Screen code 96-127
 
-; NTSC Color Palette: https://atariage.com/forums/uploads/monthly_5_2015/post-6369-0-47505700-1443889945.png
-; PAL Color Palette: https://atariage.com/forums/uploads/monthly_5_2015/post-6369-0-90255700-1443889950.png
+; NTSC Color Palette: https://atariage.com/forums/uploads/monthly_10_2015/post-6369-0-47505700-1443889945.png
+; PAL Color Palette: https://atariage.com/forums/uploads/monthly_10_2015/post-6369-0-90255700-1443889950.png
 ; PMG Memory Map: https://www.atarimagazines.com/compute/issue64/atari_animation.gif
 
 	org $2000
 
-map     = $3000 ; Map
-charset = $4000 ; Character Set
-pmg     = $5000 ; Player Missile Data
-screen  = $6000 ; Screen buffer
+map     	= $3000 ; Map
+charset 	= $4000 ; Character Set
+pmg     	= $5000 ; Player Missle Data
+screen  	= $6000 ; Screen buffer
 
-stick_up 	= %0001
-stick_down 	= %0010
-stick_left 	= %0100
+stick_up    = %0001
+stick_down  = %0010 
+stick_left  = %0100
 stick_right = %1000
 
-map_ptr		= $92
-screen_ptr	= $94
+map_ptr 	= $92
+screen_ptr 	= $94
+player_x	= $96
+player_y	= $97
+tmp			= $98
+up_tile		= $9a
+down_tile	= $9b
+left_tile	= $9c
+right_tile	= $9d
+on_tile		= $9e
 
 screen_char_width = 40
 screen_width = 19
 screen_height = 11
-map_width = 64
-map_height = 64
+map_width = 49
+map_height = 49
+
+	lda #16
+	sta player_x
+	sta player_y
 
 	setup_screen()
 	setup_colors()
@@ -41,56 +53,79 @@ map_height = 64
 	clear_pmg()
 	load_pmg()
 	setup_pmg()
-	blit_screen()
 
 game
-	; lda STICK0
-	; and #stick_up
-	; beq up 
+	read_joystick()
+	blit_screen()
+	jmp game
 
-	; lda STICK0
-	; and #stick_down
-	; beq down
+.proc read_joystick
+	lda STICK0
+	and #stick_up
+	beq move_up
 
-	; lda STICK0
-	; and #stick_right
-	; beq right
+	lda STICK0
+	and #stick_down
+	beq move_down
 
-	; lda STICK0
-	; and #stick_left
-	; beq left
+	lda STICK0
+	and #stick_left
+	beq move_left
 
-; 	jmp game
+	lda STICK0
+	and #stick_right
+	beq move_right
 
-; up
-; 	delay #5
-; 	scroll_lu #$80
-; 	jmp game
+	jmp done
 
-; down
-; 	delay #5
-; 	scroll_rd #$80
-; 	jmp game
+move_up
+	lda up_tile
+	cmp #1
+	beq done
+	delay #5
+	lda player_y
+	sub #1
+	sta player_y
+	jmp done
 
-; right
-; 	delay #5
-; 	scroll_rd #2
-; 	jmp game
+move_down
+	lda down_tile
+	cmp #1
+	beq done
+	delay #5
+	lda player_y
+	add #1
+	sta player_y
+	jmp done
 
-; left
-; 	delay #5
-; 	scroll_lu #2
- 	jmp game
+move_left
+	lda left_tile
+	cmp #1
+	beq done
+	delay #5
+	lda player_x
+	sub #1
+	sta player_x
+	jmp done
 
+move_right
+	lda right_tile
+	cmp #1
+	beq done
+	delay #5
+	lda player_x
+	add #1
+	sta player_x
+	jmp done
 
-
-
-
+done
+	rts
+	.endp
 
 * --------------------------------------- *
 * Proc: delay                             *
-* Scroll real-time clock                  *
-* --------------------------------------- *	
+* Uses Real-time clock to delay x/60 secs *
+* --------------------------------------- *
 .proc delay (.byte x) .reg
 start
 	lda RTCLK2
@@ -103,61 +138,6 @@ wait
 
 	rts
 	.endp
-
-* --------------------------------------- *
-* Proc: scroll_rd                         *
-* Scroll right or down                    *
-* --------------------------------------- *
-; .proc scroll_rd (.byte a) .reg
-; tmp = $92
-; 	sta tmp
-
-; 	ldy #12
-; 	ldx #4
-
-; loop
-; 	clc
-; 	lda setup_screen.dlist,x
-; 	adc tmp
-; 	sta setup_screen.dlist,x
-; 	inx
-; 	lda setup_screen.dlist,x
-; 	adc #0
-; 	sta setup_screen.dlist,x
-; 	inx
-; 	inx
-; 	dey
-; 	bne loop
-
-; 	rts
-; 	.endp
-
-* --------------------------------------- *
-* Proc: scroll_lu                         *
-* Scroll left or up                       *
-* --------------------------------------- *
-; .proc scroll_lu (.byte a) .reg
-; tmp = $92
-; 	sta tmp
-
-; 	ldy #12
-; 	ldx #4
-
-; loop
-; 	sec
-; 	lda setup_screen.dlist, x
-; 	sbc tmp
-; 	sta setup_screen.dlist,x
-; 	inx
-; 	lda setup_screen.dlist,x
-; 	sbc #0
-; 	sta setup_screen.dlist,x
-; 	inx
-; 	inx
-; 	dey
-; 	bne loop
-; 	rts
-; 	.endp
 
 * --------------------------------------- *
 * Proc: setup_colors                      *
@@ -174,7 +154,7 @@ blue = $80
 
 	; Character Set Colors
 	mva #med_gray COLOR0 ; %01
-	mva #lt_gray COLOR1  ; %5
+	mva #lt_gray COLOR1  ; %10
 	mva #green COLOR2	 ; %11
 	mva #brown COLOR3    ; %11 (inverse)
 	mva #black COLOR4    ; %00
@@ -249,32 +229,17 @@ loop
 	rts
 	.endp
 
-* --------------------------------------- *
-* Macro: blit_tile                        *
-* Reads a tile from the map and blits     *
-* Left and right characters to the screen *
-* buffer                                  *
-* --------------------------------------- *
 .macro blit_tile
-	lda (map_ptr),y 	; get tile from map
-	asl 				; multiply by 2 to get left character
-	sta (screen_ptr),y 	; store left character
-	inc screen_ptr 		; move to next screen position
-	add #1 				; add 1 to get right character
-	sta (screen_ptr),y 	; store right character
-	adw map_ptr #1		; advance map pointer
-	adw screen_ptr #1	; advance screen pointer
-	.endm	
+	lda (map_ptr),y			; Load the tile from the map
+	asl						; Multiply by two to get left character
+	sta (screen_ptr),y		; Store the left character
+	inc screen_ptr			; Advance the screen pointer
+	add #1					; Add one to get right character
+	sta (screen_ptr),y		; Store the right character
+	adw map_ptr #1			; Advance the map pointer
+	adw screen_ptr #1		; Advance the screen pointer	
+	.endm
 
-* --------------------------------------- *
-* Macro: blit_circle_line                 *
-* Blits a line of a circle                *
-*   body: the width of the circle line    *
-*   map_space: the space on the left and  *
-*     right, in tiles                     *
-*   screen_space: the space on the left   *
-*     and right, in characters            *
-* --------------------------------------- *
 .macro blit_circle_line body, map_space, screen_space
 	adw map_ptr #:map_space
 	adw screen_ptr #:screen_space
@@ -288,97 +253,118 @@ loop
 	adw map_ptr #(map_width - screen_width)
 	adw screen_ptr #:screen_space
 	adw screen_ptr #(screen_char_width - screen_width * 2)
-	.endm                         
+	.endm
 
-* --------------------------------------- *
-* Proc: blit_screen                       *
-* Blits the visible map to the screen     *
-*   buffer                                *
-* --------------------------------------- *
-.proc blit_screen
+.proc map_offset
 	mwa #map map_ptr
 	mwa #screen screen_ptr
 
+	; Shift vertically for player's y position
+	lda player_y
+	sub #(screen_height / 2)
+	sub #1
+	tay
+loop
+	adw map_ptr #map_width
+	dey
+	bne loop
+
+	; Shift horizontally for player's x position
+	lda player_x
+	sub #(screen_width / 2)
+	sta tmp
+	lda #0
+	sta tmp + 1
+	adw map_ptr tmp
+
+	rts
+	.endp
+
+.proc blit_screen
+	map_offset()
+
 	ldy #0
+
+	; 2 Blank lines
+	adw screen_ptr #(screen_char_width * 2)
+	adw map_ptr #(map_width * 2)
 	
-	; 2 Blank liines
-	adw screen_ptr #(screen_char_width * 2)	 ; Skip top border
-	adw map_ptr #(map_width * 2)          	 ; Skip top border
-	
-	
-	; top 3 lines of the circle
+	; Top 3 lines of the circle
 	blit_circle_line 5, 7, 14
 	blit_circle_line 7, 6, 12
 	blit_circle_line 9, 5, 10
+
+	; Line above the player
+	adw map_ptr #9				; Advance to the tile above the player
+	lda (map_ptr),y				; Load in the tile
+	sta up_tile					; Store the tile
+	sbw map_ptr #9				; Undo math
 	blit_circle_line 9, 5, 10
+
+	adw map_ptr #8				; Advance to the tile to the left of the player
+	lda (map_ptr),y				; Load in the tile
+	sta left_tile				; Store the tile
+	adw map_ptr #1				; Advance to the tile that the player is on
+	lda (map_ptr),y				; Load in the tile
+	sta on_tile					; Store the tile
+	adw map_ptr #1				; Advance to the tile to the right of the player
+	lda (map_ptr),y				; Load in the tile
+	sta right_tile				; Store the tile
+	sbw map_ptr #10				; Undo math
 	blit_circle_line 9, 5, 10
+
+	; Line below the player
+	adw map_ptr #9				; Advance to the tile below the player
+	lda (map_ptr),y				; Load in the tile
+	sta down_tile				; Store the tile
+	sbw map_ptr #9				; Undo math
 	blit_circle_line 9, 5, 10
+	
+	; Bottom 3 lines of the circle
 	blit_circle_line 9, 5, 10
 	blit_circle_line 7, 6, 12
 	blit_circle_line 5, 7, 14
 	rts
 .endp
 
-* --------------------------------------- *
-* Macro: blit_row                         *
-* Copies one line of map to screen        *
-* --------------------------------------- *
-; .macro blit_row map, screen
-; 	ldx #0
-; 	ldy #0
-; loop
-; 	lda :map,x
-; 	asl
-; 	sta :screen,y
-; 	iny
-; 	clc
-; 	adc #1
-; 	sta :screen,y
-; 	iny
-; 	inx
-; 	cpx #20
-; 	bne loop
-; 	.endm
 
 * --------------------------------------- *
 * Proc: copy_map_to_screen                *
 * Copies map to screen with interpolation *
 * --------------------------------------- *
-; .proc copy_map_to_screen
+.proc copy_map_to_screen
 
 
-	
 
-; 	ldy #0
-; loop
-; 	lda (map_ptr),y
-; 	asl
-; 	sta (screen_ptr),y
 
-; 	inc screen_ptr
-; 	bne next
-; 	inc screen_ptr+1
+	ldy #0
+loop
+	lda (map_ptr),y
+	asl
+	sta (screen_ptr),y
 
-; next
-; 	add #1
-; 	sta (screen_ptr),y
-; 	iny
-; 	bne loop
+	inc screen_ptr
+	bne next
+	inc screen_ptr+1
 
-; 	inc map_ptr+1
-; 	inc screen_ptr+1
+next
+	add #1
+	sta (screen_ptr),y
+	iny
+	bne loop
 
-; 	lda map_ptr+1
-; 	cmp #>(map + $500)
-; 	bne loop
+	inc map_ptr+1
+	inc screen_ptr+1
 
-; 	rts
-; 	.endp
+	lda map_ptr+1
+	cmp #>(map + $1000)
+	bne loop
+
+	rts
+	.endp
 
 	icl 'hardware.asm'
 	icl 'dlist.asm'
 	icl 'pmgdata.asm'
 	icl 'map.asm'
 	icl 'gfx.asm'
-	
-	
