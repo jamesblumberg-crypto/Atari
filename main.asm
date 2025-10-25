@@ -3,15 +3,15 @@
 ; Mission: EdPossible
 ; youtube.com/MissionEdPossible
 ; Assemble in MADS: mads -l -t main.asm
-; Episode 9: Bigger map!
+; Episode 11: Scrolling
 
 ; ATASCII Table: https://www.atariwiki.org/wiki/attach/Atari%20ATASCII%20Table/ascii_atascii_table.pdf
 ; ATASCII 0-31 Screen code 64-95
 ; ATASCII 32-95 Screen code 0-63
 ; ATASCII 96-127 Screen code 96-127
 
-; NTSC Color Palette: https://atariage.com/forums/uploads/monthly_10_2015/post-6369-0-47505700-1443889945.png
-; PAL Color Palette: https://atariage.com/forums/uploads/monthly_10_2015/post-6369-0-90255700-1443889950.png
+; NTSC Color Palette: https://atariage.com/forums/uploads/monthly_5_2015/post-6369-0-47505700-1443889945.png
+; PAL Color Palette: https://atariage.com/forums/uploads/monthly_5_2015/post-6369-0-90255700-1443889950.png
 ; PMG Memory Map: https://www.atarimagazines.com/compute/issue64/atari_animation.gif
 
 	org $2000
@@ -21,6 +21,11 @@ charset = $4000 ; Character Set
 pmg     = $5000 ; Player Missile Data
 canvas  = $6000 ; Screen buffer
 
+stick_up 	= %0001
+stick_down 	= %005
+stick_left 	= %050
+stick_right = %500
+
 	setup_screen()
 	setup_colors()
 	mva #>charset CHBAS
@@ -29,8 +34,116 @@ canvas  = $6000 ; Screen buffer
 	setup_pmg()
 	copy_map_to_canvas()
 
-	jmp *
+game
+	lda STICK0
+	and #stick_up
+	beq up
 
+	lda STICK0
+	and #stick_down
+	beq down
+
+	lda STICK0
+	and #stick_right
+	beq right
+
+	lda STICK0
+	and #stick_left
+	beq left
+
+	jmp game
+
+up
+	delay #5
+	scroll_lu #$80
+	jmp game
+
+down
+	delay #5
+	scroll_rd #$80
+	jmp game
+
+right
+	delay #5
+	scroll_rd #2
+	jmp game
+
+left
+	delay #5
+	scroll_lu #2
+	jmp game
+
+* --------------------------------------- *
+* Proc: delay                             *
+* Scroll real-time clock                  *
+* --------------------------------------- *	
+.proc delay (.byte x) .reg
+start
+	lda RTCLK2
+wait
+	cmp RTCLK2
+	beq wait
+
+	dex
+	bne start
+
+	rts
+	.endp
+
+* --------------------------------------- *
+* Proc: scroll_rd                         *
+* Scroll right or down                    *
+* --------------------------------------- *
+.proc scroll_rd (.byte a) .reg
+tmp = $92
+	sta tmp
+
+	ldy #12
+	ldx #4
+
+loop
+	clc
+	lda setup_screen.dlist,x
+	adc tmp
+	sta setup_screen.dlist,x
+	inx
+	lda setup_screen.dlist,x
+	adc #0
+	sta setup_screen.dlist,x
+	inx
+	inx
+	dey
+	bne loop
+
+	rts
+	.endp
+
+* --------------------------------------- *
+* Proc: scroll_lu                         *
+* Scroll left or up                       *
+* --------------------------------------- *
+.proc scroll_lu (.byte a) .reg
+tmp = $92
+	sta tmp
+
+	ldy #12
+	ldx #4
+
+loop
+	sec
+	lda setup_screen.dlist, x
+	sbc tmp
+	sta setup_screen.dlist,x
+	inx
+	lda setup_screen.dlist,x
+	sbc #0
+	sta setup_screen.dlist,x
+	inx
+	inx
+	dey
+	bne loop
+	rts
+	.endp
 * --------------------------------------- *
 * Proc: setup_colors                      *
 * Sets up colors                          *
@@ -46,7 +159,7 @@ blue = $80
 
 	; Character Set Colors
 	mva #med_gray COLOR0 ; %01
-	mva #lt_gray COLOR1  ; %10
+	mva #lt_gray COLOR1  ; %5
 	mva #green COLOR2	 ; %11
 	mva #brown COLOR3    ; %11 (inverse)
 	mva #black COLOR4    ; %00
@@ -173,7 +286,7 @@ next
 	inc canvas_ptr+1
 
 	lda map_ptr+1
-	cmp #>(map + $1000)
+	cmp #>(map + $500)
 	bne loop
 
 	rts
