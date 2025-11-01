@@ -22,7 +22,7 @@ Source: main.asm
     20 = 4000			pmg     			= $4000 ; Player Missle Data
     21 = 5000			charset_dungeon_a 	= $5000 ; Main character set
     22 = 6000			charset_outdoor_a 	= $6000 ; Character Set for outdoors
-    23 = 6400			status_line 		= $6400 ; Status line character set
+    23 = 6400			status_line		 	= $6400 ; Status line
     24 = 7000			monsters_a          = $7000 ; Monster characters
     25 = 8000			screen  			= $8000 ; Screen buffer
     26
@@ -42,8 +42,8 @@ Source: main.asm
     40 = 009D			right_tile	= $9d
     41 = 009E			on_tile		= $9e
     42
-    43 = 00A0			tmp_addr1	= $a0
-    44 = 00A2			tmp_addr2	= $a2
+    43 = 00A0			tmp_addr1 = $a0
+    44 = 00A2			tmp_addr2 = $a2
     45
     46 = 0028			screen_char_width = 40
     47 = 0013			screen_width = 19
@@ -109,7 +109,7 @@ Source: main.asm
    104 204F 20 92 20		 JSR DELAY
    105 2052 20 5E 21			update_player_tiles()
    106 2055 4C 91 20			jmp done
-   107
+   107 					
    108 2058			move_down
    109 2058 A5 9B			lda down_tile
    110 205A C9 37			cmp #55
@@ -136,7 +136,7 @@ Source: main.asm
    125
    126 207E			move_right
    127 207E A5 9D			lda right_tile
-   128 2080 C9 37			cmp #55
+   128 2080 C9 37			cmp #55  
    129 2082 90 0D			bcc done
    130 2084 E6 96			inc player_x
    131 					delay #5
@@ -265,7 +265,7 @@ Source: main.asm
    251 				.macro blit_circle_line body, map_space, screen_space
    252 					mwa map_ptr tmp_addr1
    253 					mwa screen_ptr tmp_addr2
-   254 					
+   254 				
    255 					adw map_ptr #:map_space
    256 					adw screen_ptr #:screen_space
    257 					ldx #:body
@@ -321,12 +321,12 @@ Macro: ADBW [Source: macros.asm]
      6 2181			skip_carry
 Source: main.asm
    301
-   302 					; get tiles player on
+   302 					; Get the tile the player is standing on
    303 2181 A0 00			ldy #0
    304 2183 B1 92			lda (map_ptr),y
    305 2185 85 9E			sta on_tile
    306
-   307 					; get tile left of player
+   307 					; Get the tile to the left of the player
    308 2187				dec16 map_ptr
 Macro: DEC16 [Source: macros.asm]
      1 2187 A5 92		    lda MAP_PTR
@@ -338,7 +338,7 @@ Source: main.asm
    309 218F B1 92			lda (map_ptr),y
    310 2191 85 9C			sta left_tile
    311
-   312 					; get tile right of player
+   312 					; Get the tile to the right of the player
    313 2193				inc16 map_ptr
 Macro: INC16 [Source: macros.asm]
      1 2193 E6 92		    inc MAP_PTR
@@ -356,7 +356,7 @@ Source: main.asm
    315 219F B1 92			lda (map_ptr),y
    316 21A1 85 9D			sta right_tile
    317
-   318 					; get tile above player
+   318 					; Get the tile above the player
    319 21A3				dec16 map_ptr
 Macro: DEC16 [Source: macros.asm]
      1 21A3 A5 92		    lda MAP_PTR
@@ -369,19 +369,19 @@ Source: main.asm
    321 21B6 B1 92			lda (map_ptr),y
    322 21B8 85 9A			sta up_tile
    323
-   324 					; get tile below player
+   324 					; Get the tile below the player
    325 21BA 18 A5 92 69 62 85 + 	adw map_ptr #(map_width * 2)
    326 21C5 B1 92			lda (map_ptr),y
    327 21C7 85 9B			sta down_tile
    328
    329 21C9 60				rts
    330 					.endp
-   331
+   331 						
    332 21CA			.proc blit_screen
    333 21CA 20 21 21			map_offset()
    334
    335 21CD A0 00			ldy #0
-   336 					; Line 1 (Blank)
+   336 					; Line #1 
    337 21CF 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
    338 21DA 18 A5 92 69 31 85 + 	adw map_ptr #map_width
    339 21E5				blit_circle_line 5, 3, 7
@@ -411,7 +411,7 @@ Source: main.asm
     13 223E A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
 Source: main.asm
    340
-   341 					; Line 2
+   341 					; Line #2
    342 2246 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
    343 2251 18 A5 92 69 31 85 + 	adw map_ptr #map_width
    344 225C				blit_circle_line 7, 2, 5
@@ -441,7 +441,7 @@ Source: main.asm
     13 22B5 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
 Source: main.asm
    345
-   346 					; Line 3
+   346 					; Line #3
    347 22BD 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
    348 22C8 18 A5 92 69 31 85 + 	adw map_ptr #map_width
    349 22D3				blit_circle_line 9, 1, 3
@@ -471,7 +471,7 @@ Source: main.asm
     13 232C A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
 Source: main.asm
    350
-   351 					; Line 4
+   351 					; Line #4
    352 2334 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
    353 233F 18 A5 92 69 31 85 + 	adw map_ptr #map_width
    354 234A				blit_circle_line 9, 1, 3
@@ -501,7 +501,7 @@ Source: main.asm
     13 23A3 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
 Source: main.asm
    355
-   356 					; Line 5
+   356 					; Line #5
    357 23AB 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
    358 23B6 18 A5 92 69 31 85 + 	adw map_ptr #map_width
    359 23C1				blit_circle_line 9, 1, 3
@@ -531,7 +531,7 @@ Source: main.asm
     13 241A A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
 Source: main.asm
    360
-   361 					; Line 6
+   361 					; Line #6
    362 2422 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
    363 242D 18 A5 92 69 31 85 + 	adw map_ptr #map_width
    364 2438				blit_circle_line 9, 1, 3
@@ -561,7 +561,7 @@ Source: main.asm
     13 2491 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
 Source: main.asm
    365
-   366 					; Line 7
+   366 					; Line #7
    367 2499 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
    368 24A4 18 A5 92 69 31 85 + 	adw map_ptr #map_width
    369 24AF				blit_circle_line 9, 1, 3
@@ -591,7 +591,7 @@ Source: main.asm
     13 2508 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
 Source: main.asm
    370
-   371 					; Line 8
+   371 					; Line #8
    372 2510 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
    373 251B 18 A5 92 69 31 85 + 	adw map_ptr #map_width
    374 2526				blit_circle_line 7, 2, 5
@@ -621,7 +621,7 @@ Source: main.asm
     13 257F A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
 Source: main.asm
    375
-   376 					; Line 9 
+   376 					; Line #9
    377 2587 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
    378 2592 18 A5 92 69 31 85 + 	adw map_ptr #map_width
    379 259D				blit_circle_line 5, 3, 7
@@ -650,7 +650,7 @@ Source: main.asm
     12 25EE A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
     13 25F6 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
 Source: main.asm
-   380
+   380 					
    381 25FE 60				rts
    382 				.endp
    383
@@ -676,11 +676,11 @@ Source: hardware.asm
     18 = D002			HPOSP2 = $D002  ; Horizontal position of player 2
     19 = D003			HPOSP3 = $D003  ; Horizontal position of player 3
     20 = 0278			STICK0 = $0278  ; Joystick 0
-    21 = 0284			STRIG0 = $0284  ; Joystick 0 trigger
-    22 = 0012			RTCLOK = $0012  ; Real Time Clock
-    23 = 0012			RTCLK0 = $0012  ; Real Time Clock low byte
-    24 = 0013			RTCLK1 = $0013  ; Real Time Clock high byte 
-    25 = 0014			RTCLK2 = $0014  ; Real Time Clock control byte
+    21 = 0284			STRIG0 = $0284  ; Trigger 0
+    22 = 0012			RTCLOK = $0012  ; Real-time clock
+    23 = 0012			RTCLK0 = $0012  ; Real-time clock (most significant byte)
+    24 = 0013			RTCLK1 = $0013  ; Real-time clock (middle significant byte)
+    25 = 0014			RTCLK2 = $0014  ; Real-time clock (least significant byte)
    385 25FF				icl 'dlist.asm'
 Source: dlist.asm
      1 				* --------------------------------------- *

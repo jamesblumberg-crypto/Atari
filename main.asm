@@ -20,7 +20,7 @@ map     			= $3000 ; Map
 pmg     			= $4000 ; Player Missle Data
 charset_dungeon_a 	= $5000 ; Main character set
 charset_outdoor_a 	= $6000 ; Character Set for outdoors
-status_line 		= $6400 ; Status line character set
+status_line		 	= $6400 ; Status line
 monsters_a          = $7000 ; Monster characters
 screen  			= $8000 ; Screen buffer
 
@@ -40,8 +40,8 @@ left_tile	= $9c
 right_tile	= $9d
 on_tile		= $9e
 
-tmp_addr1	= $a0
-tmp_addr2	= $a2
+tmp_addr1 = $a0
+tmp_addr2 = $a2
 
 screen_char_width = 40
 screen_width = 19
@@ -104,7 +104,7 @@ move_up
 	delay #5
 	update_player_tiles()
 	jmp done
-
+	
 move_down
 	lda down_tile
 	cmp #55
@@ -125,7 +125,7 @@ move_left
 
 move_right
 	lda right_tile
-	cmp #55
+	cmp #55  
 	bcc done
 	inc player_x
 	delay #5
@@ -251,7 +251,7 @@ loop
 .macro blit_circle_line body, map_space, screen_space
 	mwa map_ptr tmp_addr1
 	mwa screen_ptr tmp_addr2
-	
+
 	adw map_ptr #:map_space
 	adw screen_ptr #:screen_space
 	ldx #:body
@@ -299,85 +299,85 @@ loop
 
 	adbw map_ptr player_x
 
-	; get tiles player on
+	; Get the tile the player is standing on
 	ldy #0
 	lda (map_ptr),y
 	sta on_tile
 
-	; get tile left of player
+	; Get the tile to the left of the player
 	dec16 map_ptr
 	lda (map_ptr),y
 	sta left_tile
 
-	; get tile right of player
+	; Get the tile to the right of the player
 	inc16 map_ptr
 	inc16 map_ptr
 	lda (map_ptr),y
 	sta right_tile
 
-	; get tile above player
+	; Get the tile above the player
 	dec16 map_ptr
 	sbw map_ptr #map_width
 	lda (map_ptr),y
 	sta up_tile
 
-	; get tile below player
+	; Get the tile below the player
 	adw map_ptr #(map_width * 2)
 	lda (map_ptr),y
 	sta down_tile
 
 	rts
 	.endp
-
+		
 .proc blit_screen
 	map_offset()
 
 	ldy #0
-	; Line 1 (Blank)
+	; Line #1 
 	adw screen_ptr #screen_char_width
 	adw map_ptr #map_width
 	blit_circle_line 5, 3, 7
 
-	; Line 2
+	; Line #2
 	adw screen_ptr #screen_char_width
 	adw map_ptr #map_width
 	blit_circle_line 7, 2, 5
 
-	; Line 3
+	; Line #3
 	adw screen_ptr #screen_char_width
 	adw map_ptr #map_width
 	blit_circle_line 9, 1, 3
 
-	; Line 4
+	; Line #4
 	adw screen_ptr #screen_char_width
 	adw map_ptr #map_width
 	blit_circle_line 9, 1, 3
 
-	; Line 5
+	; Line #5
 	adw screen_ptr #screen_char_width
 	adw map_ptr #map_width
 	blit_circle_line 9, 1, 3
 
-	; Line 6
+	; Line #6
 	adw screen_ptr #screen_char_width
 	adw map_ptr #map_width
 	blit_circle_line 9, 1, 3
 
-	; Line 7
+	; Line #7
 	adw screen_ptr #screen_char_width
 	adw map_ptr #map_width
 	blit_circle_line 9, 1, 3
 
-	; Line 8
+	; Line #8
 	adw screen_ptr #screen_char_width
 	adw map_ptr #map_width
 	blit_circle_line 7, 2, 5
 
-	; Line 9 
+	; Line #9
 	adw screen_ptr #screen_char_width
 	adw map_ptr #map_width
 	blit_circle_line 5, 3, 7
-
+	
 	rts
 .endp
 
