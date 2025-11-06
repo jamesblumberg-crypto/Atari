@@ -1,0 +1,32 @@
+mads 2.1.7
+Source: hardware.asm
+     1 = 0230			SDLSTL = $0230  ; Display list starting address
+     2 = 02F4			CHBAS  = $02f4  ; CHaracter BAse Register (Shadow)
+     3 = D409			CHBASE = $D409  ; CHaracter BAse Register (Hardware)
+     4 = 02C4			COLOR0 = $02c4	; Color for %01
+     5 = 02C5			COLOR1 = $02c5  ; Color for %10
+     6 = 02C6			COLOR2 = $02c6  ; Color for %11 (normal)
+     7 = 02C7			COLOR3 = $02c7  ; Color for %11 (inverse)
+     8 = 02C8			COLOR4 = $02c8  ; Color for %00 (background)
+     9 = 02C0			PCOLR0 = $2C0 	; Color for Player-Missile 0
+    10 = 02C1			PCOLR1 = $2C1 	; Color for Player-Missile 1
+    11 = 02C2			PCOLR2 = $2C2 	; Color for Player-Missile 2
+    12 = 02C3			PCOLR3 = $2C3 	; Color for Player-Missile 3
+    13 = D01D			GRACTL = $D01D  ; Enable/disable PMG
+    14 = D407			PMBASE = $D407  ; Player Missile Graphics Base address
+    15 = 026F			GRPRIOR = $26F  ; Player-Missile Priority
+    16 = 022F			SDMCTL = $22F   ; PM Resolution 46 ($2E) = double line resolution
+    17 = D000			HPOSP0 = $D000  ; Horizontal position of player 0
+    18 = D001			HPOSP1 = $D001  ; Horizontal position of player 1
+    19 = D002			HPOSP2 = $D002  ; Horizontal position of player 2
+    20 = D003			HPOSP3 = $D003  ; Horizontal position of player 3
+    21 = 0278			STICK0 = $0278  ; Joystick 0
+    22 = 0284			STRIG0 = $0284  ; Trigger 0
+    23 = 0012			RTCLOK = $0012  ; Real-time clock
+    24 = 0012			RTCLK0 = $0012  ; Real-time clock (most significant byte)
+    25 = 0013			RTCLK1 = $0013  ; Real-time clock (middle significant byte)
+    26 = 0014			RTCLK2 = $0014  ; Real-time clock (least significant byte)
+    27
+    28 = D40E			NMIEN  = $D40E  ; NMI Enable Register
+    29 = 0200			VDSLST = $0200  ; Vertical Display List Interrupt Start Address
+    30 = D40A			WSYNC  = $d40a  ; Wait for Sync
