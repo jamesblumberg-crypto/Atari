@@ -2,7 +2,7 @@ mads 2.1.7
 Source: hardware.asm
      1 = 0230			SDLSTL = $0230  ; Display list starting address
      2 = 02F4			CHBAS  = $02f4  ; CHaracter BAse Register (Shadow)
-     3 = D409			CHBASE = $D409  ; CHaracter BAse Register (Hardware)
+     3 = D409			CHBASE = $d409  ; CHaracter BAse Register
      4 = 02C4			COLOR0 = $02c4	; Color for %01
      5 = 02C5			COLOR1 = $02c5  ; Color for %10
      6 = 02C6			COLOR2 = $02c6  ; Color for %11 (normal)
@@ -27,6 +27,6 @@ Source: hardware.asm
     25 = 0013			RTCLK1 = $0013  ; Real-time clock (middle significant byte)
     26 = 0014			RTCLK2 = $0014  ; Real-time clock (least significant byte)
     27
-    28 = D40E			NMIEN  = $D40E  ; NMI Enable Register
-    29 = 0200			VDSLST = $0200  ; Vertical Display List Interrupt Start Address
-    30 = D40A			WSYNC  = $d40a  ; Wait for Sync
+    28 = D40E			NMIEN  = $d40e
+    29 = 0200			VDSLST = $0200
+    30 = D40A			WSYNC  = $d40a

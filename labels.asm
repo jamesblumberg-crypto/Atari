@@ -1,3 +1,14 @@
+DOOR_NORTH              = %1000
+DOOR_SOUTH              = %0100
+DOOR_WEST               = %0010
+DOOR_EAST               = %0001
+
+MAP_WALL                = 1
+MAP_FLOOR               = 127
+MAP_UP                  = 120
+MAP_DOWN                = 119
+MAP_DOOR                = 122
+
 UI_VERT_BORDER          = 1
 UI_HORIZ_BORDER         = 4
 UI_TOP_TEE              = 10
