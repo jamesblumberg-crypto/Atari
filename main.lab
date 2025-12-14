@@ -20,1471 +20,1549 @@ Source: main.asm
     18
     19 				; RAM: $2000-7FFF - 24K
     20 = 2000			map     			= $2000 ; Map (16K+)
-    21 = 7000			screen  			= $7000 ; Screen buffer (480 bytes)
-    22 = 71E0			status_line			= $71e0 ; Status Line (40 bytes)
-    23 = 7208			tmp_room			= $7208 ; Temp room (225 bytes)
-    24 = 72E9			room_doors			= $72e9 ; Room doors (64 bytes)
-    25
-    26 				; free
-    27 = 7400			pmg     			= $7400 ; Player Missle Data (1K)
+    21 				; free (almost 4K)
+    22 = 7000			screen  			= $7000 ; Screen buffer (480 bytes)
+    23 = 71E0			status_line			= $71e0 ; Status Line (40 bytes)
+    24 = 7208			tmp_room			= $7208 ; Temp room (225 bytes)
+    25 = 72E9			placed_doors		= $72e9 ; Doors that have been placed (64 bytes)
+    26 = 7329			avail_doors			= $7329	; Doors that are available (64 bytes)
+    27 = 7369			occupied_rooms		= $7369 ; Rooms that are occupied (8 bytes)
     28 				; free
-    29
-    30 				; 16K Cartridge ROM: $8000-BFFF - 16K
-    31 				; 8000-8FFF
-    32 = 8000			charset_dungeon_a 	= $8000 ; Main character set (1K)
-    33 = 8400			charset_dungeon_b 	= $8400 ; Main character set (1K)
-    34 = 8800			charset_outdoor_a 	= $8800 ; Character Set for outdoors (1K)
-    35 = 8C00			charset_outdoor_b 	= $8c00 ; Character Set for outdoors (1K)
-    36
-    37 				; 9000-9FFF
-    38 = 9000			monsters_a          = $9000 ; Monster characters (1K)
-    39 = 9400			monsters_b          = $9400 ; Monster characters (1K)
-    40 				; free
-    41 = 9800			dlist				= $9800
-    42 = A000			room_types			= $a000 ; 3600 Bytes
-    43 = AE10			room_positions		= $ae10	; 128 bytes
-    44 = AE90			room_pos_doors		= $ae90 ; 64 bytes
-    45 = AED0			room_type_doors		= $aed0 ; 16 bytes
-    46
-    47 				; free
-    48
-    49 				; B000-BFFF (Code)
+    29 = 7400			pmg     			= $7400 ; Player Missle Data (1K)
+    30 = 7800			cur_charset_a		= $7800 ; Currently copied character set (A) (1K)
+    31 = 7C00			cur_charset_b		= $7c00 ; Currently copied character set (B) (1K)
+    32 				; free
+    33
+    34 				; 16K Cartridge ROM: $8000-BFFF - 16K
+    35 				; 8000-8FFF
+    36 = 8000			charset_dungeon_a 	= $8000 ; Main character set (1K)
+    37 = 8400			charset_dungeon_b 	= $8400 ; Main character set (1K)
+    38 = 8800			charset_outdoor_a 	= $8800 ; Character Set for outdoors (1K)
+    39 = 8C00			charset_outdoor_b 	= $8c00 ; Character Set for outdoors (1K)
+    40
+    41 				; 9000-9FFF
+    42 = 9000			monsters_a          = $9000 ; Monster characters (1K)
+    43 = 9400			monsters_b          = $9400 ; Monster characters (1K)
+    44 				; free
+    45 = 9800			dlist				= $9800
+    46 = A000			room_types			= $a000 ; 3600 Bytes
+    47 = AE10			room_positions		= $ae10	; 128 bytes
+    48 = AE90			room_pos_doors		= $ae90 ; 64 bytes
+    49 = AED0			room_type_doors		= $aed0 ; 16 bytes
     50
-    51 = 0001			stick_up    = %0001
-    52 = 0002			stick_down  = %0010 
-    53 = 0004			stick_left  = %0100
-    54 = 0008			stick_right = %1000
-    55
-    56 = 0092			map_ptr 	= $92
-    57 = 0094			screen_ptr 	= $94
-    58 = 0096			player_x	= $96
-    59 = 0097			player_y	= $97
-    60 = 0098			tmp			= $98
-    61 = 009A			up_tile		= $9a
-    62 = 009B			down_tile	= $9b
-    63 = 009C			left_tile	= $9c
-    64 = 009D			right_tile	= $9d
-    65 = 009E			on_tile		= $9e
-    66
-    67 = 00A0			tmp_addr1	= $a0
-    68 = 00A2			tmp_addr2   = $a2
-    69
-    70 = 0028			screen_char_width = 40
-    71 = 0013			screen_width = 19
-    72 = 000B			screen_height = 11
-    73 = 0006			border				= 6
-    74 = 000F			room_width			= 15
-    75 = 000F			room_height			= 15
-    76 = 008B			map_width 			= room_width * 8 + 7 + border * 2
-    77 = 008B			map_height 			= room_height * 8 + 7 + border * 2
-    78
-    79 = 000B			playfield_width = 11
-    80 = 000B			playfield_height = 11
-    81
-    82 = 00A4			game_timer = $a4
-    83 = 000A			game_tick = 10
+    51 				; free
+    52
+    53 				; B000-BFFF (Code)
+    54
+    55 = 0001			stick_up    = %0001
+    56 = 0002			stick_down  = %0010 
+    57 = 0004			stick_left  = %0100
+    58 = 0008			stick_right = %1000
+    59
+    60 = 0092			map_ptr 	= $92
+    61 = 0094			screen_ptr 	= $94
+    62 = 0096			player_x	= $96
+    63 = 0097			player_y	= $97
+    64 = 0098			tmp			= $98
+    65 = 009A			up_tile		= $9a
+    66 = 009B			down_tile	= $9b
+    67 = 009C			left_tile	= $9c
+    68 = 009D			right_tile	= $9d
+    69 = 009E			on_tile		= $9e
+    70
+    71 = 00A0			tmp_addr1	= $a0
+    72 = 00A2			tmp_addr2   = $a2
+    73
+    74 = 0028			screen_char_width = 40
+    75 = 0013			screen_width = 19
+    76 = 000B			screen_height = 11
+    77 = 0006			border				= 6
+    78 = 000F			room_width			= 15
+    79 = 000F			room_height			= 15
+    80 = 008B			map_width 			= room_width * 8 + 7 + border * 2
+    81 = 008B			map_height 			= room_height * 8 + 7 + border * 2
+    82 = 0008			map_room_columns	= 8
+    83 = 0008			map_room_rows		= 8
     84
-    85 = 00A5			status_ptr = $a5
-    86
-    87 = 00A7			rand				= $a7
-    88 = 00A8			room_type			= $a8
-    89 = 00A9			room_pos			= $a9
-    90 = 00AA			room_x				= $aa
-    91 = 00AB			room_y				= $ab
-    92 = 00AC			room_ptr			= $ac ; 16 bit
-    93 = 00AE			tmp_x				= $ae
-    94 = 00AF			tmp_y				= $af
-    95
-    96 				; Colors
-    97 = 000A			white = $0a
-    98 = 0032			red = $32
-    99 = 0000			black = $00
-   100 = 002C			peach = $2c
-   101 = 0092			blue = $92
-   102 = 002A			gold = $2a
-   103
-   104 FFFF> B000-B979> A9 10		lda #16
-   105 B002 85 96			sta player_x
-   106 B004 85 97			sta player_y
-   107
-   108 B006 A9 7B 85 A7			mva #123 rand
-   109
-   110 B00A 20 A9 B0			setup_colors()
-   111 B00D A9 88 8D F4 02		mva #>charset_outdoor_a CHBAS
-   112 B012 20 D7 B0			clear_pmg()
-   113 B015 20 EB B0			load_pmg()
-   114 B018 20 0B B1			setup_pmg()
-   115
-   116 B01B 20 7F 98			new_map()
-   117 B01E 20 00 98			setup_screen()
-   118 B021 20 6B B1			update_player_tiles()
-   119 B024 20 D9 B1			display_borders()
-   120 B027 20 5C B2			update_ui()
-   121 B02A				reset_timer
-Macro: RESET_TIMER [Source: main.asm]
-     1 B02A A5 14			lda RTCLK2
-     2 B02C 18 69 0A			add #game_tick
-     3 B02F 85 A4			sta game_timer
-Source: main.asm
-   122
-   123 B031			game
-   124 B031 A5 14			lda RTCLK2
-   125 B033 C5 A4			cmp game_timer
-   126 B035 D0 FA			bne game
+    85 = 000B			playfield_width = 11
+    86 = 000B			playfield_height = 11
+    87
+    88 = 00A4			game_timer = $a4
+    89 = 000A			game_tick = 10
+    90
+    91 = 00A5			status_ptr = $a5
+    92
+    93 = 00A7			rand				= $a7
+    94 = 00A8			room_type			= $a8
+    95 = 00A9			room_pos			= $a9
+    96 = 00AA			room_x				= $aa
+    97 = 00AB			room_y				= $ab
+    98 = 00AC			room_ptr			= $ac ; 16 bit
+    99 = 00AE			tmp_x				= $ae
+   100 = 00AF			tmp_y				= $af
+   101 = 00B0			num_rooms			= $b0
+   102 = 00B1			max_rooms			= $b1
+   103 = 00B2			placed_doors_ptr	= $b2 ; 16 bit
+   104 = 00B4			avail_doors_ptr		= $b4 ; 16 bit
+   105 = 00B6			room_col			= $b6
+   106 = 00B7			room_row			= $b7
+   107 = 00B8			pow2_ptr			= $b8 ; 16 bit
+   108 = 00BA			occupied_rooms_ptr  = $ba ; 16 bit
+   109 = 00BC			doors				= $bc
+   110 = 00BD			tmp2				= $bd
+   111 = 00BE			rand16				= $be
+   112
+   113 				; Colors
+   114 = 000A			white = $0a
+   115 = 0032			red = $32
+   116 = 0000			black = $00
+   117 = 002C			peach = $2c
+   118 = 0092			blue = $92
+   119 = 002A			gold = $2a
+   120
+   121 FFFF> B000-BA4F> A9 10		lda #16
+   122 B002 85 96			sta player_x
+   123 B004 85 97			sta player_y
+   124
+   125 B006 A9 7B 85 A7			mva #123 rand
+   126 B00A A9 C8 85 BE			mva #200 rand16
    127
-   128 B037 20 47 B0			read_joystick()
-   129 B03A				reset_timer
-Macro: RESET_TIMER [Source: main.asm]
-     1 B03A A5 14			lda RTCLK2
-     2 B03C 18 69 0A			add #game_tick
-     3 B03F 85 A4			sta game_timer
+   128 B00E A9 E0 85 B8 A9 AE + 	mwa #powers_of_two pow2_ptr
+   129 B016 A9 69 85 BA A9 73 + 	mwa #occupied_rooms occupied_rooms_ptr
+   130
+   131 B01E 20 1A B1			setup_colors()
+   132
+   133 B021				copy_data charset_dungeon_a cur_charset_a 4
+Macro: COPY_DATA [Source: macros.asm]
+     1 B021 A9 00 85 A0 A9 80 +     mwa #CHARSET_DUNGEON_A tmp_addr1
+     2 B029 A9 00 85 A2 A9 78 +     mwa #CUR_CHARSET_A tmp_addr2
+     4 B031 A0 00		    ldy #0
+     5 B033 A2 00		    ldx #0
+     6 B035			loop
+     7 B035 B1 A0		    lda (tmp_addr1), y
+     8 B037 91 A2		    sta (tmp_addr2), y
+     9 B039 C8			    iny
+    10 B03A D0 F9		    bne loop
+    11 B03C E6 A1		    inc tmp_addr1 + 1
+    12 B03E E6 A3		    inc tmp_addr2 + 1
+    13 B040 E8			    inx
+    14 B041 E0 04		    cpx #4
+    15 B043 D0 F0		    bne loop
 Source: main.asm
-   130 B041 20 3B B5			blit_screen()
-   131
-   132 B044 4C 31 B0			jmp game
-   133
-   134 				.macro reset_timer
-   135 					lda RTCLK2
-   136 					add #game_tick
-   137 					sta game_timer
-   138 					.endm
-   139
+   134 B045				copy_monsters 0 12
+Macro: COPY_MONSTERS [Source: macros.asm]
+     1 B045 A9 00 85 A0 A9 90 +     mwa #monsters_a tmp_addr1
+     2 B04D A9 00 85 A2 A9 78 +     mwa #cur_charset_a tmp_addr2
+     4 B055 18 A5 A2 69 B0 85 +     adw tmp_addr2 #(86 * 8) ; Monsters offset in the character set
+     6 B062 A9 00		    lda #0
+     7 B064 0A			    asl             ; Multiply by two because tiles are two chars wide
+     8 B065 A8			    tay
+    10 B066 A9 0C		    lda #12
+    11 B068 0A			    asl
+    12 B069 0A			    asl
+    13 B06A 0A			    asl
+    14 B06B 0A			    asl
+    15 B06C 85 98		    sta tmp
+    17 B06E			loop
+    18 B06E B1 A0		    lda (tmp_addr1), y
+    19 B070 91 A2		    sta (tmp_addr2), y
+    20 B072 C8			    iny
+    22 B073 C4 98		    cpy tmp
+    23 B075 D0 F7		    bne loop
+Source: main.asm
+   135
+   136 B077 A9 88 8D F4 02		mva #>charset_outdoor_a CHBAS
+   137 B07C 20 48 B1			clear_pmg()
+   138 B07F 20 5C B1			load_pmg()
+   139 B082 20 7C B1			setup_pmg()
    140
-   141 B047			.proc read_joystick
-   142 B047 AD 78 02			lda STICK0
-   143 B04A 29 01			and #stick_up
-   144 B04C F0 18			beq move_up
-   145
-   146 B04E AD 78 02			lda STICK0
-   147 B051 29 02			and #stick_down
-   148 B053 F0 1F			beq move_down
-   149
-   150 B055 AD 78 02			lda STICK0
-   151 B058 29 04			and #stick_left
-   152 B05A F0 26			beq move_left
+   141 B085 20 7F 98			new_map()
+   142 					place_monsters #255 #12
+   142 				 LDX# 255\ LDA# 12\ JSR PLACE_MONSTERS
+   142 B088 A2 FF		 LDX# 255
+   142 B08A A9 0C		 LDA# 12
+   142 B08C 20 F9 B9		 JSR PLACE_MONSTERS
+   143 B08F 20 00 98			setup_screen()
+   144 B092 20 DC B1			update_player_tiles()
+   145 B095 20 4A B2			display_borders()
+   146 B098 20 CD B2			update_ui()
+   147 B09B				reset_timer
+Macro: RESET_TIMER [Source: main.asm]
+     1 B09B A5 14			lda RTCLK2
+     2 B09D 18 69 0A			add #game_tick
+     3 B0A0 85 A4			sta game_timer
+Source: main.asm
+   148
+   149 B0A2			game
+   150 B0A2 A5 14			lda RTCLK2
+   151 B0A4 C5 A4			cmp game_timer
+   152 B0A6 D0 FA			bne game
    153
-   154 B05C AD 78 02			lda STICK0
-   155 B05F 29 08			and #stick_right
-   156 B061 F0 2D			beq move_right
+   154 B0A8 20 B8 B0			read_joystick()
+   155 B0AB				reset_timer
+Macro: RESET_TIMER [Source: main.asm]
+     1 B0AB A5 14			lda RTCLK2
+     2 B0AD 18 69 0A			add #game_tick
+     3 B0B0 85 A4			sta game_timer
+Source: main.asm
+   156 B0B2 20 AC B5			blit_screen()
    157
-   158 B063 4C 9E B0			jmp done
+   158 B0B5 4C A2 B0			jmp game
    159
-   160 B066			move_up
-   161 B066 A5 9A			lda up_tile
-   162 B068 C9 37			cmp #55
-   163 B06A 90 32			bcc done
-   164 B06C C6 97			dec player_y
-   165 B06E 20 6B B1			update_player_tiles()
-   166 B071 4C 9E B0			jmp done
-   167
-   168 B074			move_down
-   169 B074 A5 9B			lda down_tile
-   170 B076 C9 37			cmp #55
-   171 B078 90 24			bcc done
-   172 B07A E6 97			inc player_y
-   173 B07C 20 6B B1			update_player_tiles()
-   174 B07F 4C 9E B0			jmp done
+   160 				.macro reset_timer
+   161 					lda RTCLK2
+   162 					add #game_tick
+   163 					sta game_timer
+   164 					.endm
+   165
+   166
+   167 B0B8			.proc read_joystick
+   168 B0B8 AD 78 02			lda STICK0
+   169 B0BB 29 01			and #stick_up
+   170 B0BD F0 18			beq move_up
+   171
+   172 B0BF AD 78 02			lda STICK0
+   173 B0C2 29 02			and #stick_down
+   174 B0C4 F0 1F			beq move_down
    175
-   176 B082			move_left
-   177 B082 A5 9C			lda left_tile
-   178 B084 C9 37			cmp #55
-   179 B086 90 16			bcc done
-   180 B088 C6 96			dec player_x
-   181 B08A 20 6B B1			update_player_tiles()
-   182 B08D 4C 9E B0			jmp done
+   176 B0C6 AD 78 02			lda STICK0
+   177 B0C9 29 04			and #stick_left
+   178 B0CB F0 26			beq move_left
+   179
+   180 B0CD AD 78 02			lda STICK0
+   181 B0D0 29 08			and #stick_right
+   182 B0D2 F0 2D			beq move_right
    183
-   184 B090			move_right
-   185 B090 A5 9D			lda right_tile
-   186 B092 C9 37			cmp #55
-   187 B094 90 08			bcc done
-   188 B096 E6 96			inc player_x
-   189 B098 20 6B B1			update_player_tiles()
-   190 B09B 4C 9E B0			jmp done
-   191
-   192 B09E			done
-   193 B09E 60				rts
-   194 					.endp
-   195
-   196 				* --------------------------------------- *
-   197 				* Proc: delay                             *
-   198 				* Uses Real-time clock to delay x/60 secs *
-   199 				* --------------------------------------- *
-   200 B09F			.proc delay (.byte x) .reg
-   201 B09F			start
-   202 B09F A5 14			lda RTCLK2
-   203 B0A1			wait
-   204 B0A1 C5 14			cmp RTCLK2
-   205 B0A3 F0 FC			beq wait
-   206
-   207 B0A5 CA				dex
-   208 B0A6 D0 F7			bne start
+   184 B0D4 4C 0F B1			jmp done
+   185
+   186 B0D7			move_up
+   187 B0D7 A5 9A			lda up_tile
+   188 B0D9 C9 37			cmp #55
+   189 B0DB 90 32			bcc done
+   190 B0DD C6 97			dec player_y
+   191 B0DF 20 DC B1			update_player_tiles()
+   192 B0E2 4C 0F B1			jmp done
+   193
+   194 B0E5			move_down
+   195 B0E5 A5 9B			lda down_tile
+   196 B0E7 C9 37			cmp #55
+   197 B0E9 90 24			bcc done
+   198 B0EB E6 97			inc player_y
+   199 B0ED 20 DC B1			update_player_tiles()
+   200 B0F0 4C 0F B1			jmp done
+   201
+   202 B0F3			move_left
+   203 B0F3 A5 9C			lda left_tile
+   204 B0F5 C9 37			cmp #55
+   205 B0F7 90 16			bcc done
+   206 B0F9 C6 96			dec player_x
+   207 B0FB 20 DC B1			update_player_tiles()
+   208 B0FE 4C 0F B1			jmp done
    209
-   210 B0A8 60				rts
-   211 					.endp
-   212
-   213 				* --------------------------------------- *
-   214 				* Proc: setup_colors                      *
-   215 				* Sets up colors                          *
-   216 				* --------------------------------------- *
-   217 B0A9			.proc setup_colors
-   218 					; Character Set Colors
-   219 B0A9 A9 0A 8D C4 02		mva #white COLOR0 	; %01
-   220 B0AE A9 32 8D C5 02		mva #red COLOR1  	; %10
-   221 B0B3 A9 92 8D C6 02		mva #blue COLOR2	; %11
-   222 B0B8 A9 2A 8D C7 02		mva #gold COLOR3    ; %11 (inverse)
-   223 B0BD A9 00 8D C8 02		mva #black COLOR4   ; %00
-   224
-   225 					; Player-Missile Colors
-   226 B0C2 A9 32 8D C0 02		mva #red PCOLR0
-   227 B0C7 A9 2C 8D C1 02		mva #peach PCOLR1
-   228 B0CC A9 92 8D C2 02		mva #blue PCOLR2
-   229 B0D1 A9 00 8D C3 02		mva #black PCOLR3
-   230
-   231 B0D6 60				rts
-   232 					.endp
-   233
-   234 				* --------------------------------------- *
-   235 				* Proc: clear_pmg                         *
-   236 				* Clears memory for Player-Missile Gfx    *
-   237 				* --------------------------------------- *
-   238 B0D7			.proc clear_pmg
-   239 = 7600			pmg_p0 = pmg + $200
-   240 = 7680			pmg_p1 = pmg + $280
-   241 = 7700			pmg_p2 = pmg + $300
-   242 = 7780			pmg_p3 = pmg + $380
-   243
-   244 B0D7 A2 80			ldx #$80
-   245 B0D9 A9 00			lda #0
-   246 B0DB			loop
-   247 B0DB CA				dex
-   248 B0DC 9D 00 76			sta pmg_p0,x
-   249 B0DF 9D 80 76			sta pmg_p1,x
-   250 B0E2 9D 00 77			sta pmg_p2,x
-   251 B0E5 9D 80 77			sta pmg_p3,x
-   252 B0E8 D0 F1			bne loop
-   253 B0EA 60				rts
-   254 					.endp
-   255
-   256 				* --------------------------------------- *
-   257 				* Proc: load_pmg                          *
-   258 				* Load PMG Graphics                       *
-   259 				* --------------------------------------- *
-   260 B0EB			.proc load_pmg
-   261 = 7600			pmg_p0 = pmg + $200
-   262 = 7680			pmg_p1 = pmg + $280
-   263 = 7700			pmg_p2 = pmg + $300
-   264 = 7780			pmg_p3 = pmg + $380
-   265
-   266 B0EB A2 00			ldx #0
-   267 B0ED			loop
-   268 B0ED BD 5F 98 9D 3C 76		mva pmgdata,x pmg_p0+60,x
-   269 B0F3 BD 67 98 9D BC 76		mva pmgdata+8,x pmg_p1+60,x
-   270 B0F9 BD 6F 98 9D 3C 77		mva pmgdata+16,x pmg_p2+60,x
-   271 B0FF BD 77 98 9D BC 77		mva pmgdata+24,x pmg_p3+60,x
-   272 B105 E8				inx
-   273 B106 E0 08			cpx #8
-   274 B108 D0 E3			bne loop
-   275 B10A 60				rts
-   276 					.endp
-   277
-   278 				* --------------------------------------- *
-   279 				* Proc: setup_pmg                         *
-   280 				* Sets up Player-Missile Graphics System  *
-   281 				* --------------------------------------- *
-   282 B10B			.proc setup_pmg
-   283 B10B A9 74 8D 07 D4		mva #>pmg PMBASE
-   284 B110 A9 2E 8D 2F 02		mva #46 SDMCTL ; Single Line resolution
-   285 B115 A9 03 8D 1D D0		mva #3 GRACTL  ; Enable PMG
-   286 B11A A9 01 8D 6F 02		mva #1 GRPRIOR ; Give players priority
-   287 B11F A9 5C			lda #92
-   288 B121 8D 00 D0			sta HPOSP0
-   289 B124 8D 01 D0			sta HPOSP1
-   290 B127 8D 02 D0			sta HPOSP2
-   291 B12A 8D 03 D0			sta HPOSP3
-   292 B12D 60				rts
-   293 					.endp
-   294
-   295 				.macro blit_tile
-   296 					lda (map_ptr),y			; Load the tile from the map
-   297 					asl						; Multiply by two to get left character
-   298 					sta (screen_ptr),y		; Store the left character
-   299 					inc16 screen_ptr		; Advance the screen pointer
-   300 					add #1					; Add one to get right character
-   301 					sta (screen_ptr),y		; Store the right character
-   302 					adw map_ptr #1			; Advance the map pointer
-   303 					adw screen_ptr #1		; Advance the screen pointer	
-   304 					.endm
-   305
-   306 				.macro blit_circle_line body, map_space, screen_space
-   307 					mwa map_ptr tmp_addr1
-   308 					mwa screen_ptr tmp_addr2
-   309 					
-   310 					adw map_ptr #:map_space
-   311 					adw screen_ptr #:screen_space
-   312 					ldx #:body
-   313 				loop
-   314 					blit_tile()
-   315 					dex
-   316 					bne loop
-   317 				
-   318 					mwa tmp_addr1 map_ptr
-   319 					mwa tmp_addr2 screen_ptr
-   320 					.endm
-   321
-   322 B12E			.proc map_offset
-   323 B12E A9 00 85 92 A9 20 + 	mwa #map map_ptr
-   324 B136 A9 00 85 94 A9 70 + 	mwa #screen screen_ptr
-   325
-   326 					; Shift vertically for player's y position
-   327 B13E A5 97			lda player_y
-   328 B140 38 E9 05			sub #(playfield_height / 2)
-   329 B143 A8				tay
-   330 B144			loop
-   331 B144 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
-   332 B14F 88				dey
-   333 B150 D0 F2			bne loop
-   334
-   335 					; Shift horizontally for player's x position
-   336 B152 A5 96			lda player_x
-   337 B154 38 E9 05			sub #(playfield_width / 2)
-   338 B157 85 98			sta tmp
-   339 B159 A9 00			lda #0
-   340 B15B 85 99			sta tmp + 1
-   341 B15D 18 A5 92 65 98 85 + 	adw map_ptr tmp
-   342
-   343 B16A 60				rts
-   344 					.endp
-   345
-   346 B16B			.proc update_player_tiles
-   347 B16B A9 00 85 92 A9 20 + 	mwa #map map_ptr
-   348
-   349 B173 A4 97			ldy player_y
-   350 B175			loop
-   351 B175 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
-   352 B180 88				dey
-   353 B181 D0 F2			bne loop
-   354
-   355 B183				adbw map_ptr player_x
+   210 B101			move_right
+   211 B101 A5 9D			lda right_tile
+   212 B103 C9 37			cmp #55
+   213 B105 90 08			bcc done
+   214 B107 E6 96			inc player_x
+   215 B109 20 DC B1			update_player_tiles()
+   216 B10C 4C 0F B1			jmp done
+   217
+   218 B10F			done
+   219 B10F 60				rts
+   220 					.endp
+   221
+   222 				* --------------------------------------- *
+   223 				* Proc: delay                             *
+   224 				* Uses Real-time clock to delay x/60 secs *
+   225 				* --------------------------------------- *
+   226 B110			.proc delay (.byte x) .reg
+   227 B110			start
+   228 B110 A5 14			lda RTCLK2
+   229 B112			wait
+   230 B112 C5 14			cmp RTCLK2
+   231 B114 F0 FC			beq wait
+   232
+   233 B116 CA				dex
+   234 B117 D0 F7			bne start
+   235
+   236 B119 60				rts
+   237 					.endp
+   238
+   239 				* --------------------------------------- *
+   240 				* Proc: setup_colors                      *
+   241 				* Sets up colors                          *
+   242 				* --------------------------------------- *
+   243 B11A			.proc setup_colors
+   244 					; Character Set Colors
+   245 B11A A9 0A 8D C4 02		mva #white COLOR0 	; %01
+   246 B11F A9 32 8D C5 02		mva #red COLOR1  	; %10
+   247 B124 A9 92 8D C6 02		mva #blue COLOR2	; %11
+   248 B129 A9 2A 8D C7 02		mva #gold COLOR3    ; %11 (inverse)
+   249 B12E A9 00 8D C8 02		mva #black COLOR4   ; %00
+   250
+   251 					; Player-Missile Colors
+   252 B133 A9 32 8D C0 02		mva #red PCOLR0
+   253 B138 A9 2C 8D C1 02		mva #peach PCOLR1
+   254 B13D A9 92 8D C2 02		mva #blue PCOLR2
+   255 B142 A9 00 8D C3 02		mva #black PCOLR3
+   256
+   257 B147 60				rts
+   258 					.endp
+   259
+   260 				* --------------------------------------- *
+   261 				* Proc: clear_pmg                         *
+   262 				* Clears memory for Player-Missile Gfx    *
+   263 				* --------------------------------------- *
+   264 B148			.proc clear_pmg
+   265 = 7600			pmg_p0 = pmg + $200
+   266 = 7680			pmg_p1 = pmg + $280
+   267 = 7700			pmg_p2 = pmg + $300
+   268 = 7780			pmg_p3 = pmg + $380
+   269
+   270 B148 A2 80			ldx #$80
+   271 B14A A9 00			lda #0
+   272 B14C			loop
+   273 B14C CA				dex
+   274 B14D 9D 00 76			sta pmg_p0,x
+   275 B150 9D 80 76			sta pmg_p1,x
+   276 B153 9D 00 77			sta pmg_p2,x
+   277 B156 9D 80 77			sta pmg_p3,x
+   278 B159 D0 F1			bne loop
+   279 B15B 60				rts
+   280 					.endp
+   281
+   282 				* --------------------------------------- *
+   283 				* Proc: load_pmg                          *
+   284 				* Load PMG Graphics                       *
+   285 				* --------------------------------------- *
+   286 B15C			.proc load_pmg
+   287 = 7600			pmg_p0 = pmg + $200
+   288 = 7680			pmg_p1 = pmg + $280
+   289 = 7700			pmg_p2 = pmg + $300
+   290 = 7780			pmg_p3 = pmg + $380
+   291
+   292 B15C A2 00			ldx #0
+   293 B15E			loop
+   294 B15E BD 5F 98 9D 3C 76		mva pmgdata,x pmg_p0+60,x
+   295 B164 BD 67 98 9D BC 76		mva pmgdata+8,x pmg_p1+60,x
+   296 B16A BD 6F 98 9D 3C 77		mva pmgdata+16,x pmg_p2+60,x
+   297 B170 BD 77 98 9D BC 77		mva pmgdata+24,x pmg_p3+60,x
+   298 B176 E8				inx
+   299 B177 E0 08			cpx #8
+   300 B179 D0 E3			bne loop
+   301 B17B 60				rts
+   302 					.endp
+   303
+   304 				* --------------------------------------- *
+   305 				* Proc: setup_pmg                         *
+   306 				* Sets up Player-Missile Graphics System  *
+   307 				* --------------------------------------- *
+   308 B17C			.proc setup_pmg
+   309 B17C A9 74 8D 07 D4		mva #>pmg PMBASE
+   310 B181 A9 2E 8D 2F 02		mva #46 SDMCTL ; Single Line resolution
+   311 B186 A9 03 8D 1D D0		mva #3 GRACTL  ; Enable PMG
+   312 B18B A9 01 8D 6F 02		mva #1 GRPRIOR ; Give players priority
+   313 B190 A9 5C			lda #92
+   314 B192 8D 00 D0			sta HPOSP0
+   315 B195 8D 01 D0			sta HPOSP1
+   316 B198 8D 02 D0			sta HPOSP2
+   317 B19B 8D 03 D0			sta HPOSP3
+   318 B19E 60				rts
+   319 					.endp
+   320
+   321 				.macro blit_tile
+   322 					lda (map_ptr),y			; Load the tile from the map
+   323 					asl						; Multiply by two to get left character
+   324 					sta (screen_ptr),y		; Store the left character
+   325 					inc16 screen_ptr		; Advance the screen pointer
+   326 					add #1					; Add one to get right character
+   327 					sta (screen_ptr),y		; Store the right character
+   328 					adw map_ptr #1			; Advance the map pointer
+   329 					adw screen_ptr #1		; Advance the screen pointer	
+   330 					.endm
+   331
+   332 				.macro blit_circle_line body, map_space, screen_space
+   333 					mwa map_ptr tmp_addr1
+   334 					mwa screen_ptr tmp_addr2
+   335 					
+   336 					adw map_ptr #:map_space
+   337 					adw screen_ptr #:screen_space
+   338 					ldx #:body
+   339 				loop
+   340 					blit_tile()
+   341 					dex
+   342 					bne loop
+   343 				
+   344 					mwa tmp_addr1 map_ptr
+   345 					mwa tmp_addr2 screen_ptr
+   346 					.endm
+   347
+   348 B19F			.proc map_offset
+   349 B19F A9 00 85 92 A9 20 + 	mwa #map map_ptr
+   350 B1A7 A9 00 85 94 A9 70 + 	mwa #screen screen_ptr
+   351
+   352 					; Shift vertically for player's y position
+   353 B1AF A5 97			lda player_y
+   354 B1B1 38 E9 05			sub #(playfield_height / 2)
+   355 B1B4 A8				tay
+   356 B1B5			loop
+   357 B1B5 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
+   358 B1C0 88				dey
+   359 B1C1 D0 F2			bne loop
+   360
+   361 					; Shift horizontally for player's x position
+   362 B1C3 A5 96			lda player_x
+   363 B1C5 38 E9 05			sub #(playfield_width / 2)
+   364 B1C8 85 98			sta tmp
+   365 B1CA A9 00			lda #0
+   366 B1CC 85 99			sta tmp + 1
+   367 B1CE 18 A5 92 65 98 85 + 	adw map_ptr tmp
+   368
+   369 B1DB 60				rts
+   370 					.endp
+   371
+   372 B1DC			.proc update_player_tiles
+   373 B1DC A9 00 85 92 A9 20 + 	mwa #map map_ptr
+   374
+   375 B1E4 A4 97			ldy player_y
+   376 B1E6			loop
+   377 B1E6 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
+   378 B1F1 88				dey
+   379 B1F2 D0 F2			bne loop
+   380
+   381 B1F4				adbw map_ptr player_x
 Macro: ADBW [Source: macros.asm]
-     1 B183 A5 92		    lda MAP_PTR
-     2 B185 18 65 96		    add PLAYER_X
-     3 B188 85 92		    sta MAP_PTR
-     4 B18A 90 02		    bcc skip_carry
-     5 B18C E6 93		    inc MAP_PTR + 1
-     6 B18E			skip_carry
+     1 B1F4 A5 92		    lda MAP_PTR
+     2 B1F6 18 65 96		    add PLAYER_X
+     3 B1F9 85 92		    sta MAP_PTR
+     4 B1FB 90 02		    bcc skip_carry
+     5 B1FD E6 93		    inc MAP_PTR + 1
+     6 B1FF			skip_carry
 Source: main.asm
-   356
-   357 					; Get the tile the player is on
-   358 B18E A0 00			ldy #0
-   359 B190 B1 92			lda (map_ptr),y
-   360 B192 85 9E			sta on_tile
-   361
-   362 					; Get the tile to the left of the player
-   363 B194				dec16 map_ptr
+   382
+   383 					; Get the tile the player is on
+   384 B1FF A0 00			ldy #0
+   385 B201 B1 92			lda (map_ptr),y
+   386 B203 85 9E			sta on_tile
+   387
+   388 					; Get the tile to the left of the player
+   389 B205				dec16 map_ptr
 Macro: DEC16 [Source: macros.asm]
-     1 B194 A5 92		    lda MAP_PTR
-     2 B196 D0 02		    bne skip_borrow
-     3 B198 C6 93		    dec MAP_PTR + 1
-     4 B19A			skip_borrow
-     5 B19A C6 92		    dec MAP_PTR
+     1 B205 A5 92		    lda MAP_PTR
+     2 B207 D0 02		    bne skip_borrow
+     3 B209 C6 93		    dec MAP_PTR + 1
+     4 B20B			skip_borrow
+     5 B20B C6 92		    dec MAP_PTR
 Source: main.asm
-   364 B19C B1 92			lda (map_ptr),y
-   365 B19E 85 9C			sta left_tile
-   366
-   367 					; Get the tile to the right of the player
-   368 B1A0				inc16 map_ptr
-Macro: INC16 [Source: macros.asm]
-     1 B1A0 E6 92		    inc MAP_PTR
-     2 B1A2 D0 02		    bne skip_carry
-     3 B1A4 E6 93		    inc MAP_PTR + 1
-     4 B1A6			skip_carry
-Source: main.asm
-   369 B1A6				inc16 map_ptr
-Macro: INC16 [Source: macros.asm]
-     1 B1A6 E6 92		    inc MAP_PTR
-     2 B1A8 D0 02		    bne skip_carry
-     3 B1AA E6 93		    inc MAP_PTR + 1
-     4 B1AC			skip_carry
-Source: main.asm
-   370 B1AC B1 92			lda (map_ptr),y
-   371 B1AE 85 9D			sta right_tile
-   372
-   373 					; Get the tile above the player
-   374 B1B0				dec16 map_ptr
-Macro: DEC16 [Source: macros.asm]
-     1 B1B0 A5 92		    lda MAP_PTR
-     2 B1B2 D0 02		    bne skip_borrow
-     3 B1B4 C6 93		    dec MAP_PTR + 1
-     4 B1B6			skip_borrow
-     5 B1B6 C6 92		    dec MAP_PTR
-Source: main.asm
-   375 B1B8 38 A5 92 E9 8B 85 + 	sbw map_ptr #map_width
-   376 B1C3 B1 92			lda (map_ptr),y
-   377 B1C5 85 9A			sta up_tile
-   378
-   379 					; Get the tile below the player
-   380 B1C7 18 A5 92 69 16 85 + 	adw map_ptr #(map_width * 2)
-   381 B1D4 B1 92			lda (map_ptr),y
-   382 B1D6 85 9B			sta down_tile
-   383
-   384 B1D8 60				rts
-   385 					.endp
-   386
-   387 				.macro blit_char char addr pos
-   388 					lda :char
-   389 					ldy :pos
-   390 					sta (:addr),y
-   391 					.endm
+   390 B20D B1 92			lda (map_ptr),y
+   391 B20F 85 9C			sta left_tile
    392
-   393 				.macro blit_char_row char addr start end
-   394 					lda :char
-   395 					ldy :start
-   396 				loop
-   397 					sta (:addr),y
-   398 					iny
-   399 					cpy :end
-   400 					bcc loop
-   401 					.endm
-   402
-   403 B1D9			.proc display_borders
-   404 B1D9 A9 E0 85 A5 A9 71 + 	mwa #status_line status_ptr
-   405 B1E1 A9 00 85 94 A9 70 + 	mwa #screen screen_ptr
-   406
-   407 B1E9				blit_char #UI_NW_BORDER status_ptr #0
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B1E9 A9 0C			lda #UI_NW_BORDER
-     2 B1EB A0 00			ldy #0
-     3 B1ED 91 A5			sta (STATUS_PTR),y
+   393 					; Get the tile to the right of the player
+   394 B211				inc16 map_ptr
+Macro: INC16 [Source: macros.asm]
+     1 B211 E6 92		    inc MAP_PTR
+     2 B213 D0 02		    bne skip_carry
+     3 B215 E6 93		    inc MAP_PTR + 1
+     4 B217			skip_carry
 Source: main.asm
-   408 B1EF				blit_char_row #UI_HORIZ_BORDER status_ptr #1 #23
+   395 B217				inc16 map_ptr
+Macro: INC16 [Source: macros.asm]
+     1 B217 E6 92		    inc MAP_PTR
+     2 B219 D0 02		    bne skip_carry
+     3 B21B E6 93		    inc MAP_PTR + 1
+     4 B21D			skip_carry
+Source: main.asm
+   396 B21D B1 92			lda (map_ptr),y
+   397 B21F 85 9D			sta right_tile
+   398
+   399 					; Get the tile above the player
+   400 B221				dec16 map_ptr
+Macro: DEC16 [Source: macros.asm]
+     1 B221 A5 92		    lda MAP_PTR
+     2 B223 D0 02		    bne skip_borrow
+     3 B225 C6 93		    dec MAP_PTR + 1
+     4 B227			skip_borrow
+     5 B227 C6 92		    dec MAP_PTR
+Source: main.asm
+   401 B229 38 A5 92 E9 8B 85 + 	sbw map_ptr #map_width
+   402 B234 B1 92			lda (map_ptr),y
+   403 B236 85 9A			sta up_tile
+   404
+   405 					; Get the tile below the player
+   406 B238 18 A5 92 69 16 85 + 	adw map_ptr #(map_width * 2)
+   407 B245 B1 92			lda (map_ptr),y
+   408 B247 85 9B			sta down_tile
+   409
+   410 B249 60				rts
+   411 					.endp
+   412
+   413 				.macro blit_char char addr pos
+   414 					lda :char
+   415 					ldy :pos
+   416 					sta (:addr),y
+   417 					.endm
+   418
+   419 				.macro blit_char_row char addr start end
+   420 					lda :char
+   421 					ldy :start
+   422 				loop
+   423 					sta (:addr),y
+   424 					iny
+   425 					cpy :end
+   426 					bcc loop
+   427 					.endm
+   428
+   429 B24A			.proc display_borders
+   430 B24A A9 E0 85 A5 A9 71 + 	mwa #status_line status_ptr
+   431 B252 A9 00 85 94 A9 70 + 	mwa #screen screen_ptr
+   432
+   433 B25A				blit_char #UI_NW_BORDER status_ptr #0
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B25A A9 0C			lda #UI_NW_BORDER
+     2 B25C A0 00			ldy #0
+     3 B25E 91 A5			sta (STATUS_PTR),y
+Source: main.asm
+   434 B260				blit_char_row #UI_HORIZ_BORDER status_ptr #1 #23
 Macro: BLIT_CHAR_ROW [Source: main.asm]
-     1 B1EF A9 04			lda #UI_HORIZ_BORDER
-     2 B1F1 A0 01			ldy #1
-     3 B1F3			loop
-     4 B1F3 91 A5			sta (STATUS_PTR),y
-     5 B1F5 C8				iny
-     6 B1F6 C0 17			cpy #23
-     7 B1F8 90 F9			bcc loop
+     1 B260 A9 04			lda #UI_HORIZ_BORDER
+     2 B262 A0 01			ldy #1
+     3 B264			loop
+     4 B264 91 A5			sta (STATUS_PTR),y
+     5 B266 C8				iny
+     6 B267 C0 17			cpy #23
+     7 B269 90 F9			bcc loop
 Source: main.asm
-   409 B1FA				blit_char #UI_TOP_TEE status_ptr #23
+   435 B26B				blit_char #UI_TOP_TEE status_ptr #23
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B1FA A9 0A			lda #UI_TOP_TEE
-     2 B1FC A0 17			ldy #23
-     3 B1FE 91 A5			sta (STATUS_PTR),y
+     1 B26B A9 0A			lda #UI_TOP_TEE
+     2 B26D A0 17			ldy #23
+     3 B26F 91 A5			sta (STATUS_PTR),y
 Source: main.asm
-   410 B200				blit_char_row #UI_HORIZ_BORDER status_ptr #24 #39
+   436 B271				blit_char_row #UI_HORIZ_BORDER status_ptr #24 #39
 Macro: BLIT_CHAR_ROW [Source: main.asm]
-     1 B200 A9 04			lda #UI_HORIZ_BORDER
-     2 B202 A0 18			ldy #24
-     3 B204			loop
-     4 B204 91 A5			sta (STATUS_PTR),y
-     5 B206 C8				iny
-     6 B207 C0 27			cpy #39
-     7 B209 90 F9			bcc loop
+     1 B271 A9 04			lda #UI_HORIZ_BORDER
+     2 B273 A0 18			ldy #24
+     3 B275			loop
+     4 B275 91 A5			sta (STATUS_PTR),y
+     5 B277 C8				iny
+     6 B278 C0 27			cpy #39
+     7 B27A 90 F9			bcc loop
 Source: main.asm
-   411 B20B				blit_char #UI_NE_BORDER status_ptr #39
+   437 B27C				blit_char #UI_NE_BORDER status_ptr #39
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B20B A9 0D			lda #UI_NE_BORDER
-     2 B20D A0 27			ldy #39
-     3 B20F 91 A5			sta (STATUS_PTR),y
+     1 B27C A9 0D			lda #UI_NE_BORDER
+     2 B27E A0 27			ldy #39
+     3 B280 91 A5			sta (STATUS_PTR),y
 Source: main.asm
-   412 					
-   413 B211 A2 0B			ldx #playfield_height
-   414 B213			loop
-   415 B213				blit_char #UI_VERT_BORDER screen_ptr #0
+   438 					
+   439 B282 A2 0B			ldx #playfield_height
+   440 B284			loop
+   441 B284				blit_char #UI_VERT_BORDER screen_ptr #0
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B213 A9 01			lda #UI_VERT_BORDER
-     2 B215 A0 00			ldy #0
-     3 B217 91 94			sta (SCREEN_PTR),y
+     1 B284 A9 01			lda #UI_VERT_BORDER
+     2 B286 A0 00			ldy #0
+     3 B288 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   416 B219				blit_char #UI_VERT_BORDER screen_ptr #23
+   442 B28A				blit_char #UI_VERT_BORDER screen_ptr #23
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B219 A9 01			lda #UI_VERT_BORDER
-     2 B21B A0 17			ldy #23
-     3 B21D 91 94			sta (SCREEN_PTR),y
+     1 B28A A9 01			lda #UI_VERT_BORDER
+     2 B28C A0 17			ldy #23
+     3 B28E 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   417 B21F				blit_char #UI_VERT_BORDER screen_ptr #39
+   443 B290				blit_char #UI_VERT_BORDER screen_ptr #39
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B21F A9 01			lda #UI_VERT_BORDER
-     2 B221 A0 27			ldy #39
-     3 B223 91 94			sta (SCREEN_PTR),y
+     1 B290 A9 01			lda #UI_VERT_BORDER
+     2 B292 A0 27			ldy #39
+     3 B294 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   418 B225 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   419 B230 CA				dex
-   420 B231 D0 E0			bne loop
-   421
-   422 B233				blit_char #UI_SW_BORDER screen_ptr #0
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B233 A9 0E			lda #UI_SW_BORDER
-     2 B235 A0 00			ldy #0
-     3 B237 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   423 B239				blit_char_row #UI_HORIZ_BORDER screen_ptr #1 #23
-Macro: BLIT_CHAR_ROW [Source: main.asm]
-     1 B239 A9 04			lda #UI_HORIZ_BORDER
-     2 B23B A0 01			ldy #1
-     3 B23D			loop
-     4 B23D 91 94			sta (SCREEN_PTR),y
-     5 B23F C8				iny
-     6 B240 C0 17			cpy #23
-     7 B242 90 F9			bcc loop
-Source: main.asm
-   424 B244				blit_char #UI_BOTTOM_TEE screen_ptr #23
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B244 A9 0B			lda #UI_BOTTOM_TEE
-     2 B246 A0 17			ldy #23
-     3 B248 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   425 B24A				blit_char_row #UI_HORIZ_BORDER screen_ptr #24 #39
-Macro: BLIT_CHAR_ROW [Source: main.asm]
-     1 B24A A9 04			lda #UI_HORIZ_BORDER
-     2 B24C A0 18			ldy #24
-     3 B24E			loop
-     4 B24E 91 94			sta (SCREEN_PTR),y
-     5 B250 C8				iny
-     6 B251 C0 27			cpy #39
-     7 B253 90 F9			bcc loop
-Source: main.asm
-   426 B255				blit_char #UI_SE_BORDER screen_ptr #39
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B255 A9 0F			lda #UI_SE_BORDER
-     2 B257 A0 27			ldy #39
-     3 B259 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   427 					
-   428 B25B 60				rts
-   429 					.endp
-   430
-   431 B25C			.proc update_ui
-   432 B25C A9 00 85 94 A9 70 + 	mwa #screen screen_ptr
-   433 					; HP Bar
-   434 B264				blit_char #UI_HP_ICON_LEFT screen_ptr #25
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B264 A9 28			lda #UI_HP_ICON_LEFT
-     2 B266 A0 19			ldy #25
-     3 B268 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   435 B26A				blit_char #UI_HP_ICON_RIGHT screen_ptr #26
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B26A A9 29			lda #UI_HP_ICON_RIGHT
-     2 B26C A0 1A			ldy #26
-     3 B26E 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   436 B270				blit_char #UI_COLON screen_ptr #27
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B270 A9 39			lda #UI_COLON
-     2 B272 A0 1B			ldy #27
-     3 B274 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   437 B276				blit_char #UI_BAR_LEFT screen_ptr #28
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B276 A9 36			lda #UI_BAR_LEFT
-     2 B278 A0 1C			ldy #28
-     3 B27A 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   438 B27C				blit_char #UI_HP_FULL screen_ptr #29
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B27C A9 3D			lda #UI_HP_FULL
-     2 B27E A0 1D			ldy #29
-     3 B280 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   439 B282				blit_char #UI_HP_FULL screen_ptr #30
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B282 A9 3D			lda #UI_HP_FULL
-     2 B284 A0 1E			ldy #30
-     3 B286 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   440 B288				blit_char #UI_HP_FULL screen_ptr #31
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B288 A9 3D			lda #UI_HP_FULL
-     2 B28A A0 1F			ldy #31
-     3 B28C 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   441 B28E				blit_char #UI_HP_FULL screen_ptr #32
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B28E A9 3D			lda #UI_HP_FULL
-     2 B290 A0 20			ldy #32
-     3 B292 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   442 B294				blit_char #UI_HP_FULL screen_ptr #33
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B294 A9 3D			lda #UI_HP_FULL
-     2 B296 A0 21			ldy #33
-     3 B298 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   443 B29A				blit_char #UI_HP_3_QTR screen_ptr #34
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B29A A9 3C			lda #UI_HP_3_QTR
-     2 B29C A0 22			ldy #34
-     3 B29E 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   444 B2A0				blit_char #UI_BAR_RIGHT screen_ptr #35
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B2A0 A9 37			lda #UI_BAR_RIGHT
-     2 B2A2 A0 23			ldy #35
-     3 B2A4 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   445
-   446 B2A6 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   444 B296 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   445 B2A1 CA				dex
+   446 B2A2 D0 E0			bne loop
    447
-   448 					; Skills
-   449 B2B1				blit_char #UI_MELEE_ICON_LEFT screen_ptr #25
+   448 B2A4				blit_char #UI_SW_BORDER screen_ptr #0
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B2B1 A9 1A			lda #UI_MELEE_ICON_LEFT
-     2 B2B3 A0 19			ldy #25
-     3 B2B5 91 94			sta (SCREEN_PTR),y
+     1 B2A4 A9 0E			lda #UI_SW_BORDER
+     2 B2A6 A0 00			ldy #0
+     3 B2A8 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   450 B2B7				blit_char #UI_MELEE_ICON_RIGHT screen_ptr #26
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B2B7 A9 1B			lda #UI_MELEE_ICON_RIGHT
-     2 B2B9 A0 1A			ldy #26
-     3 B2BB 91 94			sta (SCREEN_PTR),y
+   449 B2AA				blit_char_row #UI_HORIZ_BORDER screen_ptr #1 #23
+Macro: BLIT_CHAR_ROW [Source: main.asm]
+     1 B2AA A9 04			lda #UI_HORIZ_BORDER
+     2 B2AC A0 01			ldy #1
+     3 B2AE			loop
+     4 B2AE 91 94			sta (SCREEN_PTR),y
+     5 B2B0 C8				iny
+     6 B2B1 C0 17			cpy #23
+     7 B2B3 90 F9			bcc loop
 Source: main.asm
-   451 B2BD				blit_char #UI_COLON screen_ptr #27
+   450 B2B5				blit_char #UI_BOTTOM_TEE screen_ptr #23
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B2BD A9 39			lda #UI_COLON
-     2 B2BF A0 1B			ldy #27
-     3 B2C1 91 94			sta (SCREEN_PTR),y
+     1 B2B5 A9 0B			lda #UI_BOTTOM_TEE
+     2 B2B7 A0 17			ldy #23
+     3 B2B9 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   452 B2C3				blit_char #UI_NUMBER_0 screen_ptr #28
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B2C3 A9 2C			lda #UI_NUMBER_0
-     2 B2C5 A0 1C			ldy #28
-     3 B2C7 91 94			sta (SCREEN_PTR),y
+   451 B2BB				blit_char_row #UI_HORIZ_BORDER screen_ptr #24 #39
+Macro: BLIT_CHAR_ROW [Source: main.asm]
+     1 B2BB A9 04			lda #UI_HORIZ_BORDER
+     2 B2BD A0 18			ldy #24
+     3 B2BF			loop
+     4 B2BF 91 94			sta (SCREEN_PTR),y
+     5 B2C1 C8				iny
+     6 B2C2 C0 27			cpy #39
+     7 B2C4 90 F9			bcc loop
 Source: main.asm
-   453 B2C9				blit_char #UI_NUMBER_0 screen_ptr #29
+   452 B2C6				blit_char #UI_SE_BORDER screen_ptr #39
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B2C9 A9 2C			lda #UI_NUMBER_0
-     2 B2CB A0 1D			ldy #29
-     3 B2CD 91 94			sta (SCREEN_PTR),y
+     1 B2C6 A9 0F			lda #UI_SE_BORDER
+     2 B2C8 A0 27			ldy #39
+     3 B2CA 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   454 B2CF				blit_char #UI_NUMBER_0 screen_ptr #30
+   453 					
+   454 B2CC 60				rts
+   455 					.endp
+   456
+   457 B2CD			.proc update_ui
+   458 B2CD A9 00 85 94 A9 70 + 	mwa #screen screen_ptr
+   459 					; HP Bar
+   460 B2D5				blit_char #UI_HP_ICON_LEFT screen_ptr #25
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B2CF A9 2C			lda #UI_NUMBER_0
-     2 B2D1 A0 1E			ldy #30
-     3 B2D3 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   455
-   456 B2D5				blit_char #UI_RANGED_ICON_LEFT screen_ptr #32
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B2D5 A9 1E			lda #UI_RANGED_ICON_LEFT
-     2 B2D7 A0 20			ldy #32
+     1 B2D5 A9 28			lda #UI_HP_ICON_LEFT
+     2 B2D7 A0 19			ldy #25
      3 B2D9 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   457 B2DB				blit_char #UI_RANGED_ICON_RIGHT screen_ptr #33
+   461 B2DB				blit_char #UI_HP_ICON_RIGHT screen_ptr #26
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B2DB A9 1F			lda #UI_RANGED_ICON_RIGHT
-     2 B2DD A0 21			ldy #33
+     1 B2DB A9 29			lda #UI_HP_ICON_RIGHT
+     2 B2DD A0 1A			ldy #26
      3 B2DF 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   458 B2E1				blit_char #UI_COLON screen_ptr #34
+   462 B2E1				blit_char #UI_COLON screen_ptr #27
 Macro: BLIT_CHAR [Source: main.asm]
      1 B2E1 A9 39			lda #UI_COLON
-     2 B2E3 A0 22			ldy #34
+     2 B2E3 A0 1B			ldy #27
      3 B2E5 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   459 B2E7				blit_char #UI_NUMBER_0 screen_ptr #35
+   463 B2E7				blit_char #UI_BAR_LEFT screen_ptr #28
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B2E7 A9 2C			lda #UI_NUMBER_0
-     2 B2E9 A0 23			ldy #35
+     1 B2E7 A9 36			lda #UI_BAR_LEFT
+     2 B2E9 A0 1C			ldy #28
      3 B2EB 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   460 B2ED				blit_char #UI_NUMBER_0 screen_ptr #36
+   464 B2ED				blit_char #UI_HP_FULL screen_ptr #29
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B2ED A9 2C			lda #UI_NUMBER_0
-     2 B2EF A0 24			ldy #36
+     1 B2ED A9 3D			lda #UI_HP_FULL
+     2 B2EF A0 1D			ldy #29
      3 B2F1 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   461 B2F3				blit_char #UI_NUMBER_0 screen_ptr #37
+   465 B2F3				blit_char #UI_HP_FULL screen_ptr #30
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B2F3 A9 2C			lda #UI_NUMBER_0
-     2 B2F5 A0 25			ldy #37
+     1 B2F3 A9 3D			lda #UI_HP_FULL
+     2 B2F5 A0 1E			ldy #30
      3 B2F7 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   462
-   463 B2F9 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   464
-   465 B304				blit_char #UI_DEFENSE_ICON_LEFT screen_ptr #25
+   466 B2F9				blit_char #UI_HP_FULL screen_ptr #31
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B304 A9 1C			lda #UI_DEFENSE_ICON_LEFT
-     2 B306 A0 19			ldy #25
-     3 B308 91 94			sta (SCREEN_PTR),y
+     1 B2F9 A9 3D			lda #UI_HP_FULL
+     2 B2FB A0 1F			ldy #31
+     3 B2FD 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   466 B30A				blit_char #UI_DEFENSE_ICON_RIGHT screen_ptr #26
+   467 B2FF				blit_char #UI_HP_FULL screen_ptr #32
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B30A A9 1D			lda #UI_DEFENSE_ICON_RIGHT
-     2 B30C A0 1A			ldy #26
-     3 B30E 91 94			sta (SCREEN_PTR),y
+     1 B2FF A9 3D			lda #UI_HP_FULL
+     2 B301 A0 20			ldy #32
+     3 B303 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   467 B310				blit_char #UI_COLON screen_ptr #27
+   468 B305				blit_char #UI_HP_FULL screen_ptr #33
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B310 A9 39			lda #UI_COLON
-     2 B312 A0 1B			ldy #27
-     3 B314 91 94			sta (SCREEN_PTR),y
+     1 B305 A9 3D			lda #UI_HP_FULL
+     2 B307 A0 21			ldy #33
+     3 B309 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   468 B316				blit_char #UI_NUMBER_0 screen_ptr #28
+   469 B30B				blit_char #UI_HP_3_QTR screen_ptr #34
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B316 A9 2C			lda #UI_NUMBER_0
-     2 B318 A0 1C			ldy #28
-     3 B31A 91 94			sta (SCREEN_PTR),y
+     1 B30B A9 3C			lda #UI_HP_3_QTR
+     2 B30D A0 22			ldy #34
+     3 B30F 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   469 B31C				blit_char #UI_NUMBER_0 screen_ptr #29
+   470 B311				blit_char #UI_BAR_RIGHT screen_ptr #35
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B31C A9 2C			lda #UI_NUMBER_0
-     2 B31E A0 1D			ldy #29
-     3 B320 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   470 B322				blit_char #UI_NUMBER_0 screen_ptr #30
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B322 A9 2C			lda #UI_NUMBER_0
-     2 B324 A0 1E			ldy #30
-     3 B326 91 94			sta (SCREEN_PTR),y
+     1 B311 A9 37			lda #UI_BAR_RIGHT
+     2 B313 A0 23			ldy #35
+     3 B315 91 94			sta (SCREEN_PTR),y
 Source: main.asm
    471
-   472 B328				blit_char #UI_FORTITUDE_ICON_LEFT screen_ptr #32
+   472 B317 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   473
+   474 					; Skills
+   475 B322				blit_char #UI_MELEE_ICON_LEFT screen_ptr #25
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B328 A9 20			lda #UI_FORTITUDE_ICON_LEFT
-     2 B32A A0 20			ldy #32
+     1 B322 A9 1A			lda #UI_MELEE_ICON_LEFT
+     2 B324 A0 19			ldy #25
+     3 B326 91 94			sta (SCREEN_PTR),y
+Source: main.asm
+   476 B328				blit_char #UI_MELEE_ICON_RIGHT screen_ptr #26
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B328 A9 1B			lda #UI_MELEE_ICON_RIGHT
+     2 B32A A0 1A			ldy #26
      3 B32C 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   473 B32E				blit_char #UI_FORTITUDE_ICON_RIGHT screen_ptr #33
+   477 B32E				blit_char #UI_COLON screen_ptr #27
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B32E A9 21			lda #UI_FORTITUDE_ICON_RIGHT
-     2 B330 A0 21			ldy #33
+     1 B32E A9 39			lda #UI_COLON
+     2 B330 A0 1B			ldy #27
      3 B332 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   474 B334				blit_char #UI_COLON screen_ptr #34
+   478 B334				blit_char #UI_NUMBER_0 screen_ptr #28
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B334 A9 39			lda #UI_COLON
-     2 B336 A0 22			ldy #34
+     1 B334 A9 2C			lda #UI_NUMBER_0
+     2 B336 A0 1C			ldy #28
      3 B338 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   475 B33A				blit_char #UI_NUMBER_0 screen_ptr #35
+   479 B33A				blit_char #UI_NUMBER_0 screen_ptr #29
 Macro: BLIT_CHAR [Source: main.asm]
      1 B33A A9 2C			lda #UI_NUMBER_0
-     2 B33C A0 23			ldy #35
+     2 B33C A0 1D			ldy #29
      3 B33E 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   476 B340				blit_char #UI_NUMBER_0 screen_ptr #36
+   480 B340				blit_char #UI_NUMBER_0 screen_ptr #30
 Macro: BLIT_CHAR [Source: main.asm]
      1 B340 A9 2C			lda #UI_NUMBER_0
-     2 B342 A0 24			ldy #36
+     2 B342 A0 1E			ldy #30
      3 B344 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   477 B346				blit_char #UI_NUMBER_0 screen_ptr #37
+   481
+   482 B346				blit_char #UI_RANGED_ICON_LEFT screen_ptr #32
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B346 A9 2C			lda #UI_NUMBER_0
-     2 B348 A0 25			ldy #37
+     1 B346 A9 1E			lda #UI_RANGED_ICON_LEFT
+     2 B348 A0 20			ldy #32
      3 B34A 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   478
-   479 B34C 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   480
-   481 					; XP Bar
-   482 B357				blit_char #UI_XP_ICON_LEFT screen_ptr #25
+   483 B34C				blit_char #UI_RANGED_ICON_RIGHT screen_ptr #33
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B357 A9 2A			lda #UI_XP_ICON_LEFT
-     2 B359 A0 19			ldy #25
-     3 B35B 91 94			sta (SCREEN_PTR),y
+     1 B34C A9 1F			lda #UI_RANGED_ICON_RIGHT
+     2 B34E A0 21			ldy #33
+     3 B350 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   483 B35D				blit_char #UI_XP_ICON_RIGHT screen_ptr #26
+   484 B352				blit_char #UI_COLON screen_ptr #34
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B35D A9 2B			lda #UI_XP_ICON_RIGHT
-     2 B35F A0 1A			ldy #26
-     3 B361 91 94			sta (SCREEN_PTR),y
+     1 B352 A9 39			lda #UI_COLON
+     2 B354 A0 22			ldy #34
+     3 B356 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   484 B363				blit_char #UI_COLON screen_ptr #27
+   485 B358				blit_char #UI_NUMBER_0 screen_ptr #35
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B363 A9 39			lda #UI_COLON
-     2 B365 A0 1B			ldy #27
-     3 B367 91 94			sta (SCREEN_PTR),y
+     1 B358 A9 2C			lda #UI_NUMBER_0
+     2 B35A A0 23			ldy #35
+     3 B35C 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   485 B369				blit_char #UI_BAR_LEFT screen_ptr #28
+   486 B35E				blit_char #UI_NUMBER_0 screen_ptr #36
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B369 A9 36			lda #UI_BAR_LEFT
-     2 B36B A0 1C			ldy #28
-     3 B36D 91 94			sta (SCREEN_PTR),y
+     1 B35E A9 2C			lda #UI_NUMBER_0
+     2 B360 A0 24			ldy #36
+     3 B362 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   486 B36F				blit_char #UI_XP_FULL screen_ptr #29
+   487 B364				blit_char #UI_NUMBER_0 screen_ptr #37
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B36F A9 41			lda #UI_XP_FULL
-     2 B371 A0 1D			ldy #29
-     3 B373 91 94			sta (SCREEN_PTR),y
+     1 B364 A9 2C			lda #UI_NUMBER_0
+     2 B366 A0 25			ldy #37
+     3 B368 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   487 B375				blit_char #UI_XP_FULL screen_ptr #30
+   488
+   489 B36A 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   490
+   491 B375				blit_char #UI_DEFENSE_ICON_LEFT screen_ptr #25
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B375 A9 41			lda #UI_XP_FULL
-     2 B377 A0 1E			ldy #30
+     1 B375 A9 1C			lda #UI_DEFENSE_ICON_LEFT
+     2 B377 A0 19			ldy #25
      3 B379 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   488 B37B				blit_char #UI_XP_FULL screen_ptr #31
+   492 B37B				blit_char #UI_DEFENSE_ICON_RIGHT screen_ptr #26
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B37B A9 41			lda #UI_XP_FULL
-     2 B37D A0 1F			ldy #31
+     1 B37B A9 1D			lda #UI_DEFENSE_ICON_RIGHT
+     2 B37D A0 1A			ldy #26
      3 B37F 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   489 B381				blit_char #UI_XP_FULL screen_ptr #32
+   493 B381				blit_char #UI_COLON screen_ptr #27
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B381 A9 41			lda #UI_XP_FULL
-     2 B383 A0 20			ldy #32
+     1 B381 A9 39			lda #UI_COLON
+     2 B383 A0 1B			ldy #27
      3 B385 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   490 B387				blit_char #UI_XP_FULL screen_ptr #33
+   494 B387				blit_char #UI_NUMBER_0 screen_ptr #28
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B387 A9 41			lda #UI_XP_FULL
-     2 B389 A0 21			ldy #33
+     1 B387 A9 2C			lda #UI_NUMBER_0
+     2 B389 A0 1C			ldy #28
      3 B38B 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   491 B38D				blit_char #UI_XP_FULL screen_ptr #34
+   495 B38D				blit_char #UI_NUMBER_0 screen_ptr #29
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B38D A9 41			lda #UI_XP_FULL
-     2 B38F A0 22			ldy #34
+     1 B38D A9 2C			lda #UI_NUMBER_0
+     2 B38F A0 1D			ldy #29
      3 B391 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   492 B393				blit_char #UI_XP_HALF screen_ptr #35
+   496 B393				blit_char #UI_NUMBER_0 screen_ptr #30
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B393 A9 3F			lda #UI_XP_HALF
-     2 B395 A0 23			ldy #35
+     1 B393 A9 2C			lda #UI_NUMBER_0
+     2 B395 A0 1E			ldy #30
      3 B397 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   493 B399				blit_char #UI_BAR_EMPTY screen_ptr #36
+   497
+   498 B399				blit_char #UI_FORTITUDE_ICON_LEFT screen_ptr #32
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B399 A9 38			lda #UI_BAR_EMPTY
-     2 B39B A0 24			ldy #36
+     1 B399 A9 20			lda #UI_FORTITUDE_ICON_LEFT
+     2 B39B A0 20			ldy #32
      3 B39D 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   494 B39F				blit_char #UI_BAR_EMPTY screen_ptr #37
+   499 B39F				blit_char #UI_FORTITUDE_ICON_RIGHT screen_ptr #33
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B39F A9 38			lda #UI_BAR_EMPTY
-     2 B3A1 A0 25			ldy #37
+     1 B39F A9 21			lda #UI_FORTITUDE_ICON_RIGHT
+     2 B3A1 A0 21			ldy #33
      3 B3A3 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   495 B3A5				blit_char #UI_BAR_RIGHT screen_ptr #38
+   500 B3A5				blit_char #UI_COLON screen_ptr #34
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B3A5 A9 37			lda #UI_BAR_RIGHT
-     2 B3A7 A0 26			ldy #38
+     1 B3A5 A9 39			lda #UI_COLON
+     2 B3A7 A0 22			ldy #34
      3 B3A9 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   496
-   497 B3AB 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   498
-   499 					; Inventory
-   500 B3B6				blit_char #UI_TORCH_ICON_LEFT screen_ptr #25
+   501 B3AB				blit_char #UI_NUMBER_0 screen_ptr #35
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B3B6 A9 A2			lda #UI_TORCH_ICON_LEFT
-     2 B3B8 A0 19			ldy #25
-     3 B3BA 91 94			sta (SCREEN_PTR),y
+     1 B3AB A9 2C			lda #UI_NUMBER_0
+     2 B3AD A0 23			ldy #35
+     3 B3AF 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   501 B3BC				blit_char #UI_TORCH_ICON_RIGHT screen_ptr #26
+   502 B3B1				blit_char #UI_NUMBER_0 screen_ptr #36
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B3BC A9 A3			lda #UI_TORCH_ICON_RIGHT
-     2 B3BE A0 1A			ldy #26
-     3 B3C0 91 94			sta (SCREEN_PTR),y
+     1 B3B1 A9 2C			lda #UI_NUMBER_0
+     2 B3B3 A0 24			ldy #36
+     3 B3B5 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   502 B3C2				blit_char #UI_COLON screen_ptr #27
+   503 B3B7				blit_char #UI_NUMBER_0 screen_ptr #37
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B3C2 A9 39			lda #UI_COLON
-     2 B3C4 A0 1B			ldy #27
-     3 B3C6 91 94			sta (SCREEN_PTR),y
+     1 B3B7 A9 2C			lda #UI_NUMBER_0
+     2 B3B9 A0 25			ldy #37
+     3 B3BB 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   503 B3C8				blit_char #UI_NUMBER_0 screen_ptr #28
+   504
+   505 B3BD 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   506
+   507 					; XP Bar
+   508 B3C8				blit_char #UI_XP_ICON_LEFT screen_ptr #25
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B3C8 A9 2C			lda #UI_NUMBER_0
-     2 B3CA A0 1C			ldy #28
+     1 B3C8 A9 2A			lda #UI_XP_ICON_LEFT
+     2 B3CA A0 19			ldy #25
      3 B3CC 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   504 B3CE				blit_char #UI_NUMBER_0 screen_ptr #29
+   509 B3CE				blit_char #UI_XP_ICON_RIGHT screen_ptr #26
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B3CE A9 2C			lda #UI_NUMBER_0
-     2 B3D0 A0 1D			ldy #29
+     1 B3CE A9 2B			lda #UI_XP_ICON_RIGHT
+     2 B3D0 A0 1A			ldy #26
      3 B3D2 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   505 B3D4				blit_char #UI_NUMBER_0 screen_ptr #30
+   510 B3D4				blit_char #UI_COLON screen_ptr #27
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B3D4 A9 2C			lda #UI_NUMBER_0
-     2 B3D6 A0 1E			ldy #30
+     1 B3D4 A9 39			lda #UI_COLON
+     2 B3D6 A0 1B			ldy #27
      3 B3D8 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   506
-   507 B3DA				blit_char #UI_POTION_ICON_LEFT screen_ptr #32
+   511 B3DA				blit_char #UI_BAR_LEFT screen_ptr #28
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B3DA A9 26			lda #UI_POTION_ICON_LEFT
-     2 B3DC A0 20			ldy #32
+     1 B3DA A9 36			lda #UI_BAR_LEFT
+     2 B3DC A0 1C			ldy #28
      3 B3DE 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   508 B3E0				blit_char #UI_POTION_ICON_RIGHT screen_ptr #33
+   512 B3E0				blit_char #UI_XP_FULL screen_ptr #29
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B3E0 A9 27			lda #UI_POTION_ICON_RIGHT
-     2 B3E2 A0 21			ldy #33
+     1 B3E0 A9 41			lda #UI_XP_FULL
+     2 B3E2 A0 1D			ldy #29
      3 B3E4 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   509 B3E6				blit_char #UI_COLON screen_ptr #34
+   513 B3E6				blit_char #UI_XP_FULL screen_ptr #30
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B3E6 A9 39			lda #UI_COLON
-     2 B3E8 A0 22			ldy #34
+     1 B3E6 A9 41			lda #UI_XP_FULL
+     2 B3E8 A0 1E			ldy #30
      3 B3EA 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   510 B3EC				blit_char #UI_NUMBER_0 screen_ptr #35
+   514 B3EC				blit_char #UI_XP_FULL screen_ptr #31
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B3EC A9 2C			lda #UI_NUMBER_0
-     2 B3EE A0 23			ldy #35
+     1 B3EC A9 41			lda #UI_XP_FULL
+     2 B3EE A0 1F			ldy #31
      3 B3F0 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   511 B3F2				blit_char #UI_NUMBER_0 screen_ptr #36
+   515 B3F2				blit_char #UI_XP_FULL screen_ptr #32
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B3F2 A9 2C			lda #UI_NUMBER_0
-     2 B3F4 A0 24			ldy #36
+     1 B3F2 A9 41			lda #UI_XP_FULL
+     2 B3F4 A0 20			ldy #32
      3 B3F6 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   512 B3F8				blit_char #UI_NUMBER_0 screen_ptr #37
+   516 B3F8				blit_char #UI_XP_FULL screen_ptr #33
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B3F8 A9 2C			lda #UI_NUMBER_0
-     2 B3FA A0 25			ldy #37
+     1 B3F8 A9 41			lda #UI_XP_FULL
+     2 B3FA A0 21			ldy #33
      3 B3FC 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   513
-   514 B3FE 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   515 B409				blit_char #UI_COIN_ICON_LEFT screen_ptr #25
+   517 B3FE				blit_char #UI_XP_FULL screen_ptr #34
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B409 A9 A4			lda #UI_COIN_ICON_LEFT
-     2 B40B A0 19			ldy #25
-     3 B40D 91 94			sta (SCREEN_PTR),y
+     1 B3FE A9 41			lda #UI_XP_FULL
+     2 B400 A0 22			ldy #34
+     3 B402 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   516 B40F				blit_char #UI_COIN_ICON_RIGHT screen_ptr #26
+   518 B404				blit_char #UI_XP_HALF screen_ptr #35
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B40F A9 A5			lda #UI_COIN_ICON_RIGHT
-     2 B411 A0 1A			ldy #26
-     3 B413 91 94			sta (SCREEN_PTR),y
+     1 B404 A9 3F			lda #UI_XP_HALF
+     2 B406 A0 23			ldy #35
+     3 B408 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   517 B415				blit_char #UI_COLON screen_ptr #27
+   519 B40A				blit_char #UI_BAR_EMPTY screen_ptr #36
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B415 A9 39			lda #UI_COLON
-     2 B417 A0 1B			ldy #27
-     3 B419 91 94			sta (SCREEN_PTR),y
+     1 B40A A9 38			lda #UI_BAR_EMPTY
+     2 B40C A0 24			ldy #36
+     3 B40E 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   518 B41B				blit_char #UI_NUMBER_0 screen_ptr #28
+   520 B410				blit_char #UI_BAR_EMPTY screen_ptr #37
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B41B A9 2C			lda #UI_NUMBER_0
-     2 B41D A0 1C			ldy #28
-     3 B41F 91 94			sta (SCREEN_PTR),y
+     1 B410 A9 38			lda #UI_BAR_EMPTY
+     2 B412 A0 25			ldy #37
+     3 B414 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   519 B421				blit_char #UI_NUMBER_0 screen_ptr #29
+   521 B416				blit_char #UI_BAR_RIGHT screen_ptr #38
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B421 A9 2C			lda #UI_NUMBER_0
-     2 B423 A0 1D			ldy #29
-     3 B425 91 94			sta (SCREEN_PTR),y
+     1 B416 A9 37			lda #UI_BAR_RIGHT
+     2 B418 A0 26			ldy #38
+     3 B41A 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   520 B427				blit_char #UI_NUMBER_0 screen_ptr #30
+   522
+   523 B41C 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   524
+   525 					; Inventory
+   526 B427				blit_char #UI_TORCH_ICON_LEFT screen_ptr #25
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B427 A9 2C			lda #UI_NUMBER_0
-     2 B429 A0 1E			ldy #30
+     1 B427 A9 A2			lda #UI_TORCH_ICON_LEFT
+     2 B429 A0 19			ldy #25
      3 B42B 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   521 B42D				blit_char #UI_NUMBER_0 screen_ptr #31
+   527 B42D				blit_char #UI_TORCH_ICON_RIGHT screen_ptr #26
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B42D A9 2C			lda #UI_NUMBER_0
-     2 B42F A0 1F			ldy #31
+     1 B42D A9 A3			lda #UI_TORCH_ICON_RIGHT
+     2 B42F A0 1A			ldy #26
      3 B431 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   522 B433				blit_char #UI_NUMBER_0 screen_ptr #32
+   528 B433				blit_char #UI_COLON screen_ptr #27
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B433 A9 2C			lda #UI_NUMBER_0
-     2 B435 A0 20			ldy #32
+     1 B433 A9 39			lda #UI_COLON
+     2 B435 A0 1B			ldy #27
      3 B437 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   523
-   524 					; Amulet
-   525 B439 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   526 B444 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   527 B44F				blit_char #UI_AMULET_NW_ICON_LEFT screen_ptr #29
+   529 B439				blit_char #UI_NUMBER_0 screen_ptr #28
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B44F A9 4E			lda #UI_AMULET_NW_ICON_LEFT
-     2 B451 A0 1D			ldy #29
-     3 B453 91 94			sta (SCREEN_PTR),y
+     1 B439 A9 2C			lda #UI_NUMBER_0
+     2 B43B A0 1C			ldy #28
+     3 B43D 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   528 B455				blit_char #UI_AMULET_NW_ICON_RIGHT screen_ptr #30
+   530 B43F				blit_char #UI_NUMBER_0 screen_ptr #29
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B455 A9 4F			lda #UI_AMULET_NW_ICON_RIGHT
-     2 B457 A0 1E			ldy #30
-     3 B459 91 94			sta (SCREEN_PTR),y
+     1 B43F A9 2C			lda #UI_NUMBER_0
+     2 B441 A0 1D			ldy #29
+     3 B443 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   529 B45B				blit_char #UI_BLACK_GEM_ICON_LEFT screen_ptr #31
+   531 B445				blit_char #UI_NUMBER_0 screen_ptr #30
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B45B A9 46			lda #UI_BLACK_GEM_ICON_LEFT
-     2 B45D A0 1F			ldy #31
-     3 B45F 91 94			sta (SCREEN_PTR),y
+     1 B445 A9 2C			lda #UI_NUMBER_0
+     2 B447 A0 1E			ldy #30
+     3 B449 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   530 B461				blit_char #UI_BLACK_GEM_ICON_RIGHT screen_ptr #32
+   532
+   533 B44B				blit_char #UI_POTION_ICON_LEFT screen_ptr #32
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B461 A9 47			lda #UI_BLACK_GEM_ICON_RIGHT
-     2 B463 A0 20			ldy #32
-     3 B465 91 94			sta (SCREEN_PTR),y
+     1 B44B A9 26			lda #UI_POTION_ICON_LEFT
+     2 B44D A0 20			ldy #32
+     3 B44F 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   531 B467				blit_char #UI_AMULET_NE_ICON_LEFT screen_ptr #33
+   534 B451				blit_char #UI_POTION_ICON_RIGHT screen_ptr #33
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B467 A9 50			lda #UI_AMULET_NE_ICON_LEFT
-     2 B469 A0 21			ldy #33
-     3 B46B 91 94			sta (SCREEN_PTR),y
+     1 B451 A9 27			lda #UI_POTION_ICON_RIGHT
+     2 B453 A0 21			ldy #33
+     3 B455 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   532 B46D				blit_char #UI_AMULET_NE_ICON_RIGHT screen_ptr #34
+   535 B457				blit_char #UI_COLON screen_ptr #34
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B46D A9 51			lda #UI_AMULET_NE_ICON_RIGHT
-     2 B46F A0 22			ldy #34
-     3 B471 91 94			sta (SCREEN_PTR),y
+     1 B457 A9 39			lda #UI_COLON
+     2 B459 A0 22			ldy #34
+     3 B45B 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   533
-   534 B473 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   535 B47E				blit_char #UI_BLUE_GEM_ICON_LEFT screen_ptr #29
+   536 B45D				blit_char #UI_NUMBER_0 screen_ptr #35
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B47E A9 48			lda #UI_BLUE_GEM_ICON_LEFT
-     2 B480 A0 1D			ldy #29
-     3 B482 91 94			sta (SCREEN_PTR),y
+     1 B45D A9 2C			lda #UI_NUMBER_0
+     2 B45F A0 23			ldy #35
+     3 B461 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   536 B484				blit_char #UI_BLUE_GEM_ICON_RIGHT screen_ptr #30
+   537 B463				blit_char #UI_NUMBER_0 screen_ptr #36
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B484 A9 49			lda #UI_BLUE_GEM_ICON_RIGHT
-     2 B486 A0 1E			ldy #30
-     3 B488 91 94			sta (SCREEN_PTR),y
+     1 B463 A9 2C			lda #UI_NUMBER_0
+     2 B465 A0 24			ldy #36
+     3 B467 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   537 B48A				blit_char #UI_WHITE_GEM_ICON_LEFT screen_ptr #31
+   538 B469				blit_char #UI_NUMBER_0 screen_ptr #37
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B48A A9 44			lda #UI_WHITE_GEM_ICON_LEFT
-     2 B48C A0 1F			ldy #31
-     3 B48E 91 94			sta (SCREEN_PTR),y
+     1 B469 A9 2C			lda #UI_NUMBER_0
+     2 B46B A0 25			ldy #37
+     3 B46D 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   538 B490				blit_char #UI_WHITE_GEM_ICON_RIGHT screen_ptr #32
+   539
+   540 B46F 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   541 B47A				blit_char #UI_COIN_ICON_LEFT screen_ptr #25
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B490 A9 45			lda #UI_WHITE_GEM_ICON_RIGHT
-     2 B492 A0 20			ldy #32
-     3 B494 91 94			sta (SCREEN_PTR),y
+     1 B47A A9 A4			lda #UI_COIN_ICON_LEFT
+     2 B47C A0 19			ldy #25
+     3 B47E 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   539 B496				blit_char #UI_RED_GEM_ICON_LEFT screen_ptr #33
+   542 B480				blit_char #UI_COIN_ICON_RIGHT screen_ptr #26
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B496 A9 4A			lda #UI_RED_GEM_ICON_LEFT
-     2 B498 A0 21			ldy #33
-     3 B49A 91 94			sta (SCREEN_PTR),y
+     1 B480 A9 A5			lda #UI_COIN_ICON_RIGHT
+     2 B482 A0 1A			ldy #26
+     3 B484 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   540 B49C				blit_char #UI_RED_GEM_ICON_RIGHT screen_ptr #34
+   543 B486				blit_char #UI_COLON screen_ptr #27
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B49C A9 4B			lda #UI_RED_GEM_ICON_RIGHT
-     2 B49E A0 22			ldy #34
-     3 B4A0 91 94			sta (SCREEN_PTR),y
+     1 B486 A9 39			lda #UI_COLON
+     2 B488 A0 1B			ldy #27
+     3 B48A 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   541
-   542 B4A2 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   543 B4AD				blit_char #UI_AMULET_SW_ICON_LEFT screen_ptr #29
+   544 B48C				blit_char #UI_NUMBER_0 screen_ptr #28
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B4AD A9 52			lda #UI_AMULET_SW_ICON_LEFT
-     2 B4AF A0 1D			ldy #29
-     3 B4B1 91 94			sta (SCREEN_PTR),y
+     1 B48C A9 2C			lda #UI_NUMBER_0
+     2 B48E A0 1C			ldy #28
+     3 B490 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   544 B4B3				blit_char #UI_AMULET_SW_ICON_RIGHT screen_ptr #30
+   545 B492				blit_char #UI_NUMBER_0 screen_ptr #29
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B4B3 A9 53			lda #UI_AMULET_SW_ICON_RIGHT
-     2 B4B5 A0 1E			ldy #30
-     3 B4B7 91 94			sta (SCREEN_PTR),y
+     1 B492 A9 2C			lda #UI_NUMBER_0
+     2 B494 A0 1D			ldy #29
+     3 B496 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   545 B4B9				blit_char #UI_GOLD_GEM_ICON_LEFT screen_ptr #31
+   546 B498				blit_char #UI_NUMBER_0 screen_ptr #30
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B4B9 A9 CC			lda #UI_GOLD_GEM_ICON_LEFT
-     2 B4BB A0 1F			ldy #31
-     3 B4BD 91 94			sta (SCREEN_PTR),y
+     1 B498 A9 2C			lda #UI_NUMBER_0
+     2 B49A A0 1E			ldy #30
+     3 B49C 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   546 B4BF				blit_char #UI_GOLD_GEM_ICON_RIGHT screen_ptr #32
+   547 B49E				blit_char #UI_NUMBER_0 screen_ptr #31
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B4BF A9 CD			lda #UI_GOLD_GEM_ICON_RIGHT
-     2 B4C1 A0 20			ldy #32
-     3 B4C3 91 94			sta (SCREEN_PTR),y
+     1 B49E A9 2C			lda #UI_NUMBER_0
+     2 B4A0 A0 1F			ldy #31
+     3 B4A2 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   547 B4C5				blit_char #UI_AMULET_SE_ICON_LEFT screen_ptr #33
+   548 B4A4				blit_char #UI_NUMBER_0 screen_ptr #32
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B4C5 A9 54			lda #UI_AMULET_SE_ICON_LEFT
-     2 B4C7 A0 21			ldy #33
-     3 B4C9 91 94			sta (SCREEN_PTR),y
-Source: main.asm
-   548 B4CB				blit_char #UI_AMULET_SE_ICON_RIGHT screen_ptr #34
-Macro: BLIT_CHAR [Source: main.asm]
-     1 B4CB A9 55			lda #UI_AMULET_SE_ICON_RIGHT
-     2 B4CD A0 22			ldy #34
-     3 B4CF 91 94			sta (SCREEN_PTR),y
+     1 B4A4 A9 2C			lda #UI_NUMBER_0
+     2 B4A6 A0 20			ldy #32
+     3 B4A8 91 94			sta (SCREEN_PTR),y
 Source: main.asm
    549
-   550 					; Keys
-   551 B4D1 38 A5 94 E9 50 85 + 	sbw screen_ptr #(screen_char_width * 2)
-   552 B4DC				blit_char #UI_BLUE_KEY_ICON screen_ptr #26
+   550 					; Amulet
+   551 B4AA 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   552 B4B5 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   553 B4C0				blit_char #UI_AMULET_NW_ICON_LEFT screen_ptr #29
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B4DC A9 0C			lda #UI_BLUE_KEY_ICON
-     2 B4DE A0 1A			ldy #26
-     3 B4E0 91 94			sta (SCREEN_PTR),y
+     1 B4C0 A9 4E			lda #UI_AMULET_NW_ICON_LEFT
+     2 B4C2 A0 1D			ldy #29
+     3 B4C4 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   553 B4E2				blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
+   554 B4C6				blit_char #UI_AMULET_NW_ICON_RIGHT screen_ptr #30
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B4E2 A9 0B			lda #UI_KEY_ICON_RIGHT
-     2 B4E4 A0 1B			ldy #27
-     3 B4E6 91 94			sta (SCREEN_PTR),y
+     1 B4C6 A9 4F			lda #UI_AMULET_NW_ICON_RIGHT
+     2 B4C8 A0 1E			ldy #30
+     3 B4CA 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   554
-   555 B4E8				blit_char #UI_BLACK_KEY_CAP_LEFT screen_ptr #35
+   555 B4CC				blit_char #UI_BLACK_GEM_ICON_LEFT screen_ptr #31
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B4E8 A9 0F			lda #UI_BLACK_KEY_CAP_LEFT
-     2 B4EA A0 23			ldy #35
-     3 B4EC 91 94			sta (SCREEN_PTR),y
+     1 B4CC A9 46			lda #UI_BLACK_GEM_ICON_LEFT
+     2 B4CE A0 1F			ldy #31
+     3 B4D0 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   556 B4EE				blit_char #UI_BLACK_KEY_ICON_LEFT screen_ptr #36
+   556 B4D2				blit_char #UI_BLACK_GEM_ICON_RIGHT screen_ptr #32
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B4EE A9 10			lda #UI_BLACK_KEY_ICON_LEFT
-     2 B4F0 A0 24			ldy #36
-     3 B4F2 91 94			sta (SCREEN_PTR),y
+     1 B4D2 A9 47			lda #UI_BLACK_GEM_ICON_RIGHT
+     2 B4D4 A0 20			ldy #32
+     3 B4D6 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   557 B4F4				blit_char #UI_BLACK_KEY_ICON_RIGHT screen_ptr #37
+   557 B4D8				blit_char #UI_AMULET_NE_ICON_LEFT screen_ptr #33
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B4F4 A9 11			lda #UI_BLACK_KEY_ICON_RIGHT
-     2 B4F6 A0 25			ldy #37
-     3 B4F8 91 94			sta (SCREEN_PTR),y
+     1 B4D8 A9 50			lda #UI_AMULET_NE_ICON_LEFT
+     2 B4DA A0 21			ldy #33
+     3 B4DC 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   558 B4FA				blit_char #UI_BLACK_KEY_CAP_RIGHT screen_ptr #38
+   558 B4DE				blit_char #UI_AMULET_NE_ICON_RIGHT screen_ptr #34
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B4FA A9 12			lda #UI_BLACK_KEY_CAP_RIGHT
-     2 B4FC A0 26			ldy #38
-     3 B4FE 91 94			sta (SCREEN_PTR),y
+     1 B4DE A9 51			lda #UI_AMULET_NE_ICON_RIGHT
+     2 B4E0 A0 22			ldy #34
+     3 B4E2 91 94			sta (SCREEN_PTR),y
 Source: main.asm
    559
-   560 B500 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   561 B50B				blit_char #UI_RED_KEY_ICON screen_ptr #26
+   560 B4E4 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   561 B4EF				blit_char #UI_BLUE_GEM_ICON_LEFT screen_ptr #29
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B50B A9 0D			lda #UI_RED_KEY_ICON
-     2 B50D A0 1A			ldy #26
-     3 B50F 91 94			sta (SCREEN_PTR),y
+     1 B4EF A9 48			lda #UI_BLUE_GEM_ICON_LEFT
+     2 B4F1 A0 1D			ldy #29
+     3 B4F3 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   562 B511				blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
+   562 B4F5				blit_char #UI_BLUE_GEM_ICON_RIGHT screen_ptr #30
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B511 A9 0B			lda #UI_KEY_ICON_RIGHT
-     2 B513 A0 1B			ldy #27
-     3 B515 91 94			sta (SCREEN_PTR),y
+     1 B4F5 A9 49			lda #UI_BLUE_GEM_ICON_RIGHT
+     2 B4F7 A0 1E			ldy #30
+     3 B4F9 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   563 B517				blit_char #UI_WHITE_KEY_ICON screen_ptr #36
+   563 B4FB				blit_char #UI_WHITE_GEM_ICON_LEFT screen_ptr #31
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B517 A9 0A			lda #UI_WHITE_KEY_ICON
-     2 B519 A0 24			ldy #36
-     3 B51B 91 94			sta (SCREEN_PTR),y
+     1 B4FB A9 44			lda #UI_WHITE_GEM_ICON_LEFT
+     2 B4FD A0 1F			ldy #31
+     3 B4FF 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   564 B51D				blit_char #UI_KEY_ICON_RIGHT screen_ptr #37
+   564 B501				blit_char #UI_WHITE_GEM_ICON_RIGHT screen_ptr #32
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B51D A9 0B			lda #UI_KEY_ICON_RIGHT
-     2 B51F A0 25			ldy #37
-     3 B521 91 94			sta (SCREEN_PTR),y
+     1 B501 A9 45			lda #UI_WHITE_GEM_ICON_RIGHT
+     2 B503 A0 20			ldy #32
+     3 B505 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   565
-   566 B523 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   567 B52E				blit_char #UI_GOLD_KEY_ICON screen_ptr #26
+   565 B507				blit_char #UI_RED_GEM_ICON_LEFT screen_ptr #33
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B52E A9 8E			lda #UI_GOLD_KEY_ICON
-     2 B530 A0 1A			ldy #26
-     3 B532 91 94			sta (SCREEN_PTR),y
+     1 B507 A9 4A			lda #UI_RED_GEM_ICON_LEFT
+     2 B509 A0 21			ldy #33
+     3 B50B 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   568 B534				blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
+   566 B50D				blit_char #UI_RED_GEM_ICON_RIGHT screen_ptr #34
 Macro: BLIT_CHAR [Source: main.asm]
-     1 B534 A9 0B			lda #UI_KEY_ICON_RIGHT
-     2 B536 A0 1B			ldy #27
-     3 B538 91 94			sta (SCREEN_PTR),y
+     1 B50D A9 4B			lda #UI_RED_GEM_ICON_RIGHT
+     2 B50F A0 22			ldy #34
+     3 B511 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   569
-   570 B53A 60				rts
-   571 					.endp
-   572
-   573
-   574 B53B			.proc blit_screen
-   575 B53B 20 2E B1			map_offset()
-   576
-   577 B53E A0 00			ldy #0
-   578 					; Line #1
-   579 B540 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   580 B54B 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
-   581 B556				blit_circle_line 5, 3, 7
-Macro: BLIT_CIRCLE_LINE [Source: main.asm]
-     1 B556 A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
-     2 B55E A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
-     4 B566 18 A5 92 69 03 85 + 	adw map_ptr #3
-     5 B571 18 A5 94 69 07 85 + 	adw screen_ptr #7
-     6 B57C A2 05			ldx #5
-     7 B57E			loop
-     1 B57E B1 92			lda (map_ptr),y			; Load the tile from the map
-     2 B580 0A				asl						; Multiply by two to get left character
-     3 B581 91 94			sta (screen_ptr),y		; Store the left character
-     1 B583 E6 94		    inc SCREEN_PTR
-     2 B585 D0 02		    bne skip_carry
-     3 B587 E6 95		    inc SCREEN_PTR + 1
-     4 B589			skip_carry
+   567
+   568 B513 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   569 B51E				blit_char #UI_AMULET_SW_ICON_LEFT screen_ptr #29
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B51E A9 52			lda #UI_AMULET_SW_ICON_LEFT
+     2 B520 A0 1D			ldy #29
+     3 B522 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-     5 B589 18 69 01			add #1					; Add one to get right character
-     6 B58C 91 94			sta (screen_ptr),y		; Store the right character
-     7 B58E 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
-     8 B599 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+   570 B524				blit_char #UI_AMULET_SW_ICON_RIGHT screen_ptr #30
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B524 A9 53			lda #UI_AMULET_SW_ICON_RIGHT
+     2 B526 A0 1E			ldy #30
+     3 B528 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-     9 B5A4 CA				dex
-    10 B5A5 D0 D7			bne loop
-    12 B5A7 A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
-    13 B5AF A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
+   571 B52A				blit_char #UI_GOLD_GEM_ICON_LEFT screen_ptr #31
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B52A A9 CC			lda #UI_GOLD_GEM_ICON_LEFT
+     2 B52C A0 1F			ldy #31
+     3 B52E 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   582
-   583 					; Line #2
-   584 B5B7 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   585 B5C2 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
-   586 B5CD				blit_circle_line 7, 2, 5
-Macro: BLIT_CIRCLE_LINE [Source: main.asm]
-     1 B5CD A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
-     2 B5D5 A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
-     4 B5DD 18 A5 92 69 02 85 + 	adw map_ptr #2
-     5 B5E8 18 A5 94 69 05 85 + 	adw screen_ptr #5
-     6 B5F3 A2 07			ldx #7
-     7 B5F5			loop
-     1 B5F5 B1 92			lda (map_ptr),y			; Load the tile from the map
-     2 B5F7 0A				asl						; Multiply by two to get left character
-     3 B5F8 91 94			sta (screen_ptr),y		; Store the left character
-     1 B5FA E6 94		    inc SCREEN_PTR
-     2 B5FC D0 02		    bne skip_carry
-     3 B5FE E6 95		    inc SCREEN_PTR + 1
-     4 B600			skip_carry
+   572 B530				blit_char #UI_GOLD_GEM_ICON_RIGHT screen_ptr #32
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B530 A9 CD			lda #UI_GOLD_GEM_ICON_RIGHT
+     2 B532 A0 20			ldy #32
+     3 B534 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-     5 B600 18 69 01			add #1					; Add one to get right character
-     6 B603 91 94			sta (screen_ptr),y		; Store the right character
-     7 B605 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
-     8 B610 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+   573 B536				blit_char #UI_AMULET_SE_ICON_LEFT screen_ptr #33
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B536 A9 54			lda #UI_AMULET_SE_ICON_LEFT
+     2 B538 A0 21			ldy #33
+     3 B53A 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-     9 B61B CA				dex
-    10 B61C D0 D7			bne loop
-    12 B61E A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
-    13 B626 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
+   574 B53C				blit_char #UI_AMULET_SE_ICON_RIGHT screen_ptr #34
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B53C A9 55			lda #UI_AMULET_SE_ICON_RIGHT
+     2 B53E A0 22			ldy #34
+     3 B540 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   587
-   588 					; Line #3
-   589 B62E 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   590 B639 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
-   591 B644				blit_circle_line 9, 1, 3
-Macro: BLIT_CIRCLE_LINE [Source: main.asm]
-     1 B644 A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
-     2 B64C A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
-     4 B654 18 A5 92 69 01 85 + 	adw map_ptr #1
-     5 B65F 18 A5 94 69 03 85 + 	adw screen_ptr #3
-     6 B66A A2 09			ldx #9
-     7 B66C			loop
-     1 B66C B1 92			lda (map_ptr),y			; Load the tile from the map
-     2 B66E 0A				asl						; Multiply by two to get left character
-     3 B66F 91 94			sta (screen_ptr),y		; Store the left character
-     1 B671 E6 94		    inc SCREEN_PTR
-     2 B673 D0 02		    bne skip_carry
-     3 B675 E6 95		    inc SCREEN_PTR + 1
-     4 B677			skip_carry
+   575
+   576 					; Keys
+   577 B542 38 A5 94 E9 50 85 + 	sbw screen_ptr #(screen_char_width * 2)
+   578 B54D				blit_char #UI_BLUE_KEY_ICON screen_ptr #26
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B54D A9 0C			lda #UI_BLUE_KEY_ICON
+     2 B54F A0 1A			ldy #26
+     3 B551 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-     5 B677 18 69 01			add #1					; Add one to get right character
-     6 B67A 91 94			sta (screen_ptr),y		; Store the right character
-     7 B67C 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
-     8 B687 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+   579 B553				blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B553 A9 0B			lda #UI_KEY_ICON_RIGHT
+     2 B555 A0 1B			ldy #27
+     3 B557 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-     9 B692 CA				dex
-    10 B693 D0 D7			bne loop
-    12 B695 A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
-    13 B69D A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
+   580
+   581 B559				blit_char #UI_BLACK_KEY_CAP_LEFT screen_ptr #35
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B559 A9 0F			lda #UI_BLACK_KEY_CAP_LEFT
+     2 B55B A0 23			ldy #35
+     3 B55D 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   592
-   593 					; Line #4
-   594 B6A5 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   595 B6B0 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
-   596 B6BB				blit_circle_line 9, 1, 3
-Macro: BLIT_CIRCLE_LINE [Source: main.asm]
-     1 B6BB A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
-     2 B6C3 A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
-     4 B6CB 18 A5 92 69 01 85 + 	adw map_ptr #1
-     5 B6D6 18 A5 94 69 03 85 + 	adw screen_ptr #3
-     6 B6E1 A2 09			ldx #9
-     7 B6E3			loop
-     1 B6E3 B1 92			lda (map_ptr),y			; Load the tile from the map
-     2 B6E5 0A				asl						; Multiply by two to get left character
-     3 B6E6 91 94			sta (screen_ptr),y		; Store the left character
-     1 B6E8 E6 94		    inc SCREEN_PTR
-     2 B6EA D0 02		    bne skip_carry
-     3 B6EC E6 95		    inc SCREEN_PTR + 1
-     4 B6EE			skip_carry
+   582 B55F				blit_char #UI_BLACK_KEY_ICON_LEFT screen_ptr #36
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B55F A9 10			lda #UI_BLACK_KEY_ICON_LEFT
+     2 B561 A0 24			ldy #36
+     3 B563 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-     5 B6EE 18 69 01			add #1					; Add one to get right character
-     6 B6F1 91 94			sta (screen_ptr),y		; Store the right character
-     7 B6F3 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
-     8 B6FE 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+   583 B565				blit_char #UI_BLACK_KEY_ICON_RIGHT screen_ptr #37
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B565 A9 11			lda #UI_BLACK_KEY_ICON_RIGHT
+     2 B567 A0 25			ldy #37
+     3 B569 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-     9 B709 CA				dex
-    10 B70A D0 D7			bne loop
-    12 B70C A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
-    13 B714 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
+   584 B56B				blit_char #UI_BLACK_KEY_CAP_RIGHT screen_ptr #38
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B56B A9 12			lda #UI_BLACK_KEY_CAP_RIGHT
+     2 B56D A0 26			ldy #38
+     3 B56F 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-   597
-   598 					; Line #5
-   599 B71C 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   600 B727 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
-   601 B732				blit_circle_line 9, 1, 3
-Macro: BLIT_CIRCLE_LINE [Source: main.asm]
-     1 B732 A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
-     2 B73A A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
-     4 B742 18 A5 92 69 01 85 + 	adw map_ptr #1
-     5 B74D 18 A5 94 69 03 85 + 	adw screen_ptr #3
-     6 B758 A2 09			ldx #9
-     7 B75A			loop
-     1 B75A B1 92			lda (map_ptr),y			; Load the tile from the map
-     2 B75C 0A				asl						; Multiply by two to get left character
-     3 B75D 91 94			sta (screen_ptr),y		; Store the left character
-     1 B75F E6 94		    inc SCREEN_PTR
-     2 B761 D0 02		    bne skip_carry
-     3 B763 E6 95		    inc SCREEN_PTR + 1
-     4 B765			skip_carry
+   585
+   586 B571 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   587 B57C				blit_char #UI_RED_KEY_ICON screen_ptr #26
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B57C A9 0D			lda #UI_RED_KEY_ICON
+     2 B57E A0 1A			ldy #26
+     3 B580 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-     5 B765 18 69 01			add #1					; Add one to get right character
-     6 B768 91 94			sta (screen_ptr),y		; Store the right character
-     7 B76A 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
-     8 B775 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+   588 B582				blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B582 A9 0B			lda #UI_KEY_ICON_RIGHT
+     2 B584 A0 1B			ldy #27
+     3 B586 91 94			sta (SCREEN_PTR),y
 Source: main.asm
-     9 B780 CA				dex
-    10 B781 D0 D7			bne loop
-    12 B783 A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
-    13 B78B A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
+   589 B588				blit_char #UI_WHITE_KEY_ICON screen_ptr #36
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B588 A9 0A			lda #UI_WHITE_KEY_ICON
+     2 B58A A0 24			ldy #36
+     3 B58C 91 94			sta (SCREEN_PTR),y
 Source: main.asm
+   590 B58E				blit_char #UI_KEY_ICON_RIGHT screen_ptr #37
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B58E A9 0B			lda #UI_KEY_ICON_RIGHT
+     2 B590 A0 25			ldy #37
+     3 B592 91 94			sta (SCREEN_PTR),y
+Source: main.asm
+   591
+   592 B594 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   593 B59F				blit_char #UI_GOLD_KEY_ICON screen_ptr #26
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B59F A9 8E			lda #UI_GOLD_KEY_ICON
+     2 B5A1 A0 1A			ldy #26
+     3 B5A3 91 94			sta (SCREEN_PTR),y
+Source: main.asm
+   594 B5A5				blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
+Macro: BLIT_CHAR [Source: main.asm]
+     1 B5A5 A9 0B			lda #UI_KEY_ICON_RIGHT
+     2 B5A7 A0 1B			ldy #27
+     3 B5A9 91 94			sta (SCREEN_PTR),y
+Source: main.asm
+   595
+   596 B5AB 60				rts
+   597 					.endp
+   598
+   599
+   600 B5AC			.proc blit_screen
+   601 B5AC 20 9F B1			map_offset()
    602
-   603 					; Line #6
-   604 B793 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   605 B79E 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
-   606 B7A9				blit_circle_line 9, 1, 3
+   603 B5AF A0 00			ldy #0
+   604 					; Line #1
+   605 B5B1 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   606 B5BC 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
+   607 B5C7				blit_circle_line 5, 3, 7
 Macro: BLIT_CIRCLE_LINE [Source: main.asm]
-     1 B7A9 A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
-     2 B7B1 A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
-     4 B7B9 18 A5 92 69 01 85 + 	adw map_ptr #1
-     5 B7C4 18 A5 94 69 03 85 + 	adw screen_ptr #3
-     6 B7CF A2 09			ldx #9
-     7 B7D1			loop
-     1 B7D1 B1 92			lda (map_ptr),y			; Load the tile from the map
-     2 B7D3 0A				asl						; Multiply by two to get left character
-     3 B7D4 91 94			sta (screen_ptr),y		; Store the left character
-     1 B7D6 E6 94		    inc SCREEN_PTR
-     2 B7D8 D0 02		    bne skip_carry
-     3 B7DA E6 95		    inc SCREEN_PTR + 1
-     4 B7DC			skip_carry
+     1 B5C7 A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
+     2 B5CF A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
+     4 B5D7 18 A5 92 69 03 85 + 	adw map_ptr #3
+     5 B5E2 18 A5 94 69 07 85 + 	adw screen_ptr #7
+     6 B5ED A2 05			ldx #5
+     7 B5EF			loop
+     1 B5EF B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 B5F1 0A				asl						; Multiply by two to get left character
+     3 B5F2 91 94			sta (screen_ptr),y		; Store the left character
+     1 B5F4 E6 94		    inc SCREEN_PTR
+     2 B5F6 D0 02		    bne skip_carry
+     3 B5F8 E6 95		    inc SCREEN_PTR + 1
+     4 B5FA			skip_carry
 Source: main.asm
-     5 B7DC 18 69 01			add #1					; Add one to get right character
-     6 B7DF 91 94			sta (screen_ptr),y		; Store the right character
-     7 B7E1 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
-     8 B7EC 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+     5 B5FA 18 69 01			add #1					; Add one to get right character
+     6 B5FD 91 94			sta (screen_ptr),y		; Store the right character
+     7 B5FF 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 B60A 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
 Source: main.asm
-     9 B7F7 CA				dex
-    10 B7F8 D0 D7			bne loop
-    12 B7FA A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
-    13 B802 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
+     9 B615 CA				dex
+    10 B616 D0 D7			bne loop
+    12 B618 A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
+    13 B620 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
 Source: main.asm
-   607
-   608 					; Line #7
-   609 B80A 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   610 B815 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
-   611 B820				blit_circle_line 9, 1, 3
+   608
+   609 					; Line #2
+   610 B628 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   611 B633 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
+   612 B63E				blit_circle_line 7, 2, 5
 Macro: BLIT_CIRCLE_LINE [Source: main.asm]
-     1 B820 A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
-     2 B828 A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
-     4 B830 18 A5 92 69 01 85 + 	adw map_ptr #1
-     5 B83B 18 A5 94 69 03 85 + 	adw screen_ptr #3
-     6 B846 A2 09			ldx #9
-     7 B848			loop
-     1 B848 B1 92			lda (map_ptr),y			; Load the tile from the map
-     2 B84A 0A				asl						; Multiply by two to get left character
-     3 B84B 91 94			sta (screen_ptr),y		; Store the left character
-     1 B84D E6 94		    inc SCREEN_PTR
-     2 B84F D0 02		    bne skip_carry
-     3 B851 E6 95		    inc SCREEN_PTR + 1
-     4 B853			skip_carry
+     1 B63E A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
+     2 B646 A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
+     4 B64E 18 A5 92 69 02 85 + 	adw map_ptr #2
+     5 B659 18 A5 94 69 05 85 + 	adw screen_ptr #5
+     6 B664 A2 07			ldx #7
+     7 B666			loop
+     1 B666 B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 B668 0A				asl						; Multiply by two to get left character
+     3 B669 91 94			sta (screen_ptr),y		; Store the left character
+     1 B66B E6 94		    inc SCREEN_PTR
+     2 B66D D0 02		    bne skip_carry
+     3 B66F E6 95		    inc SCREEN_PTR + 1
+     4 B671			skip_carry
 Source: main.asm
-     5 B853 18 69 01			add #1					; Add one to get right character
-     6 B856 91 94			sta (screen_ptr),y		; Store the right character
-     7 B858 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
-     8 B863 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+     5 B671 18 69 01			add #1					; Add one to get right character
+     6 B674 91 94			sta (screen_ptr),y		; Store the right character
+     7 B676 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 B681 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
 Source: main.asm
-     9 B86E CA				dex
-    10 B86F D0 D7			bne loop
-    12 B871 A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
-    13 B879 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
+     9 B68C CA				dex
+    10 B68D D0 D7			bne loop
+    12 B68F A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
+    13 B697 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
 Source: main.asm
-   612
-   613 					; Line #8
-   614 B881 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   615 B88C 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
-   616 B897				blit_circle_line 7, 2, 5
+   613
+   614 					; Line #3
+   615 B69F 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   616 B6AA 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
+   617 B6B5				blit_circle_line 9, 1, 3
 Macro: BLIT_CIRCLE_LINE [Source: main.asm]
-     1 B897 A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
-     2 B89F A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
-     4 B8A7 18 A5 92 69 02 85 + 	adw map_ptr #2
-     5 B8B2 18 A5 94 69 05 85 + 	adw screen_ptr #5
-     6 B8BD A2 07			ldx #7
-     7 B8BF			loop
-     1 B8BF B1 92			lda (map_ptr),y			; Load the tile from the map
-     2 B8C1 0A				asl						; Multiply by two to get left character
-     3 B8C2 91 94			sta (screen_ptr),y		; Store the left character
-     1 B8C4 E6 94		    inc SCREEN_PTR
-     2 B8C6 D0 02		    bne skip_carry
-     3 B8C8 E6 95		    inc SCREEN_PTR + 1
-     4 B8CA			skip_carry
+     1 B6B5 A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
+     2 B6BD A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
+     4 B6C5 18 A5 92 69 01 85 + 	adw map_ptr #1
+     5 B6D0 18 A5 94 69 03 85 + 	adw screen_ptr #3
+     6 B6DB A2 09			ldx #9
+     7 B6DD			loop
+     1 B6DD B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 B6DF 0A				asl						; Multiply by two to get left character
+     3 B6E0 91 94			sta (screen_ptr),y		; Store the left character
+     1 B6E2 E6 94		    inc SCREEN_PTR
+     2 B6E4 D0 02		    bne skip_carry
+     3 B6E6 E6 95		    inc SCREEN_PTR + 1
+     4 B6E8			skip_carry
 Source: main.asm
-     5 B8CA 18 69 01			add #1					; Add one to get right character
-     6 B8CD 91 94			sta (screen_ptr),y		; Store the right character
-     7 B8CF 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
-     8 B8DA 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+     5 B6E8 18 69 01			add #1					; Add one to get right character
+     6 B6EB 91 94			sta (screen_ptr),y		; Store the right character
+     7 B6ED 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 B6F8 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
 Source: main.asm
-     9 B8E5 CA				dex
-    10 B8E6 D0 D7			bne loop
-    12 B8E8 A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
-    13 B8F0 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
+     9 B703 CA				dex
+    10 B704 D0 D7			bne loop
+    12 B706 A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
+    13 B70E A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
 Source: main.asm
-   617
-   618 					; Line #9
-   619 B8F8 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
-   620 B903 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
-   621 B90E				blit_circle_line 5, 3, 7
+   618
+   619 					; Line #4
+   620 B716 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   621 B721 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
+   622 B72C				blit_circle_line 9, 1, 3
 Macro: BLIT_CIRCLE_LINE [Source: main.asm]
-     1 B90E A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
-     2 B916 A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
-     4 B91E 18 A5 92 69 03 85 + 	adw map_ptr #3
-     5 B929 18 A5 94 69 07 85 + 	adw screen_ptr #7
-     6 B934 A2 05			ldx #5
-     7 B936			loop
-     1 B936 B1 92			lda (map_ptr),y			; Load the tile from the map
-     2 B938 0A				asl						; Multiply by two to get left character
-     3 B939 91 94			sta (screen_ptr),y		; Store the left character
-     1 B93B E6 94		    inc SCREEN_PTR
-     2 B93D D0 02		    bne skip_carry
-     3 B93F E6 95		    inc SCREEN_PTR + 1
-     4 B941			skip_carry
+     1 B72C A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
+     2 B734 A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
+     4 B73C 18 A5 92 69 01 85 + 	adw map_ptr #1
+     5 B747 18 A5 94 69 03 85 + 	adw screen_ptr #3
+     6 B752 A2 09			ldx #9
+     7 B754			loop
+     1 B754 B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 B756 0A				asl						; Multiply by two to get left character
+     3 B757 91 94			sta (screen_ptr),y		; Store the left character
+     1 B759 E6 94		    inc SCREEN_PTR
+     2 B75B D0 02		    bne skip_carry
+     3 B75D E6 95		    inc SCREEN_PTR + 1
+     4 B75F			skip_carry
 Source: main.asm
-     5 B941 18 69 01			add #1					; Add one to get right character
-     6 B944 91 94			sta (screen_ptr),y		; Store the right character
-     7 B946 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
-     8 B951 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+     5 B75F 18 69 01			add #1					; Add one to get right character
+     6 B762 91 94			sta (screen_ptr),y		; Store the right character
+     7 B764 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 B76F 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
 Source: main.asm
-     9 B95C CA				dex
-    10 B95D D0 D7			bne loop
-    12 B95F A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
-    13 B967 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
+     9 B77A CA				dex
+    10 B77B D0 D7			bne loop
+    12 B77D A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
+    13 B785 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
 Source: main.asm
-   622
-   623 B96F 60				rts
-   624 					.endp
-   625
-   626 				; Uses a linear-feedback shift register (LFSR) to generate 8-bit pseudo-random numbers
-   627 				; More info: https://en.wikipedia.org/wiki/Linear-feedback_shift_register
-   628 				; Also here: https://forums.atariage.com/topic/159268-random-numbers/#comment-1958751
-   629 				; Also here: https://github.com/bbbradsmith/prng_6502
-   630 B970			.proc random8
-   631 B970 A5 A7			lda rand				; Load in seed or last number generated
-   632 B972 4A				lsr						; Shift 1 place to the right
-   633 B973 90 02			bcc no_eor				; Carry flag contains the last bit prior to shifting - if 0, skip XOR
-   634 B975 49 B4			eor #$b4				; XOR with feedback value that produces a good sequence
-   635 B977			no_eor
-   636 B977 85 A7			sta rand				; Store the random number
-   637 B979 60				rts
-   638 					.endp
-   639
-   640 B97A				icl 'macros.asm'
+   623
+   624 					; Line #5
+   625 B78D 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   626 B798 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
+   627 B7A3				blit_circle_line 9, 1, 3
+Macro: BLIT_CIRCLE_LINE [Source: main.asm]
+     1 B7A3 A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
+     2 B7AB A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
+     4 B7B3 18 A5 92 69 01 85 + 	adw map_ptr #1
+     5 B7BE 18 A5 94 69 03 85 + 	adw screen_ptr #3
+     6 B7C9 A2 09			ldx #9
+     7 B7CB			loop
+     1 B7CB B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 B7CD 0A				asl						; Multiply by two to get left character
+     3 B7CE 91 94			sta (screen_ptr),y		; Store the left character
+     1 B7D0 E6 94		    inc SCREEN_PTR
+     2 B7D2 D0 02		    bne skip_carry
+     3 B7D4 E6 95		    inc SCREEN_PTR + 1
+     4 B7D6			skip_carry
+Source: main.asm
+     5 B7D6 18 69 01			add #1					; Add one to get right character
+     6 B7D9 91 94			sta (screen_ptr),y		; Store the right character
+     7 B7DB 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 B7E6 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+Source: main.asm
+     9 B7F1 CA				dex
+    10 B7F2 D0 D7			bne loop
+    12 B7F4 A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
+    13 B7FC A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
+Source: main.asm
+   628
+   629 					; Line #6
+   630 B804 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   631 B80F 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
+   632 B81A				blit_circle_line 9, 1, 3
+Macro: BLIT_CIRCLE_LINE [Source: main.asm]
+     1 B81A A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
+     2 B822 A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
+     4 B82A 18 A5 92 69 01 85 + 	adw map_ptr #1
+     5 B835 18 A5 94 69 03 85 + 	adw screen_ptr #3
+     6 B840 A2 09			ldx #9
+     7 B842			loop
+     1 B842 B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 B844 0A				asl						; Multiply by two to get left character
+     3 B845 91 94			sta (screen_ptr),y		; Store the left character
+     1 B847 E6 94		    inc SCREEN_PTR
+     2 B849 D0 02		    bne skip_carry
+     3 B84B E6 95		    inc SCREEN_PTR + 1
+     4 B84D			skip_carry
+Source: main.asm
+     5 B84D 18 69 01			add #1					; Add one to get right character
+     6 B850 91 94			sta (screen_ptr),y		; Store the right character
+     7 B852 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 B85D 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+Source: main.asm
+     9 B868 CA				dex
+    10 B869 D0 D7			bne loop
+    12 B86B A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
+    13 B873 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
+Source: main.asm
+   633
+   634 					; Line #7
+   635 B87B 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   636 B886 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
+   637 B891				blit_circle_line 9, 1, 3
+Macro: BLIT_CIRCLE_LINE [Source: main.asm]
+     1 B891 A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
+     2 B899 A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
+     4 B8A1 18 A5 92 69 01 85 + 	adw map_ptr #1
+     5 B8AC 18 A5 94 69 03 85 + 	adw screen_ptr #3
+     6 B8B7 A2 09			ldx #9
+     7 B8B9			loop
+     1 B8B9 B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 B8BB 0A				asl						; Multiply by two to get left character
+     3 B8BC 91 94			sta (screen_ptr),y		; Store the left character
+     1 B8BE E6 94		    inc SCREEN_PTR
+     2 B8C0 D0 02		    bne skip_carry
+     3 B8C2 E6 95		    inc SCREEN_PTR + 1
+     4 B8C4			skip_carry
+Source: main.asm
+     5 B8C4 18 69 01			add #1					; Add one to get right character
+     6 B8C7 91 94			sta (screen_ptr),y		; Store the right character
+     7 B8C9 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 B8D4 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+Source: main.asm
+     9 B8DF CA				dex
+    10 B8E0 D0 D7			bne loop
+    12 B8E2 A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
+    13 B8EA A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
+Source: main.asm
+   638
+   639 					; Line #8
+   640 B8F2 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   641 B8FD 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
+   642 B908				blit_circle_line 7, 2, 5
+Macro: BLIT_CIRCLE_LINE [Source: main.asm]
+     1 B908 A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
+     2 B910 A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
+     4 B918 18 A5 92 69 02 85 + 	adw map_ptr #2
+     5 B923 18 A5 94 69 05 85 + 	adw screen_ptr #5
+     6 B92E A2 07			ldx #7
+     7 B930			loop
+     1 B930 B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 B932 0A				asl						; Multiply by two to get left character
+     3 B933 91 94			sta (screen_ptr),y		; Store the left character
+     1 B935 E6 94		    inc SCREEN_PTR
+     2 B937 D0 02		    bne skip_carry
+     3 B939 E6 95		    inc SCREEN_PTR + 1
+     4 B93B			skip_carry
+Source: main.asm
+     5 B93B 18 69 01			add #1					; Add one to get right character
+     6 B93E 91 94			sta (screen_ptr),y		; Store the right character
+     7 B940 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 B94B 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+Source: main.asm
+     9 B956 CA				dex
+    10 B957 D0 D7			bne loop
+    12 B959 A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
+    13 B961 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
+Source: main.asm
+   643
+   644 					; Line #9
+   645 B969 18 A5 94 69 28 85 + 	adw screen_ptr #screen_char_width
+   646 B974 18 A5 92 69 8B 85 + 	adw map_ptr #map_width
+   647 B97F				blit_circle_line 5, 3, 7
+Macro: BLIT_CIRCLE_LINE [Source: main.asm]
+     1 B97F A5 92 85 A0 A5 93 + 	mwa map_ptr tmp_addr1
+     2 B987 A5 94 85 A2 A5 95 + 	mwa screen_ptr tmp_addr2
+     4 B98F 18 A5 92 69 03 85 + 	adw map_ptr #3
+     5 B99A 18 A5 94 69 07 85 + 	adw screen_ptr #7
+     6 B9A5 A2 05			ldx #5
+     7 B9A7			loop
+     1 B9A7 B1 92			lda (map_ptr),y			; Load the tile from the map
+     2 B9A9 0A				asl						; Multiply by two to get left character
+     3 B9AA 91 94			sta (screen_ptr),y		; Store the left character
+     1 B9AC E6 94		    inc SCREEN_PTR
+     2 B9AE D0 02		    bne skip_carry
+     3 B9B0 E6 95		    inc SCREEN_PTR + 1
+     4 B9B2			skip_carry
+Source: main.asm
+     5 B9B2 18 69 01			add #1					; Add one to get right character
+     6 B9B5 91 94			sta (screen_ptr),y		; Store the right character
+     7 B9B7 18 A5 92 69 01 85 + 	adw map_ptr #1			; Advance the map pointer
+     8 B9C2 18 A5 94 69 01 85 + 	adw screen_ptr #1		; Advance the screen pointer	
+Source: main.asm
+     9 B9CD CA				dex
+    10 B9CE D0 D7			bne loop
+    12 B9D0 A5 A0 85 92 A5 A1 + 	mwa tmp_addr1 map_ptr
+    13 B9D8 A5 A2 85 94 A5 A3 + 	mwa tmp_addr2 screen_ptr
+Source: main.asm
+   648
+   649 B9E0 60				rts
+   650 					.endp
+   651
+   652 				; Uses a linear-feedback shift register (LFSR) to generate 8-bit pseudo-random numbers
+   653 				; More info: https://en.wikipedia.org/wiki/Linear-feedback_shift_register
+   654 				; Also here: https://forums.atariage.com/topic/159268-random-numbers/#comment-1958751
+   655 				; Also here: https://github.com/bbbradsmith/prng_6502
+   656 B9E1			.proc random8
+   657 B9E1 A5 A7			lda rand				; Load in seed or last number generated
+   658 B9E3 4A				lsr						; Shift 1 place to the right
+   659 B9E4 90 02			bcc no_eor				; Carry flag contains the last bit prior to shifting - if 0, skip XOR
+   660 B9E6 49 B4			eor #$b4				; XOR with feedback value that produces a good sequence
+   661 B9E8			no_eor
+   662 B9E8 85 A7			sta rand				; Store the random number
+   663 B9EA 60				rts
+   664 					.endp
+   665
+   666 B9EB			.proc random16
+   667 B9EB A5 A7			lda rand				; Load in seed or last number generated
+   668 B9ED 4A				lsr						; Shift 1 place to the right
+   669 B9EE 26 BE			rol rand16
+   670 B9F0 90 02			bcc no_eor				; Carry flag contains the last bit prior to shifting - if 0, skip XOR
+   671 B9F2 49 B4			eor #$b4				; XOR with feedback value that produces a good sequence
+   672 B9F4			no_eor
+   673 B9F4 85 A7			sta rand				; Store the random number
+   674 B9F6 45 BE			eor rand16
+   675 B9F8 60				rts
+   676 					.endp
+   677
+   678 B9F9				icl 'macros.asm'
 Source: macros.asm
      1 				.macro inc16 addr
      2 				    inc :addr
@@ -1517,7 +1595,7 @@ Source: macros.asm
     29 				
     30 				    ldy #0
     31 				loop
-    32 				    adbw :ptr :width
+    32 				    adw :ptr :width
     33 				    iny
     34 				    cpy :count
     35 				    bne loop
@@ -1525,7 +1603,119 @@ Source: macros.asm
     37 				done
     38 				    adbw :ptr :offset
     39 				    .endm
-   641 B97A				icl 'hardware.asm'
+    40
+    41 				.macro copy_data src dest num_pages
+    42 				    mwa #:src tmp_addr1
+    43 				    mwa #:dest tmp_addr2
+    44 				
+    45 				    ldy #0
+    46 				    ldx #0
+    47 				loop
+    48 				    lda (tmp_addr1), y
+    49 				    sta (tmp_addr2), y
+    50 				    iny
+    51 				    bne loop
+    52 				    inc tmp_addr1 + 1
+    53 				    inc tmp_addr2 + 1
+    54 				    inx
+    55 				    cpx #:num_pages
+    56 				    bne loop
+    57 				    .endm
+    58
+    59 				.macro copy_monsters start end
+    60 				    mwa #monsters_a tmp_addr1
+    61 				    mwa #cur_charset_a tmp_addr2
+    62 				
+    63 				    adw tmp_addr2 #(86 * 8) ; Monsters offset in the character set
+    64 				    
+    65 				    lda #:start
+    66 				    asl             ; Multiply by two because tiles are two chars wide
+    67 				    tay
+    68 				
+    69 				    lda #:end
+    70 				    asl
+    71 				    asl
+    72 				    asl
+    73 				    asl
+    74 				    sta tmp
+    75 				
+    76 				loop
+    77 				    lda (tmp_addr1), y
+    78 				    sta (tmp_addr2), y
+    79 				    iny
+    80 				
+    81 				    cpy tmp
+    82 				    bne loop
+    83 				    
+    84 				    .endm
+    85
+    86 B9F9			.proc place_monsters (.byte x,a) .reg
+    87 				    //;##TRACE "Placing monsters"
+    88 B9F9 85 BD		    sta tmp2
+    89 				    //;##TRACE "X: %d" @x
+    90 B9FB			pick
+    91
+    92 B9FB 20 EB B9		    random16
+    93 				    //;##TRACE "Random monster chosen: %d" @a
+    94 B9FE 29 0F		    and #15
+    95 				    //;##TRACE "AND #15: %d" @a
+    96 BA00 C5 BD		    cmp tmp2
+    97 BA02 B0 F7		    bcs pick
+    98 				    
+    99 BA04 18 69 2B		    add #43
+   100 BA07 85 98		    sta tmp
+   101
+   102 BA09			place
+   103 				    //;##TRACE "Placing monster %d" db(tmp)
+   104 				    ; pick random x
+   105 BA09 20 EB B9		    random16
+   106 BA0C 29 7F		    and #$7f
+   107 				    ;cmp #map_width
+   108 				    ;bcs place
+   109 BA0E 85 AE		    sta tmp_x
+   110 				    ; pick random y
+   111 BA10 20 EB B9		    random16
+   112 BA13 29 7F		    and #$7f
+   113 				    ;cmp #map_height
+   114 				    ;bcs place
+   115 BA15 85 AF		    sta tmp_y
+   116 				    //;##TRACE "tmp_x = %d, tmp_y = %d" db(tmp_x) db(tmp_y)
+   117
+   118 BA17			    advance_ptr #map map_ptr #map_width tmp_y tmp_x
+Macro: ADVANCE_PTR [Source: macros.asm]
+     1 BA17 A9 00 85 92 A9 20 +     mwa #MAP MAP_PTR
+     2 BA1F A5 AF		    lda TMP_Y  ; Check to make sure it's not 0
+     3 BA21 F0 12		    beq done    ; If it is, we're done
+     5 BA23 A0 00		    ldy #0
+     6 BA25			loop
+     7 BA25 18 A5 92 69 8B 85 +     adw MAP_PTR #MAP_WIDTH
+     8 BA30 C8			    iny
+     9 BA31 C4 AF		    cpy TMP_Y
+    10 BA33 D0 F0		    bne loop
+    12 BA35			done
+     1 BA35 A5 92		    lda MAP_PTR
+     2 BA37 18 65 AE		    add TMP_X
+     3 BA3A 85 92		    sta MAP_PTR
+     4 BA3C 90 02		    bcc skip_carry
+     5 BA3E E6 93		    inc MAP_PTR + 1
+     6 BA40			skip_carry
+Source: macros.asm
+Source: macros.asm
+   119 BA40 A0 00		    ldy #0
+   120 BA42 B1 92		    lda (map_ptr),y
+   121 				    ;##TRACE "map_ptr[%d][%d] (%04x): %d" db(tmp_x) db(tmp_y) dw(map_ptr) @a
+   122 BA44 C9 7F		    cmp #MAP_FLOOR
+   123 BA46 D0 C1		    bne place
+   124 BA48 A5 98		    lda tmp
+   125 				    //;##TRACE "Placing monster %d at %d,%d" db(tmp) db(tmp_x) db(tmp_y)
+   126 BA4A 91 92		    sta (map_ptr),y
+   127 BA4C CA			    dex
+   128 				   // ;##TRACE "X = %d" @x
+   129 BA4D D0 AC		    bne pick
+   130 				    
+   131 BA4F 60			    rts
+   132 				    .endp
+   679 BA50				icl 'hardware.asm'
 Source: hardware.asm
      1 = 0230			SDLSTL = $0230  ; Display list starting address
      2 = 02F4			CHBAS  = $02f4  ; CHaracter BAse Register (Shadow)
@@ -1557,7 +1747,7 @@ Source: hardware.asm
     28 = D40E			NMIEN  = $d40e
     29 = 0200			VDSLST = $0200
     30 = D40A			WSYNC  = $d40a
-   642 B97A				icl 'labels.asm'
+   680 BA50				icl 'labels.asm'
 Source: labels.asm
      1 = 0008			DOOR_NORTH              = %1000
      2 = 0004			DOOR_SOUTH              = %0100
@@ -1650,13 +1840,13 @@ Source: labels.asm
     89 = 0053			UI_AMULET_SW_ICON_RIGHT	= 83
     90 = 0054			UI_AMULET_SE_ICON_LEFT	= 84
     91 = 0055			UI_AMULET_SE_ICON_RIGHT	= 85
-   643 B97A				icl 'dlist.asm'
+   681 BA50				icl 'dlist.asm'
 Source: dlist.asm
      1 				* --------------------------------------- *
      2 				* Proc: setup_screen                      *
      3 				* Sets up the display list for the screen *
      4 				* --------------------------------------- *
-     5 B97A				org dlist
+     5 BA50				org dlist
      6
      7 9800			.proc setup_screen
      8 = 0070			blank8 = $70    ; 8 blank lines
@@ -1668,7 +1858,7 @@ Source: dlist.asm
     14 = 0004			antic4 = 4      ; Antic mode 4
     15 = 0005			antic5 = 5	    ; Antic mode 5
     16
-    17 9800-9B36> A9 1A 8D 30 + 	mwa #dlist SDLSTL
+    17 9800-9D37> A9 1A 8D 30 + 	mwa #dlist SDLSTL
     18 980A A9 31 8D 00 02 A9 + 	mwa #dli1 VDSLST
     19 9814 A9 E4			lda #NMIEN_VBI | NMIEN_DLI
     20 9816 8D 0E D4			sta NMIEN
@@ -1687,23 +1877,24 @@ Source: dlist.asm
     33 9831 48				pha
     34 9832 A9 01			lda #1
     35 9834 8D 0A D4			sta WSYNC
-    36 9837 A9 80 8D 09 D4		mva #>charset_dungeon_a CHBASE
-    37 					;blit_screen()
-    38 983C A9 48 8D 00 02 A9 + 	mwa #dli2 VDSLST
-    39 9846 68				pla
-    40 9847 40				rti
-    41
-    42 9848			dli2
-    43 9848 48				pha
-    44 9849 A9 01			lda #1
-    45 984B 8D 0A D4			sta WSYNC
-    46 984E A9 88 8D 09 D4		mva #>charset_outdoor_a CHBASE
-    47 9853 A9 31 8D 00 02 A9 + 	mwa #dli1 VDSLST
-    48 985D 68				pla
-    49 985E 40				rti
-    50
-    51 					.endp
-   644 985F				icl 'pmgdata.asm'
+    36 					;mva #>charset_dungeon_a CHBASE
+    37 9837 A9 78 8D 09 D4		mva #>cur_charset_a CHBASE
+    38 					;blit_screen()
+    39 983C A9 48 8D 00 02 A9 + 	mwa #dli2 VDSLST
+    40 9846 68				pla
+    41 9847 40				rti
+    42
+    43 9848			dli2
+    44 9848 48				pha
+    45 9849 A9 01			lda #1
+    46 984B 8D 0A D4			sta WSYNC
+    47 984E A9 88 8D 09 D4		mva #>charset_outdoor_a CHBASE
+    48 9853 A9 31 8D 00 02 A9 + 	mwa #dli1 VDSLST
+    49 985D 68				pla
+    50 985E 40				rti
+    51
+    52 					.endp
+   682 985F				icl 'pmgdata.asm'
 Source: pmgdata.asm
      1 985F			pmgdata
      2 					; PCOLR0 (Brown)
@@ -1745,431 +1936,812 @@ Source: pmgdata.asm
     38 987C 00				.byte %00000000
     39 987D 00				.byte %00000000
     40 987E 24				.byte %00100100
-   645 987F				icl 'map_gen.asm'
+   683 987F				icl 'map_gen.asm'
 Source: map_gen.asm
-     1 987F			.proc new_map
-     2 987F 20 A0 98		    fill_map()
-     3
-     4 				    ; Get room number between 0-15
-     5 9882 20 70 B9		    random8()
-     6 9885 29 0F		    and #15
-     7 9887 85 A8		    sta room_type
-     8
-     9 				    ; Get room position between 0-63
-    10 9889 20 70 B9		    random8()
-    11 988C 29 3F		    and #63
-    12 988E 85 A9		    sta room_pos
-    13
-    14 9890 20 CA 98		    copy_room()
-    15 9893 20 07 99		    place_up_tile()
-    16 9896 20 2E 99		    place_room()
-    17 9899 20 B5 99		    get_doors()
-    18 989C 20 E2 99		    place_doors()
-    19
-    20 989F 60			    rts
-    21 				    .endp
-    22
-    23 98A0			.proc fill_map
-    24 98A0 A9 00 85 92 A9 20 +     mwa #map map_ptr        ; Reset map pointer
-    25 98A8 A9 01		    lda #MAP_WALL           ; Load in wall tile
+     1 				.macro get_room_type
+     2 				    random8()
+     3 				    and #15
+     4 				    sta room_type
+     5 				    .endm
+     6
+     7 				.macro get_room_pos
+     8 				    random8()
+     9 				    and #63
+    10 				    sta room_pos
+    11 				    .endm
+    12
+    13 987F			.proc new_map
+    14 987F A9 00 85 B0		    mva #0 num_rooms
+    15 9883 A9 08 85 B1		    mva #8 max_rooms
+    16
+    17 9887 20 D2 98		    fill_map
+    18
+    19 988A			first_room
+    20 988A			    get_room_type
+Macro: GET_ROOM_TYPE [Source: map_gen.asm]
+     1 988A 20 E1 B9		    random8()
+     2 988D 29 0F		    and #15
+     3 988F 85 A8		    sta room_type
+Source: map_gen.asm
+    21 9891			    get_room_pos
+Macro: GET_ROOM_POS [Source: map_gen.asm]
+     1 9891 20 E1 B9		    random8()
+     2 9894 29 3F		    and #63
+     3 9896 85 A9		    sta room_pos
+Source: map_gen.asm
+    22 9898 20 FC 98		    copy_room
+    23 				    place_special_tile #MAP_UP
+    23 				 LDX# MAP_UP\ JSR PLACE_SPECIAL_TILE
+    23 989B A2 78		 LDX# MAP_UP
+    23 989D 20 39 99		 JSR PLACE_SPECIAL_TILE
+    24 98A0 E6 B0		    inc num_rooms
+    25 98A2 4C C2 98		    jmp place
     26
-    27 98AA A0 00		    ldy #0
-    28 98AC A2 00		    ldx #0
-    29 98AE			loop
-    30 98AE 91 92		    sta (map_ptr),y         ; Store tile
-    31 98B0 C8			    iny                     ; Move one tile to the right
-    32 98B1 C0 8B		    cpy #map_width          ; Are we at the end of the line?
-    33 98B3 D0 F9		    bne loop                ; Nope, keep looping
-    34
-    35 98B5 A0 00		    ldy #0                  ; Reset to the left edge
-    36 98B7			    adbw map_ptr #map_width ; Move to the next line
-Macro: ADBW [Source: macros.asm]
-     1 98B7 A5 92		    lda MAP_PTR
-     2 98B9 18 69 8B		    add #MAP_WIDTH
-     3 98BC 85 92		    sta MAP_PTR
-     4 98BE 90 02		    bcc skip_carry
-     5 98C0 E6 93		    inc MAP_PTR + 1
-     6 98C2			skip_carry
+    27 98A5			last_room
+    28 				    place_special_tile #MAP_DOWN
+    28 				 LDX# MAP_DOWN\ JSR PLACE_SPECIAL_TILE
+    28 98A5 A2 77		 LDX# MAP_DOWN
+    28 98A7 20 39 99		 JSR PLACE_SPECIAL_TILE
+    29 98AA 20 5F 99		    place_room
+    30 98AD 4C CE 98		    jmp done
+    31
+    32 98B0			next_room
+    33 98B0			    get_room_type
+Macro: GET_ROOM_TYPE [Source: map_gen.asm]
+     1 98B0 20 E1 B9		    random8()
+     2 98B3 29 0F		    and #15
+     3 98B5 85 A8		    sta room_type
 Source: map_gen.asm
-    37 98C2 A9 01		    lda #MAP_WALL           ; Re-load wall tile
-    38 98C4 E8			    inx                     ; Advance the vertical line index
-    39 98C5 E0 8B		    cpx #map_height         ; Check to see if all of the lines have been copied
-    40 98C7 D0 E5		    bne loop                ; Nope, keep looping
+    34 98B7 20 FC 98		    copy_room
+    35 98BA E6 B0		    inc num_rooms
+    36
+    37 98BC			check_last
+    38 98BC A5 B0		    lda num_rooms
+    39 98BE C5 B1		    cmp max_rooms
+    40 98C0 F0 E3		    beq last_room
     41
-    42 98C9 60			    rts
-    43 				    .endp
-    44
-    45 98CA			.proc copy_room
-    46 98CA			    advance_ptr #room_types room_ptr #(room_width * room_height) room_type #0
-Macro: ADVANCE_PTR [Source: macros.asm]
-     1 98CA A9 00 85 AC A9 A0 +     mwa #ROOM_TYPES ROOM_PTR
-     2 98D2 A5 A8		    lda ROOM_TYPE  ; Check to make sure it's not 0
-     3 98D4 F0 12		    beq done    ; If it is, we're done
-     5 98D6 A0 00		    ldy #0
-     6 98D8			loop
-     1 98D8 A5 AC		    lda ROOM_PTR
-     2 98DA 18 69 E1		    add #(ROOM_WIDTH * ROOM_HEIGHT)
-     3 98DD 85 AC		    sta ROOM_PTR
-     4 98DF 90 02		    bcc skip_carry
-     5 98E1 E6 AD		    inc ROOM_PTR + 1
-     6 98E3			skip_carry
-Source: map_gen.asm
-     8 98E3 C8			    iny
-     9 98E4 C4 A8		    cpy ROOM_TYPE
-    10 98E6 D0 F0		    bne loop
-    12 98E8			done
-     1 98E8 A5 AC		    lda ROOM_PTR
-     2 98EA 18 69 00		    add #0
-     3 98ED 85 AC		    sta ROOM_PTR
-     4 98EF 90 02		    bcc skip_carry
-     5 98F1 E6 AD		    inc ROOM_PTR + 1
-     6 98F3			skip_carry
-Source: map_gen.asm
-Source: map_gen.asm
-    47
-    48 98F3 A9 08 85 A0 A9 72 +     mwa #tmp_room tmp_addr1
-    49
-    50 98FB A0 00		    ldy #0
-    51 98FD			loop
-    52 98FD B1 AC		    lda (room_ptr),y
-    53 98FF 91 A0		    sta (tmp_addr1),y
-    54 9901 C8			    iny
-    55 9902 C0 E1		    cpy #(room_width * room_height)
-    56 9904 D0 F7		    bne loop
-    57
-    58 9906 60			    rts
-    59 				    .endp
-    60
-    61 9907			.proc place_up_tile
-    62 9907			loop
-    63 9907 A9 08 85 A0 A9 72 +     mwa #tmp_room tmp_addr1
-    64 990F 20 70 B9		    random8()
-    65 9912 C9 E1		    cmp #(room_width * room_height)
-    66 9914 B0 F1		    bcs loop
-    67
-    68 9916			    adbw tmp_addr1 rand
+    42 98C2			place
+    43 98C2 20 5F 99		    place_room
+    44 98C5 20 EB 99		    get_doors
+    45
+    46 98C8 20 D5 9B		    walk_room
+    47 98CB 4C B0 98		    jmp next_room
+    48
+    49 98CE			done
+    50 98CE 20 18 9A		    place_doors
+    51
+    52 98D1 60			    rts
+    53 				    .endp
+    54
+    55 98D2			.proc fill_map
+    56 98D2 A9 00 85 92 A9 20 +     mwa #map map_ptr        ; Reset map pointer
+    57 98DA A9 01		    lda #MAP_WALL           ; Load in wall tile
+    58
+    59 98DC A0 00		    ldy #0
+    60 98DE A2 00		    ldx #0
+    61 98E0			loop
+    62 98E0 91 92		    sta (map_ptr),y         ; Store tile
+    63 98E2 C8			    iny                     ; Move one tile to the right
+    64 98E3 C0 8B		    cpy #map_width          ; Are we at the end of the line?
+    65 98E5 D0 F9		    bne loop                ; Nope, keep looping
+    66
+    67 98E7 A0 00		    ldy #0                  ; Reset to the left edge
+    68 98E9			    adbw map_ptr #map_width ; Move to the next line
 Macro: ADBW [Source: macros.asm]
-     1 9916 A5 A0		    lda TMP_ADDR1
-     2 9918 18 65 A7		    add RAND
-     3 991B 85 A0		    sta TMP_ADDR1
-     4 991D 90 02		    bcc skip_carry
-     5 991F E6 A1		    inc TMP_ADDR1 + 1
-     6 9921			skip_carry
+     1 98E9 A5 92		    lda MAP_PTR
+     2 98EB 18 69 8B		    add #MAP_WIDTH
+     3 98EE 85 92		    sta MAP_PTR
+     4 98F0 90 02		    bcc skip_carry
+     5 98F2 E6 93		    inc MAP_PTR + 1
+     6 98F4			skip_carry
 Source: map_gen.asm
-    69
-    70 9921 A0 00		    ldy #0
-    71 9923 B1 A0		    lda (tmp_addr1),y
-    72 9925 C9 7F		    cmp #MAP_FLOOR
-    73 9927 D0 DE		    bne loop
-    74
-    75 9929 A9 78		    lda #MAP_UP
-    76 992B 91 A0		    sta (tmp_addr1),y
-    77
-    78 992D 60			    rts
-    79 				    .endp
-    80
-    81 992E			.proc place_room
-    82 992E A5 A9		    lda room_pos            ; Load in room position
-    83 9930 0A			    asl                     ; Multiply by 2 because positions are 2 bytes wide
-    84 9931 AA			    tax                     ; Init X register
-    85
-    86 9932 BD 10 AE		    lda room_positions,x    ; Load Y coordinate
-    87 9935 85 AB		    sta room_y              ; Save in room_y
-    88 9937 E8			    inx
-    89 9938 BD 10 AE		    lda room_positions,x    ; Load X coordinate
-    90 993B 85 AA		    sta room_x              ; Save in room_x
-    91
-    92 993D A5 AA 85 AE		    mva room_x tmp_x
-    93 9941 A5 AB 85 AF		    mva room_y tmp_y
-    94
-    95 9945			    advance_ptr #map map_ptr #map_width room_y room_x
+    69 98F4 A9 01		    lda #MAP_WALL           ; Re-load wall tile
+    70 98F6 E8			    inx                     ; Advance the vertical line index
+    71 98F7 E0 8B		    cpx #map_height         ; Check to see if all of the lines have been copied
+    72 98F9 D0 E5		    bne loop                ; Nope, keep looping
+    73
+    74 98FB 60			    rts
+    75 				    .endp
+    76
+    77 98FC			.proc copy_room
+    78 98FC			    advance_ptr #room_types room_ptr #(room_width * room_height) room_type #0
 Macro: ADVANCE_PTR [Source: macros.asm]
-     1 9945 A9 00 85 92 A9 20 +     mwa #MAP MAP_PTR
-     2 994D A5 AB		    lda ROOM_Y  ; Check to make sure it's not 0
-     3 994F F0 12		    beq done    ; If it is, we're done
-     5 9951 A0 00		    ldy #0
-     6 9953			loop
-     1 9953 A5 92		    lda MAP_PTR
-     2 9955 18 69 8B		    add #MAP_WIDTH
-     3 9958 85 92		    sta MAP_PTR
-     4 995A 90 02		    bcc skip_carry
-     5 995C E6 93		    inc MAP_PTR + 1
-     6 995E			skip_carry
-Source: map_gen.asm
-     8 995E C8			    iny
-     9 995F C4 AB		    cpy ROOM_Y
-    10 9961 D0 F0		    bne loop
-    12 9963			done
-     1 9963 A5 92		    lda MAP_PTR
-     2 9965 18 65 AA		    add ROOM_X
-     3 9968 85 92		    sta MAP_PTR
-     4 996A 90 02		    bcc skip_carry
-     5 996C E6 93		    inc MAP_PTR + 1
-     6 996E			skip_carry
+     1 98FC A9 00 85 AC A9 A0 +     mwa #ROOM_TYPES ROOM_PTR
+     2 9904 A5 A8		    lda ROOM_TYPE  ; Check to make sure it's not 0
+     3 9906 F0 12		    beq done    ; If it is, we're done
+     5 9908 A0 00		    ldy #0
+     6 990A			loop
+     7 990A 18 A5 AC 69 E1 85 +     adw ROOM_PTR #(ROOM_WIDTH * ROOM_HEIGHT)
+     8 9915 C8			    iny
+     9 9916 C4 A8		    cpy ROOM_TYPE
+    10 9918 D0 F0		    bne loop
+    12 991A			done
+     1 991A A5 AC		    lda ROOM_PTR
+     2 991C 18 69 00		    add #0
+     3 991F 85 AC		    sta ROOM_PTR
+     4 9921 90 02		    bcc skip_carry
+     5 9923 E6 AD		    inc ROOM_PTR + 1
+     6 9925			skip_carry
 Source: map_gen.asm
 Source: map_gen.asm
-    96 996E A9 08 85 A0 A9 72 +     mwa #tmp_room tmp_addr1
-    97
-    98 9976 A2 00		    ldx #0
-    99 9978 A0 00		    ldy #0
-   100 997A			loop
-   101 997A B1 A0		    lda (tmp_addr1),y
-   102 997C 91 92		    sta (map_ptr),y
-   103
-   104 997E C9 78		    cmp #MAP_UP
-   105 9980 D0 08		    bne next
-   106 9982 A5 AE 85 96		    mva tmp_x player_x
-   107 9986 A5 AF 85 97		    mva tmp_y player_y
-   108 998A			next
-   109 998A E6 AE		    inc tmp_x
-   110 998C C8			    iny
-   111 998D C0 0F		    cpy #room_width
-   112 998F D0 E9		    bne loop
-   113
-   114 9991 A0 00		    ldy #0
-   115 9993 E6 AF		    inc tmp_y
-   116 9995 A5 AA 85 AE		    mva room_x tmp_x
-   117 9999			    adbw map_ptr #map_width
+    79
+    80 9925 A9 08 85 A0 A9 72 +     mwa #tmp_room tmp_addr1
+    81
+    82 992D A0 00		    ldy #0
+    83 992F			loop
+    84 992F B1 AC		    lda (room_ptr),y
+    85 9931 91 A0		    sta (tmp_addr1),y
+    86 9933 C8			    iny
+    87 9934 C0 E1		    cpy #(room_width * room_height)
+    88 9936 D0 F7		    bne loop
+    89
+    90 9938 60			    rts
+    91 				    .endp
+    92
+    93 9939			.proc place_special_tile (.byte x) .reg
+    94 9939			loop
+    95 9939 A9 08 85 A0 A9 72 +     mwa #tmp_room tmp_addr1
+    96 9941 20 E1 B9		    random8()
+    97 9944 C9 E1		    cmp #(room_width * room_height)
+    98 9946 B0 F1		    bcs loop
+    99
+   100 9948			    adbw tmp_addr1 rand
 Macro: ADBW [Source: macros.asm]
+     1 9948 A5 A0		    lda TMP_ADDR1
+     2 994A 18 65 A7		    add RAND
+     3 994D 85 A0		    sta TMP_ADDR1
+     4 994F 90 02		    bcc skip_carry
+     5 9951 E6 A1		    inc TMP_ADDR1 + 1
+     6 9953			skip_carry
+Source: map_gen.asm
+   101
+   102 9953 A0 00		    ldy #0
+   103 9955 B1 A0		    lda (tmp_addr1),y
+   104 9957 C9 7F		    cmp #MAP_FLOOR
+   105 9959 D0 DE		    bne loop
+   106
+   107 995B 8A			    txa
+   108 995C 91 A0		    sta (tmp_addr1),y
+   109
+   110 995E 60			    rts
+   111 				    .endp
+   112
+   113 995F			.proc place_room
+   114 				    set_room_occupied room_pos
+   114 				 LDA ROOM_POS\ JSR SET_ROOM_OCCUPIED
+   114 995F A5 A9		 LDA ROOM_POS
+   114 9961 20 B2 9B		 JSR SET_ROOM_OCCUPIED
+   115 9964 A5 A9		    lda room_pos
+   116 9966 0A			    asl                     ; Multiply by 2 because positions are 2 bytes wide
+   117 9967 AA			    tax                     ; Init X register
+   118
+   119 9968 BD 10 AE		    lda room_positions,x    ; Load Y coordinate
+   120 996B 85 AB		    sta room_y              ; Save in room_y
+   121 996D E8			    inx
+   122 996E BD 10 AE		    lda room_positions,x    ; Load X coordinate
+   123 9971 85 AA		    sta room_x              ; Save in room_x
+   124
+   125 9973 A5 AA 85 AE		    mva room_x tmp_x
+   126 9977 A5 AB 85 AF		    mva room_y tmp_y
+   127
+   128 997B			    advance_ptr #map map_ptr #map_width room_y room_x
+Macro: ADVANCE_PTR [Source: macros.asm]
+     1 997B A9 00 85 92 A9 20 +     mwa #MAP MAP_PTR
+     2 9983 A5 AB		    lda ROOM_Y  ; Check to make sure it's not 0
+     3 9985 F0 12		    beq done    ; If it is, we're done
+     5 9987 A0 00		    ldy #0
+     6 9989			loop
+     7 9989 18 A5 92 69 8B 85 +     adw MAP_PTR #MAP_WIDTH
+     8 9994 C8			    iny
+     9 9995 C4 AB		    cpy ROOM_Y
+    10 9997 D0 F0		    bne loop
+    12 9999			done
      1 9999 A5 92		    lda MAP_PTR
-     2 999B 18 69 8B		    add #MAP_WIDTH
+     2 999B 18 65 AA		    add ROOM_X
      3 999E 85 92		    sta MAP_PTR
      4 99A0 90 02		    bcc skip_carry
      5 99A2 E6 93		    inc MAP_PTR + 1
      6 99A4			skip_carry
 Source: map_gen.asm
-   118 99A4			    adbw tmp_addr1 #room_width
+Source: map_gen.asm
+   129 99A4 A9 08 85 A0 A9 72 +     mwa #tmp_room tmp_addr1
+   130
+   131 99AC A2 00		    ldx #0
+   132 99AE A0 00		    ldy #0
+   133 99B0			loop
+   134 99B0 B1 A0		    lda (tmp_addr1),y
+   135 99B2 91 92		    sta (map_ptr),y
+   136
+   137 99B4 C9 78		    cmp #MAP_UP
+   138 99B6 D0 08		    bne next
+   139 99B8 A5 AE 85 96		    mva tmp_x player_x
+   140 99BC A5 AF 85 97		    mva tmp_y player_y
+   141 99C0			next
+   142 99C0 E6 AE		    inc tmp_x
+   143 99C2 C8			    iny
+   144 99C3 C0 0F		    cpy #room_width
+   145 99C5 D0 E9		    bne loop
+   146
+   147 99C7 A0 00		    ldy #0
+   148 99C9 E6 AF		    inc tmp_y
+   149 99CB A5 AA 85 AE		    mva room_x tmp_x
+   150 99CF			    adbw map_ptr #map_width
 Macro: ADBW [Source: macros.asm]
-     1 99A4 A5 A0		    lda TMP_ADDR1
-     2 99A6 18 69 0F		    add #ROOM_WIDTH
-     3 99A9 85 A0		    sta TMP_ADDR1
-     4 99AB 90 02		    bcc skip_carry
-     5 99AD E6 A1		    inc TMP_ADDR1 + 1
-     6 99AF			skip_carry
+     1 99CF A5 92		    lda MAP_PTR
+     2 99D1 18 69 8B		    add #MAP_WIDTH
+     3 99D4 85 92		    sta MAP_PTR
+     4 99D6 90 02		    bcc skip_carry
+     5 99D8 E6 93		    inc MAP_PTR + 1
+     6 99DA			skip_carry
 Source: map_gen.asm
-   119 99AF E8			    inx
-   120 99B0 E0 0F		    cpx #room_height
-   121 99B2 D0 C6		    bne loop
-   122
-   123 99B4 60			    rts
-   124 				    .endp
-   125
-   126 99B5			.proc get_doors
-   127 				    ; Get possible doors for the room position
-   128 99B5 A4 A9		    ldy room_pos
-   129 99B7 A9 90 85 A0 A9 AE +     mwa #room_pos_doors tmp_addr1
-   130 99BF A9 E9 85 A2 A9 72 +     mwa #room_doors tmp_addr2
-   131 99C7 B1 A0		    lda (tmp_addr1),y
-   132 99C9 91 A2		    sta (tmp_addr2),y
-   133
-   134 				    ; Get doors for the room type
-   135 99CB A4 A8		    ldy room_type                   ; Set up Y for getting room type
-   136 99CD A9 D0 85 A0 A9 AE +     mwa #room_type_doors tmp_addr1  ; Set up pointer for indirect addressing
-   137 99D5 B1 A0		    lda (tmp_addr1),y               ; Load room type into accumulator
-   138 99D7 85 98		    sta tmp                         ; Store room type into temp var
-   139
-   140 99D9 A4 A9		    ldy room_pos                    ; Set up Y for getting room pos
-   141 99DB B1 A2		    lda (tmp_addr2),y               ; Load in room doors for this position
-   142 99DD 25 98		    and tmp                         ; AND with room type
-   143 99DF 91 A2		    sta (tmp_addr2),y               ; Store back into room_doors
-   144
-   145 99E1 60			    rts
-   146 				    .endp
-   147
-   148 99E2			.proc place_doors
-   149 99E2 A4 A9		    ldy room_pos                    ; Load room position into Y
-   150 99E4 A9 E9 85 A0 A9 72 +     mwa #room_doors tmp_addr1       ; Set up pointer
-   151 99EC B1 A0		    lda (tmp_addr1),y               ; Get room doors for position
-   152 99EE 85 98		    sta tmp                         ; Store rooms into tmp
-   153
-   154 99F0			check_north
-   155 99F0 A5 98		    lda tmp
-   156 99F2 29 08		    and #DOOR_NORTH
-   157 99F4 F0 03		    beq check_south
-   158 99F6 20 15 9A		    place_north_door()
-   159
-   160 99F9			check_south
-   161 99F9 A5 98		    lda tmp
-   162 99FB 29 04		    and #DOOR_SOUTH
-   163 99FD F0 03		    beq check_west
-   164 99FF 20 5B 9A		    place_south_door()
-   165
-   166 9A02			check_west
-   167 9A02 A5 98		    lda tmp
-   168 9A04 29 02		    and #DOOR_WEST
-   169 9A06 F0 03		    beq check_east
-   170 9A08 20 A8 9A		    place_west_door()
-   171
-   172 9A0B			check_east
-   173 9A0B A5 98		    lda tmp
-   174 9A0D 29 01		    and #DOOR_EAST
-   175 9A0F F0 03		    beq done
-   176 9A11 20 EA 9A		    place_east_door()
-   177 				    
-   178 9A14			done
-   179 9A14 60			    rts
-   180 				    .endp
-   181
-   182 9A15			.proc place_north_door
-   183 9A15			    advance_ptr #map map_ptr #map_width room_y room_x
+   151 99DA			    adbw tmp_addr1 #room_width
+Macro: ADBW [Source: macros.asm]
+     1 99DA A5 A0		    lda TMP_ADDR1
+     2 99DC 18 69 0F		    add #ROOM_WIDTH
+     3 99DF 85 A0		    sta TMP_ADDR1
+     4 99E1 90 02		    bcc skip_carry
+     5 99E3 E6 A1		    inc TMP_ADDR1 + 1
+     6 99E5			skip_carry
+Source: map_gen.asm
+   152 99E5 E8			    inx
+   153 99E6 E0 0F		    cpx #room_height
+   154 99E8 D0 C6		    bne loop
+   155
+   156 99EA 60			    rts
+   157 				    .endp
+   158
+   159 99EB			.proc get_doors
+   160 				    ; Get possible doors for the room position
+   161 99EB A4 A9		    ldy room_pos
+   162 99ED A9 90 85 A0 A9 AE +     mwa #room_pos_doors tmp_addr1
+   163 99F5 A9 29 85 A2 A9 73 +     mwa #avail_doors tmp_addr2
+   164 99FD B1 A0		    lda (tmp_addr1),y
+   165 99FF 91 A2		    sta (tmp_addr2),y
+   166
+   167 				    ; Get doors for the room type
+   168 9A01 A4 A8		    ldy room_type                   ; Set up Y for getting room type
+   169 9A03 A9 D0 85 A0 A9 AE +     mwa #room_type_doors tmp_addr1  ; Set up pointer for indirect addressing
+   170 9A0B B1 A0		    lda (tmp_addr1),y               ; Load room type into accumulator
+   171 9A0D 85 98		    sta tmp                         ; Store room type into temp var
+   172
+   173 9A0F A4 A9		    ldy room_pos                    ; Set up Y for getting room pos
+   174 9A11 B1 A2		    lda (tmp_addr2),y               ; Load in room doors for this position
+   175 9A13 25 98		    and tmp                         ; AND with room type
+   176 9A15 91 A2		    sta (tmp_addr2),y               ; Store back into avail_doors
+   177
+   178 9A17 60			    rts
+   179 				    .endp
+   180
+   181 9A18			.proc place_doors
+   182 9A18 A9 00 85 A9		    mva #0 room_pos
+   183 9A1C A9 E9 85 A0 A9 72 +     mwa #placed_doors tmp_addr1
+   184
+   185 9A24			loop
+   186 9A24 A0 00		    ldy #0                      ; Init Y
+   187 9A26 B1 A0		    lda (tmp_addr1),y           ; Load in current placed_door
+   188 9A28 F0 35		    beq done                    ; if 0, we're done
+   189 9A2A 85 BC		    sta doors                   ; Store into doors var
+   190 9A2C A5 A9		    lda room_pos                ; Load room position
+   191 9A2E 0A			    asl                         ; Multiply by 2 because positions are 2 bytes wide
+   192 9A2F AA			    tax                         ; Init X register
+   193
+   194 9A30 BD 10 AE		    lda room_positions,x        ; Load Y coordinate
+   195 9A33 85 AB		    sta room_y                  ; Save in room_y
+   196 9A35 E8			    inx
+   197 9A36 BD 10 AE		    lda room_positions,x        ; Load X coordinate
+   198 9A39 85 AA		    sta room_x                  ; Save in room_x
+   199
+   200 9A3B			check_north
+   201 9A3B A5 BC		    lda doors
+   202 9A3D 29 08		    and #DOOR_NORTH
+   203 9A3F F0 03		    beq check_south
+   204 9A41 20 6E 9A		    place_north_door()
+   205
+   206 9A44			check_south
+   207 9A44 A5 BC		    lda doors
+   208 9A46 29 04		    and #DOOR_SOUTH
+   209 9A48 F0 03		    beq check_west
+   210 9A4A 20 B4 9A		    place_south_door()
+   211
+   212 9A4D			check_west
+   213 9A4D A5 BC		    lda doors
+   214 9A4F 29 02		    and #DOOR_WEST
+   215 9A51 F0 03		    beq check_east
+   216 9A53 20 01 9B		    place_west_door()
+   217
+   218 9A56			check_east
+   219 9A56 A5 BC		    lda doors
+   220 9A58 29 01		    and #DOOR_EAST
+   221 9A5A F0 03		    beq done
+   222 9A5C 20 4B 9B		    place_east_door()
+   223 				    
+   224 9A5F			done
+   225 9A5F E6 A0 D0 02 E6 A1	    inw tmp_addr1
+   226 9A65 E6 A9		    inc room_pos
+   227 9A67 A5 A9		    lda room_pos
+   228 9A69 C9 40		    cmp #64
+   229 9A6B 90 B7		    bcc loop
+   230
+   231 9A6D 60			    rts
+   232 				    .endp
+   233
+   234 9A6E			.proc place_north_door
+   235 9A6E			    advance_ptr #map map_ptr #map_width room_y room_x
 Macro: ADVANCE_PTR [Source: macros.asm]
-     1 9A15 A9 00 85 92 A9 20 +     mwa #MAP MAP_PTR
-     2 9A1D A5 AB		    lda ROOM_Y  ; Check to make sure it's not 0
-     3 9A1F F0 12		    beq done    ; If it is, we're done
-     5 9A21 A0 00		    ldy #0
-     6 9A23			loop
-     1 9A23 A5 92		    lda MAP_PTR
-     2 9A25 18 69 8B		    add #MAP_WIDTH
-     3 9A28 85 92		    sta MAP_PTR
-     4 9A2A 90 02		    bcc skip_carry
-     5 9A2C E6 93		    inc MAP_PTR + 1
-     6 9A2E			skip_carry
-Source: map_gen.asm
-     8 9A2E C8			    iny
-     9 9A2F C4 AB		    cpy ROOM_Y
-    10 9A31 D0 F0		    bne loop
-    12 9A33			done
-     1 9A33 A5 92		    lda MAP_PTR
-     2 9A35 18 65 AA		    add ROOM_X
-     3 9A38 85 92		    sta MAP_PTR
-     4 9A3A 90 02		    bcc skip_carry
-     5 9A3C E6 93		    inc MAP_PTR + 1
-     6 9A3E			skip_carry
+     1 9A6E A9 00 85 92 A9 20 +     mwa #MAP MAP_PTR
+     2 9A76 A5 AB		    lda ROOM_Y  ; Check to make sure it's not 0
+     3 9A78 F0 12		    beq done    ; If it is, we're done
+     5 9A7A A0 00		    ldy #0
+     6 9A7C			loop
+     7 9A7C 18 A5 92 69 8B 85 +     adw MAP_PTR #MAP_WIDTH
+     8 9A87 C8			    iny
+     9 9A88 C4 AB		    cpy ROOM_Y
+    10 9A8A D0 F0		    bne loop
+    12 9A8C			done
+     1 9A8C A5 92		    lda MAP_PTR
+     2 9A8E 18 65 AA		    add ROOM_X
+     3 9A91 85 92		    sta MAP_PTR
+     4 9A93 90 02		    bcc skip_carry
+     5 9A95 E6 93		    inc MAP_PTR + 1
+     6 9A97			skip_carry
 Source: map_gen.asm
 Source: map_gen.asm
-   184 9A3E 38 A5 92 E9 8B 85 +     sbw map_ptr #map_width
-   185 9A49 18 A5 92 69 07 85 +     adw map_ptr #(room_width / 2)
-   186 9A54 A9 7A		    lda #MAP_DOOR
-   187 9A56 A0 00		    ldy #0
-   188 9A58 91 92		    sta (map_ptr),y
-   189 9A5A 60			    rts
-   190 				    .endp
-   191
-   192 9A5B			.proc place_south_door
-   193 9A5B			    advance_ptr #map map_ptr #map_width room_y room_x
+   236 9A97 38 A5 92 E9 8B 85 +     sbw map_ptr #map_width
+   237 9AA2 18 A5 92 69 07 85 +     adw map_ptr #(room_width / 2)
+   238 9AAD A9 7A		    lda #MAP_DOOR
+   239 9AAF A0 00		    ldy #0
+   240 9AB1 91 92		    sta (map_ptr),y
+   241 9AB3 60			    rts
+   242 				    .endp
+   243
+   244 9AB4			.proc place_south_door
+   245 9AB4			    advance_ptr #map map_ptr #map_width room_y room_x
 Macro: ADVANCE_PTR [Source: macros.asm]
-     1 9A5B A9 00 85 92 A9 20 +     mwa #MAP MAP_PTR
-     2 9A63 A5 AB		    lda ROOM_Y  ; Check to make sure it's not 0
-     3 9A65 F0 12		    beq done    ; If it is, we're done
-     5 9A67 A0 00		    ldy #0
-     6 9A69			loop
-     1 9A69 A5 92		    lda MAP_PTR
-     2 9A6B 18 69 8B		    add #MAP_WIDTH
-     3 9A6E 85 92		    sta MAP_PTR
-     4 9A70 90 02		    bcc skip_carry
-     5 9A72 E6 93		    inc MAP_PTR + 1
-     6 9A74			skip_carry
-Source: map_gen.asm
-     8 9A74 C8			    iny
-     9 9A75 C4 AB		    cpy ROOM_Y
-    10 9A77 D0 F0		    bne loop
-    12 9A79			done
-     1 9A79 A5 92		    lda MAP_PTR
-     2 9A7B 18 65 AA		    add ROOM_X
-     3 9A7E 85 92		    sta MAP_PTR
-     4 9A80 90 02		    bcc skip_carry
-     5 9A82 E6 93		    inc MAP_PTR + 1
-     6 9A84			skip_carry
+     1 9AB4 A9 00 85 92 A9 20 +     mwa #MAP MAP_PTR
+     2 9ABC A5 AB		    lda ROOM_Y  ; Check to make sure it's not 0
+     3 9ABE F0 12		    beq done    ; If it is, we're done
+     5 9AC0 A0 00		    ldy #0
+     6 9AC2			loop
+     7 9AC2 18 A5 92 69 8B 85 +     adw MAP_PTR #MAP_WIDTH
+     8 9ACD C8			    iny
+     9 9ACE C4 AB		    cpy ROOM_Y
+    10 9AD0 D0 F0		    bne loop
+    12 9AD2			done
+     1 9AD2 A5 92		    lda MAP_PTR
+     2 9AD4 18 65 AA		    add ROOM_X
+     3 9AD7 85 92		    sta MAP_PTR
+     4 9AD9 90 02		    bcc skip_carry
+     5 9ADB E6 93		    inc MAP_PTR + 1
+     6 9ADD			skip_carry
 Source: map_gen.asm
 Source: map_gen.asm
-   194 9A84 A0 00		    ldy #0
-   195 9A86			loop
-   196 9A86 18 A5 92 69 8B 85 +     adw map_ptr #map_width
-   197 9A91 C8			    iny
-   198 9A92 C0 0F		    cpy #room_height
-   199 9A94 D0 F0		    bne loop
-   200
-   201 9A96 18 A5 92 69 07 85 +     adw map_ptr #(room_width / 2)
-   202 9AA1 A9 7A		    lda #MAP_DOOR
-   203 9AA3 A0 00		    ldy #0
-   204 9AA5 91 92		    sta (map_ptr),y
-   205 9AA7 60			    rts
-   206 				    .endp
-   207
-   208 9AA8			.proc place_west_door
-   209 9AA8			    advance_ptr #map map_ptr #map_width room_y room_x
+   246 9ADD A0 00		    ldy #0
+   247 9ADF			loop
+   248 9ADF 18 A5 92 69 8B 85 +     adw map_ptr #map_width
+   249 9AEA C8			    iny
+   250 9AEB C0 0F		    cpy #room_height
+   251 9AED D0 F0		    bne loop
+   252
+   253 9AEF 18 A5 92 69 07 85 +     adw map_ptr #(room_width / 2)
+   254 9AFA A9 7A		    lda #MAP_DOOR
+   255 9AFC A0 00		    ldy #0
+   256 9AFE 91 92		    sta (map_ptr),y
+   257 9B00 60			    rts
+   258 				    .endp
+   259
+   260 9B01			.proc place_west_door
+   261 9B01			    advance_ptr #map map_ptr #map_width room_y room_x
 Macro: ADVANCE_PTR [Source: macros.asm]
-     1 9AA8 A9 00 85 92 A9 20 +     mwa #MAP MAP_PTR
-     2 9AB0 A5 AB		    lda ROOM_Y  ; Check to make sure it's not 0
-     3 9AB2 F0 12		    beq done    ; If it is, we're done
-     5 9AB4 A0 00		    ldy #0
-     6 9AB6			loop
-     1 9AB6 A5 92		    lda MAP_PTR
-     2 9AB8 18 69 8B		    add #MAP_WIDTH
-     3 9ABB 85 92		    sta MAP_PTR
-     4 9ABD 90 02		    bcc skip_carry
-     5 9ABF E6 93		    inc MAP_PTR + 1
-     6 9AC1			skip_carry
-Source: map_gen.asm
-     8 9AC1 C8			    iny
-     9 9AC2 C4 AB		    cpy ROOM_Y
-    10 9AC4 D0 F0		    bne loop
-    12 9AC6			done
-     1 9AC6 A5 92		    lda MAP_PTR
-     2 9AC8 18 65 AA		    add ROOM_X
-     3 9ACB 85 92		    sta MAP_PTR
-     4 9ACD 90 02		    bcc skip_carry
-     5 9ACF E6 93		    inc MAP_PTR + 1
-     6 9AD1			skip_carry
+     1 9B01 A9 00 85 92 A9 20 +     mwa #MAP MAP_PTR
+     2 9B09 A5 AB		    lda ROOM_Y  ; Check to make sure it's not 0
+     3 9B0B F0 12		    beq done    ; If it is, we're done
+     5 9B0D A0 00		    ldy #0
+     6 9B0F			loop
+     7 9B0F 18 A5 92 69 8B 85 +     adw MAP_PTR #MAP_WIDTH
+     8 9B1A C8			    iny
+     9 9B1B C4 AB		    cpy ROOM_Y
+    10 9B1D D0 F0		    bne loop
+    12 9B1F			done
+     1 9B1F A5 92		    lda MAP_PTR
+     2 9B21 18 65 AA		    add ROOM_X
+     3 9B24 85 92		    sta MAP_PTR
+     4 9B26 90 02		    bcc skip_carry
+     5 9B28 E6 93		    inc MAP_PTR + 1
+     6 9B2A			skip_carry
 Source: map_gen.asm
 Source: map_gen.asm
-   210 9AD1 A0 00		    ldy #0
-   211 9AD3			loop
-   212 9AD3 18 A5 92 69 8B 85 +     adw map_ptr #map_width
-   213 9ADE C8			    iny
-   214 9ADF C0 07		    cpy #(room_height / 2)
-   215 9AE1 D0 F0		    bne loop
-   216
-   217 9AE3 A9 7A		    lda #MAP_DOOR
-   218 9AE5 A0 00		    ldy #0
-   219 9AE7 91 92		    sta (map_ptr),y
-   220 9AE9 60			    rts
-   221 				    .endp
-   222
-   223 9AEA			.proc place_east_door
-   224 9AEA			    advance_ptr #map map_ptr #map_width room_y room_x
+   262 9B2A A5 92 D0 02 C6 93 +     dew map_ptr
+   263 9B32 A0 00		    ldy #0
+   264 9B34			loop
+   265 9B34 18 A5 92 69 8B 85 +     adw map_ptr #map_width
+   266 9B3F C8			    iny
+   267 9B40 C0 07		    cpy #(room_height / 2)
+   268 9B42 D0 F0		    bne loop
+   269
+   270 9B44 A9 7A		    lda #MAP_DOOR
+   271 9B46 A0 00		    ldy #0
+   272 9B48 91 92		    sta (map_ptr),y
+   273 9B4A 60			    rts
+   274 				    .endp
+   275
+   276 9B4B			.proc place_east_door
+   277 9B4B			    advance_ptr #map map_ptr #map_width room_y room_x
 Macro: ADVANCE_PTR [Source: macros.asm]
-     1 9AEA A9 00 85 92 A9 20 +     mwa #MAP MAP_PTR
-     2 9AF2 A5 AB		    lda ROOM_Y  ; Check to make sure it's not 0
-     3 9AF4 F0 12		    beq done    ; If it is, we're done
-     5 9AF6 A0 00		    ldy #0
-     6 9AF8			loop
-     1 9AF8 A5 92		    lda MAP_PTR
-     2 9AFA 18 69 8B		    add #MAP_WIDTH
-     3 9AFD 85 92		    sta MAP_PTR
-     4 9AFF 90 02		    bcc skip_carry
-     5 9B01 E6 93		    inc MAP_PTR + 1
-     6 9B03			skip_carry
-Source: map_gen.asm
-     8 9B03 C8			    iny
-     9 9B04 C4 AB		    cpy ROOM_Y
-    10 9B06 D0 F0		    bne loop
-    12 9B08			done
-     1 9B08 A5 92		    lda MAP_PTR
-     2 9B0A 18 65 AA		    add ROOM_X
-     3 9B0D 85 92		    sta MAP_PTR
-     4 9B0F 90 02		    bcc skip_carry
-     5 9B11 E6 93		    inc MAP_PTR + 1
-     6 9B13			skip_carry
+     1 9B4B A9 00 85 92 A9 20 +     mwa #MAP MAP_PTR
+     2 9B53 A5 AB		    lda ROOM_Y  ; Check to make sure it's not 0
+     3 9B55 F0 12		    beq done    ; If it is, we're done
+     5 9B57 A0 00		    ldy #0
+     6 9B59			loop
+     7 9B59 18 A5 92 69 8B 85 +     adw MAP_PTR #MAP_WIDTH
+     8 9B64 C8			    iny
+     9 9B65 C4 AB		    cpy ROOM_Y
+    10 9B67 D0 F0		    bne loop
+    12 9B69			done
+     1 9B69 A5 92		    lda MAP_PTR
+     2 9B6B 18 65 AA		    add ROOM_X
+     3 9B6E 85 92		    sta MAP_PTR
+     4 9B70 90 02		    bcc skip_carry
+     5 9B72 E6 93		    inc MAP_PTR + 1
+     6 9B74			skip_carry
 Source: map_gen.asm
 Source: map_gen.asm
-   225 9B13 18 A5 92 69 0F 85 +     adw map_ptr #room_width
-   226 9B1E A0 00		    ldy #0
-   227 9B20			loop
-   228 9B20 18 A5 92 69 8B 85 +     adw map_ptr #map_width
-   229 9B2B C8			    iny
-   230 9B2C C0 07		    cpy #(room_height / 2)
-   231 9B2E D0 F0		    bne loop
-   232
-   233 9B30 A9 7A		    lda #MAP_DOOR
-   234 9B32 A0 00		    ldy #0
-   235 9B34 91 92		    sta (map_ptr),y
-   236 9B36 60			    rts
-   237 				    .endp
-   646
-   647 9B37				icl 'charset_dungeon_a.asm'
+   278 9B74 18 A5 92 69 0F 85 +     adw map_ptr #room_width
+   279 9B7F A0 00		    ldy #0
+   280 9B81			loop
+   281 9B81 18 A5 92 69 8B 85 +     adw map_ptr #map_width
+   282 9B8C C8			    iny
+   283 9B8D C0 07		    cpy #(room_height / 2)
+   284 9B8F D0 F0		    bne loop
+   285
+   286 9B91 A9 7A		    lda #MAP_DOOR
+   287 9B93 A0 00		    ldy #0
+   288 9B95 91 92		    sta (map_ptr),y
+   289 9B97 60			    rts
+   290 				    .endp
+   291
+   292 9B98			.proc get_room_occupied (.byte a) .reg
+   293 = 0098			bitmap = tmp
+   294 9B98 85 B7		    sta room_row
+   295 9B9A 29 07		    and #7                      ; Mask the last 3 bits as the column (mod 8)
+   296 9B9C 85 B6		    sta room_col                ; Store column to a temp variable
+   297 9B9E A5 B7		    lda room_row
+   298 9BA0 4A			    lsr                         ; Divide by 8 to get the row
+   299 9BA1 4A			    lsr
+   300 9BA2 4A			    lsr
+   301 9BA3 85 B7		    sta room_row                ; Store the room row
+   302 9BA5 A8			    tay                         ; Copy the room row to Y (index of occupied_rooms)
+   303 9BA6 B1 BA		    lda (occupied_rooms_ptr),y  ; Load in the correct byte for the row
+   304 9BA8 85 98		    sta bitmap                  ; Store bitmap
+   305
+   306 9BAA A5 B6		    lda room_col                ; Load in the column
+   307 9BAC A8			    tay                         ; Copy to Y register
+   308 9BAD B1 B8		    lda (pow2_ptr),y            ; Get the power of 2 for the column
+   309 9BAF 25 98		    and bitmap                  ; AND with tmp to get the value of the bit position
+   310 				    ; A contains the result
+   311
+   312 9BB1 60			    rts
+   313 				    .endp
+   314
+   315 9BB2			.proc set_room_occupied (.byte a) .reg
+   316 = 0098			bitmap = tmp
+   317
+   318 9BB2 85 B7		    sta room_row
+   319 9BB4 29 07		    and #7                      ; Mask the last 3 bits as the column (mod 8)
+   320 9BB6 85 B6		    sta room_col                ; Store column to a temp variable
+   321 9BB8 A5 B7		    lda room_row
+   322 9BBA 4A			    lsr                         ; Divide by 8 to get the row
+   323 9BBB 4A			    lsr
+   324 9BBC 4A			    lsr
+   325 9BBD 85 B7		    sta room_row                ; Save into row
+   326 9BBF A8			    tay                         ; Copy the room row to Y (index of occupied_rooms)
+   327 9BC0 B1 BA		    lda (occupied_rooms_ptr),y  ; Load in the correct byte for the row
+   328 9BC2 85 98		    sta bitmap
+   329 9BC4 A5 B6		    lda room_col                ; Load in the column
+   330 9BC6 A8			    tay                         ; Copy to Y register
+   331 9BC7 B1 B8		    lda (pow2_ptr),y            ; Get the power of 2 for the column
+   332 9BC9 05 98		    ora bitmap                  ; OR with bitmap to get the value of the bit position
+   333 9BCB 85 98		    sta bitmap                  ; Save it back to the bitmap
+   334 9BCD A5 B7		    lda room_row                ; Load the room row
+   335 9BCF A8			    tay                         ; Set Y to the room row index
+   336 9BD0 A5 98		    lda bitmap                  ; Load the bitmap back into the accumulator
+   337 9BD2 91 BA		    sta (occupied_rooms_ptr),y  ; Store the bitmap into occupied room for appropriate index
+   338 9BD4 60			    rts
+   339 				    .endp
+   340
+   341 9BD5			.proc walk_room
+   342 9BD5			pick
+   343 9BD5 A9 E9 85 B2 A9 72 +     mwa #placed_doors placed_doors_ptr
+   344 9BDD A9 29 85 B4 A9 73 +     mwa #avail_doors avail_doors_ptr
+   345
+   346 9BE5 A4 A9		    ldy room_pos
+   347 9BE7 B1 B4		    lda (avail_doors_ptr),y
+   348 9BE9 85 BC		    sta doors
+   349
+   350 9BEB 20 E1 B9		    random8
+   351 9BEE 29 0F		    and #15
+   352 9BF0 25 BC		    and doors
+   353 9BF2 85 BC		    sta doors
+   354
+   355 9BF4			check_north
+   356 9BF4 20 26 9C		    check_north_door
+   357 9BF7 F0 08		    beq check_south
+   358 				    walk_north room_pos
+   358 				 LDY ROOM_POS\ JSR WALK_NORTH
+   358 9BF9 A4 A9		 LDY ROOM_POS
+   358 9BFB 20 BA 9C		 JSR WALK_NORTH
+   359 9BFE 4C 25 9C		    jmp done
+   360
+   361 9C01			check_south
+   362 9C01 20 4B 9C		    check_south_door
+   363 9C04 F0 08		    beq check_west
+   364 				    walk_south room_pos
+   364 				 LDY ROOM_POS\ JSR WALK_SOUTH
+   364 9C06 A4 A9		 LDY ROOM_POS
+   364 9C08 20 DC 9C		 JSR WALK_SOUTH
+   365 9C0B 4C 25 9C		    jmp done
+   366
+   367 9C0E			check_west
+   368 9C0E 20 70 9C		    check_west_door
+   369 9C11 F0 08		    beq check_east
+   370 				    walk_west room_pos
+   370 				 LDY ROOM_POS\ JSR WALK_WEST
+   370 9C13 A4 A9		 LDY ROOM_POS
+   370 9C15 20 FE 9C		 JSR WALK_WEST
+   371 9C18 4C 25 9C		    jmp done
+   372
+   373 9C1B			check_east
+   374 9C1B 20 95 9C		    check_east_door
+   375 9C1E F0 B5		    beq pick
+   376 				    walk_east room_pos
+   376 				 LDY ROOM_POS\ JSR WALK_EAST
+   376 9C20 A4 A9		 LDY ROOM_POS
+   376 9C22 20 1B 9D		 JSR WALK_EAST
+   377
+   378 9C25			done
+   379 9C25 60			    rts
+   380 				    .endp
+   381
+   382 9C26			.proc check_north_door
+   383 9C26 A5 BC		    lda doors
+   384 9C28 C9 08		    cmp #DOOR_NORTH
+   385 9C2A D0 1C		    bne false
+   386
+   387 				    ; Make sure the room isn't occupied
+   388 9C2C A5 A9		    lda room_pos
+   389 9C2E 38 E9 08		    sub #8
+   390 9C31 85 98		    sta tmp
+   391 				    get_room_occupied tmp
+   391 				 LDA TMP\ JSR GET_ROOM_OCCUPIED
+   391 9C33 A5 98		 LDA TMP
+   391 9C35 20 98 9B		 JSR GET_ROOM_OCCUPIED
+   392 9C38 F0 0B		    beq true
+   393
+   394 				    ; The room is occupied
+   395 9C3A A4 A9		    ldy room_pos
+   396 9C3C B1 B4		    lda (avail_doors_ptr),y
+   397 9C3E 38 E9 08		    sub #DOOR_NORTH
+   398 9C41 91 B4		    sta (avail_doors_ptr),y
+   399 9C43 D0 03		    bne false
+   400 9C45			true
+   401 9C45 A9 01		    lda #1
+   402 9C47 60			    rts
+   403
+   404 9C48			false
+   405 9C48 A9 00		    lda #0
+   406 9C4A 60			    rts
+   407 				    .endp
+   408
+   409 9C4B			.proc check_south_door
+   410 9C4B A5 BC		    lda doors
+   411 9C4D C9 04		    cmp #DOOR_SOUTH
+   412 9C4F D0 1C		    bne false
+   413
+   414 9C51 A5 A9		    lda room_pos
+   415 9C53 18 69 08		    add #8
+   416 9C56 85 98		    sta tmp
+   417 				    get_room_occupied tmp
+   417 				 LDA TMP\ JSR GET_ROOM_OCCUPIED
+   417 9C58 A5 98		 LDA TMP
+   417 9C5A 20 98 9B		 JSR GET_ROOM_OCCUPIED
+   418 9C5D F0 0B		    beq true
+   419 9C5F A4 A9		    ldy room_pos
+   420 9C61 B1 B4		    lda (avail_doors_ptr),y
+   421 9C63 38 E9 04		    sub #DOOR_SOUTH
+   422 9C66 91 B4		    sta (avail_doors_ptr),y
+   423 9C68 D0 03		    bne false
+   424
+   425 9C6A			true
+   426 9C6A A9 01		    lda #1
+   427 9C6C 60			    rts
+   428 9C6D			false
+   429 9C6D A9 00		    lda #0
+   430 9C6F 60			    rts
+   431 				    .endp
+   432
+   433 9C70			.proc check_west_door
+   434 9C70 A5 BC		    lda doors
+   435 9C72 C9 02		    cmp #DOOR_WEST
+   436 9C74 D0 1C		    bne false
+   437
+   438 9C76 A5 A9		    lda room_pos
+   439 9C78 38 E9 01		    sub #1
+   440 9C7B 85 98		    sta tmp
+   441 				    get_room_occupied tmp
+   441 				 LDA TMP\ JSR GET_ROOM_OCCUPIED
+   441 9C7D A5 98		 LDA TMP
+   441 9C7F 20 98 9B		 JSR GET_ROOM_OCCUPIED
+   442 9C82 F0 0B		    beq true
+   443 9C84 A4 A9		    ldy room_pos
+   444 9C86 B1 B4		    lda (avail_doors_ptr),y
+   445 9C88 38 E9 02		    sub #DOOR_WEST
+   446 9C8B 91 B4		    sta (avail_doors_ptr),y
+   447 9C8D D0 03		    bne false
+   448
+   449 9C8F			true
+   450 9C8F A9 01		    lda #1
+   451 9C91 60			    rts
+   452 9C92			false
+   453 9C92 A9 00		    lda #0
+   454 9C94 60			    rts
+   455 				    .endp
+   456
+   457 9C95			.proc check_east_door
+   458 9C95 A5 BC		    lda doors
+   459 9C97 C9 01		    cmp #DOOR_EAST
+   460 9C99 D0 1C		    bne false
+   461
+   462 9C9B A5 A9		    lda room_pos
+   463 9C9D 18 69 01		    add #1
+   464 9CA0 85 98		    sta tmp
+   465 				    get_room_occupied tmp
+   465 				 LDA TMP\ JSR GET_ROOM_OCCUPIED
+   465 9CA2 A5 98		 LDA TMP
+   465 9CA4 20 98 9B		 JSR GET_ROOM_OCCUPIED
+   466 9CA7 F0 0B		    beq true
+   467 9CA9 A4 A9		    ldy room_pos
+   468 9CAB B1 B4		    lda (avail_doors_ptr),y
+   469 9CAD 38 E9 01		    sub #DOOR_EAST
+   470 9CB0 91 B4		    sta (avail_doors_ptr),y
+   471 9CB2 D0 03		    bne false
+   472
+   473 9CB4			true
+   474 9CB4 A9 01		    lda #1
+   475 9CB6 60			    rts
+   476 9CB7			false
+   477 9CB7 A9 00		    lda #0
+   478 9CB9 60			    rts
+   479 				    .endp
+   480
+   481 				; Walk north
+   482 				; Input Registers:
+   483 				; Y = room position
+   484 				; Updates current avail and placed doors
+   485 				; Moves room position to new room
+   486 				; Updates new available doors to prevent backtracking
+   487 9CBA			.proc walk_north (.byte y) .reg
+   488 				    ; Add door to placed rooms in current room
+   489 9CBA B1 B2		    lda (placed_doors_ptr),y
+   490 9CBC 18 69 08		    add #DOOR_NORTH
+   491 9CBF 91 B2		    sta (placed_doors_ptr),y
+   492
+   493 				    ; Remove door from available doors in current room
+   494 9CC1 B1 B4		    lda (avail_doors_ptr),y
+   495 9CC3 38 E9 08		    sub #DOOR_NORTH
+   496 9CC6 91 B4		    sta (avail_doors_ptr),y
+   497
+   498 				    ; Move the room position
+   499 9CC8 A5 A9		    lda room_pos
+   500 9CCA 38 E9 08		    sub #map_room_columns
+   501 9CCD 85 A9		    sta room_pos
+   502
+   503 9CCF 20 EB 99		    get_doors()
+   504
+   505 				    ; Remove door from available doors in the new room
+   506 9CD2 A4 A9		    ldy room_pos
+   507 9CD4 B1 B4		    lda (avail_doors_ptr),y
+   508 9CD6 38 E9 04		    sub #DOOR_SOUTH
+   509 9CD9 91 B4		    sta (avail_doors_ptr),y
+   510 				    
+   511 9CDB 60			    rts
+   512 				    .endp
+   513
+   514 				; Walk south
+   515 				; Input Registers:
+   516 				; Y = room position
+   517 				; Updates current avail and placed doors
+   518 				; Moves room position to new room
+   519 				; Updates new available doors to prevent backtracking
+   520 9CDC			.proc walk_south (.byte y) .reg
+   521 				    ; Add door to placed rooms in current room
+   522 9CDC B1 B2		    lda (placed_doors_ptr),y
+   523 9CDE 18 69 04		    add #DOOR_SOUTH
+   524 9CE1 91 B2		    sta (placed_doors_ptr),y
+   525
+   526 				    ; Remove door from available doors in current room
+   527 9CE3 B1 B4		    lda (avail_doors_ptr),y
+   528 9CE5 38 E9 04		    sub #DOOR_SOUTH
+   529 9CE8 91 B4		    sta (avail_doors_ptr),y
+   530 				    ; Move the room position
+   531 9CEA A5 A9		    lda room_pos
+   532 9CEC 18 69 08		    add #map_room_columns
+   533 9CEF 85 A9		    sta room_pos
+   534 				    
+   535 9CF1 20 EB 99		    get_doors()
+   536
+   537 				    ; Remove door from available doors in the new room
+   538 9CF4 A4 A9		    ldy room_pos
+   539 9CF6 B1 B4		    lda (avail_doors_ptr),y
+   540 9CF8 38 E9 08		    sub #DOOR_NORTH
+   541 9CFB 91 B4		    sta (avail_doors_ptr),y
+   542 				    
+   543 9CFD 60			    rts
+   544 				    .endp
+   545
+   546 				; Walk west
+   547 				; Input Registers:
+   548 				; Y = room position
+   549 				; Updates current avail and placed doors
+   550 				; Moves room position to new room
+   551 				; Updates new available doors to prevent backtracking
+   552 9CFE			.proc walk_west (.byte y) .reg
+   553 				    ; Add door to placed rooms in current room
+   554 9CFE B1 B2		    lda (placed_doors_ptr),y
+   555 9D00 18 69 02		    add #DOOR_WEST
+   556 9D03 91 B2		    sta (placed_doors_ptr),y
+   557
+   558 				    ; Remove door from available doors in current room
+   559 9D05 B1 B4		    lda (avail_doors_ptr),y
+   560 9D07 38 E9 02		    sub #DOOR_WEST
+   561 9D0A 91 B4		    sta (avail_doors_ptr),y
+   562
+   563 				    ; Move the room position
+   564 9D0C C6 A9		    dec room_pos
+   565 				    
+   566 9D0E 20 EB 99		    get_doors()
+   567
+   568 				    ; Remove door from available doors in the new room
+   569 9D11 A4 A9		    ldy room_pos
+   570 9D13 B1 B4		    lda (avail_doors_ptr),y
+   571 9D15 38 E9 01		    sub #DOOR_EAST
+   572 9D18 91 B4		    sta (avail_doors_ptr),y
+   573
+   574 9D1A 60			    rts
+   575 				    .endp
+   576
+   577 				; Walk east
+   578 				; Input Registers:
+   579 				; Y = room position
+   580 				; Updates current avail and placed doors
+   581 				; Moves room position to new room
+   582 				; Updates new available doors to prevent backtracking
+   583 9D1B			.proc walk_east (.byte y) .reg
+   584 				    ; Add door to placed rooms in current room
+   585 9D1B B1 B2		    lda (placed_doors_ptr),y
+   586 9D1D 18 69 01		    add #DOOR_EAST
+   587 9D20 91 B2		    sta (placed_doors_ptr),y
+   588
+   589 				    ; Remove door from available doors in current room
+   590 9D22 B1 B4		    lda (avail_doors_ptr),y
+   591 9D24 38 E9 01		    sub #DOOR_EAST
+   592 9D27 91 B4		    sta (avail_doors_ptr),y
+   593
+   594 				    ; Move the room position
+   595 9D29 E6 A9		    inc room_pos
+   596
+   597 9D2B 20 EB 99		    get_doors()
+   598
+   599 				    ; Remove door from available doors in the new room
+   600 9D2E A4 A9		    ldy room_pos
+   601 9D30 B1 B4		    lda (avail_doors_ptr),y
+   602 9D32 38 E9 02		    sub #DOOR_WEST
+   603 9D35 91 B4		    sta (avail_doors_ptr),y
+   604 				    
+   605 9D37 60			    rts
+   606 				    .endp
+   684
+   685 9D38				icl 'charset_dungeon_a.asm'
 Source: charset_dungeon_a.asm
-     1 9B37				org charset_dungeon_a	; char 0
+     1 9D38				org charset_dungeon_a	; char 0
      2 8000-83FF> 00			.byte %00000000
      3 8001 00				.byte %00000000
      4 8002 00				.byte %00000000
@@ -3321,7 +3893,7 @@ Source: charset_dungeon_a.asm
   1150 83FD 51				.byte %01010001
   1151 83FE 55				.byte %01010101
   1152 83FF 54				.byte %01010100
-   648 8400				icl 'charset_outdoor_a.asm'
+   686 8400				icl 'charset_outdoor_a.asm'
 Source: charset_outdoor_a.asm
      1 8400				org charset_outdoor_a	; char 0
      2 8800-8BFF> 00			.byte %00000000
@@ -4475,7 +5047,7 @@ Source: charset_outdoor_a.asm
   1150 8BFD A2				.byte %10100010
   1151 8BFE AA				.byte %10101010
   1152 8BFF A8				.byte %10101000
-   649 8C00				icl 'monsters_a.asm'
+   687 8C00				icl 'monsters_a.asm'
 Source: monsters_a.asm
      1 8C00				org monsters_a	; char 0
      2 9000-93FF> 55			.byte %01010101
@@ -5629,11 +6201,11 @@ Source: monsters_a.asm
   1150 93FD 55				.byte %01010101
   1151 93FE 55				.byte %01010101
   1152 93FF 55				.byte %01010101
-   650 9400				icl 'room_types.asm'
+   688 9400				icl 'room_types.asm'
 Source: room_types.asm
      1 9400			    org room_types
      2 				    ; Room 0
-     3 A000-AEDF> 7F 7F 7F 7F +     .byte 127,127,127,127,127,127,127,127,127,127,127,127,127,127,127
+     3 A000-AEE7> 7F 7F 7F 7F +     .byte 127,127,127,127,127,127,127,127,127,127,127,127,127,127,127
      4 A00F 7F 7F 7F 7F 7F 7F +     .byte 127,127,127,127,127,127,127,127,127,127,127,127,127,127,127
      5 A01E 7F 7F 7F 7F 7F 7F +     .byte 127,127,127,127,127,127,127,127,127,127,127,127,127,127,127
      6 A02D 7F 7F 7F 7F 7F 7F +     .byte 127,127,127,127,127,127,127,127,127,127,127,127,127,127,127
@@ -5888,7 +6460,7 @@ Source: room_types.asm
    255 ADE3 7F 7F 7F 7F 7F 7F +     .byte 127,127,127,127,127,127,127,127,127,127,127,127,127,127,127
    256 ADF2 7F 7F 7F 7F 7F 7F +     .byte 127,127,127,127,127,127,127,127,127,127,127,127,127,127,127
    257 AE01 7F 7F 7F 7F 7F 7F +     .byte 127,127,127,127,127,127,127,127,127,127,127,127,127,127,127
-   651 AE10				icl 'room_positions.asm'
+   689 AE10				icl 'room_positions.asm'
 Source: room_positions.asm
      1 AE10			    org room_positions
      2 				    ;  0  1  2  3  4  5  6  7
@@ -5970,7 +6542,7 @@ Source: room_positions.asm
     78 AE8A 76 56		    .byte border + room_height * 7 + 7, border + room_width * 5 + 5   ; Room 61
     79 AE8C 76 66		    .byte border + room_height * 7 + 7, border + room_width * 6 + 6   ; Room 62
     80 AE8E 76 76		    .byte border + room_height * 7 + 7, border + room_width * 7 + 7   ; Room 63
-   652 AE90				icl 'room_pos_doors'
+   690 AE90				icl 'room_pos_doors'
 Source: room_pos_doors.asm
      1 AE90			    org room_pos_doors ; 64 Bytes
      2 AE90 05 07 07 07 07 07 +     .byte %0101, %0111, %0111, %0111, %0111, %0111, %0111, %0110
@@ -5981,8 +6553,11 @@ Source: room_pos_doors.asm
      7 AEB8 0D 0F 0F 0F 0F 0F +     .byte %1101, %1111, %1111, %1111, %1111, %1111, %1111, %1110
      8 AEC0 0D 0F 0F 0F 0F 0F +     .byte %1101, %1111, %1111, %1111, %1111, %1111, %1111, %1110
      9 AEC8 09 0B 0B 0B 0B 0B +     .byte %1001, %1011, %1011, %1011, %1011, %1011, %1011, %1010
-   653 AED0				icl 'room_type_doors'
+   691 AED0				icl 'room_type_doors'
 Source: room_type_doors.asm
      1 AED0			    org room_type_doors
      2 AED0 0F 0F 0F 0F 0F 0F +     .byte %1111, %1111, %1111, %1111, %1111, %1111, %1111, %1111
      3 AED8 0F 0F 0F 0F 0F 0F +     .byte %1111, %1111, %1111, %1111, %1111, %1111, %1111, %1111
+   692
+   693 AEE0			powers_of_two
+   694 AEE0 01 02 04 08 10 20 + 	.byte 1,2,4,8,16,32,64,128

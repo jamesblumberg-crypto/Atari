@@ -18,13 +18,17 @@
 
 ; RAM: $2000-7FFF - 24K
 map     			= $2000 ; Map (16K+)
+; free (almost 4K)
 screen  			= $7000 ; Screen buffer (480 bytes)
 status_line			= $71e0 ; Status Line (40 bytes)
 tmp_room			= $7208 ; Temp room (225 bytes)
-room_doors			= $72e9 ; Room doors (64 bytes)
-
+placed_doors		= $72e9 ; Doors that have been placed (64 bytes)
+avail_doors			= $7329	; Doors that are available (64 bytes)
+occupied_rooms		= $7369 ; Rooms that are occupied (8 bytes)
 ; free
 pmg     			= $7400 ; Player Missle Data (1K)
+cur_charset_a		= $7800 ; Currently copied character set (A) (1K)
+cur_charset_b		= $7c00 ; Currently copied character set (B) (1K)
 ; free
 
 ; 16K Cartridge ROM: $8000-BFFF - 16K
@@ -75,6 +79,8 @@ room_width			= 15
 room_height			= 15
 map_width 			= room_width * 8 + 7 + border * 2
 map_height 			= room_height * 8 + 7 + border * 2
+map_room_columns	= 8
+map_room_rows		= 8
 
 playfield_width = 11
 playfield_height = 11
@@ -92,6 +98,17 @@ room_y				= $ab
 room_ptr			= $ac ; 16 bit
 tmp_x				= $ae
 tmp_y				= $af
+num_rooms			= $b0
+max_rooms			= $b1
+placed_doors_ptr	= $b2 ; 16 bit
+avail_doors_ptr		= $b4 ; 16 bit
+room_col			= $b6
+room_row			= $b7
+pow2_ptr			= $b8 ; 16 bit
+occupied_rooms_ptr  = $ba ; 16 bit
+doors				= $bc
+tmp2				= $bd
+rand16				= $be
 
 ; Colors
 white = $0a
@@ -106,14 +123,23 @@ gold = $2a
 	sta player_y
 
 	mva #123 rand
+	mva #200 rand16
+
+	mwa #powers_of_two pow2_ptr
+	mwa #occupied_rooms occupied_rooms_ptr
 
 	setup_colors()
+
+	copy_data charset_dungeon_a cur_charset_a 4
+	copy_monsters 0 12
+
 	mva #>charset_outdoor_a CHBAS
 	clear_pmg()
 	load_pmg()
 	setup_pmg()
 
 	new_map()
+	place_monsters #255 #12
 	setup_screen()
 	update_player_tiles()
 	display_borders()
@@ -637,6 +663,18 @@ no_eor
 	rts
 	.endp
 
+.proc random16
+	lda rand				; Load in seed or last number generated
+	lsr						; Shift 1 place to the right
+	rol rand16
+	bcc no_eor				; Carry flag contains the last bit prior to shifting - if 0, skip XOR
+	eor #$b4				; XOR with feedback value that produces a good sequence
+no_eor
+	sta rand				; Store the random number
+	eor rand16
+	rts
+	.endp
+
 	icl 'macros.asm'
 	icl 'hardware.asm'
 	icl 'labels.asm'
@@ -651,3 +689,6 @@ no_eor
 	icl 'room_positions.asm'
 	icl 'room_pos_doors'
 	icl 'room_type_doors'
+
+powers_of_two
+	.byte 1,2,4,8,16,32,64,128

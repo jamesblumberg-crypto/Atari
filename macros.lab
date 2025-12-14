@@ -1,0 +1,59 @@
+mads 2.1.7
+Source: macros.asm
+     1 				.macro inc16 addr
+     2 				    inc :addr
+     3 				    bne skip_carry
+     4 				    inc :addr + 1
+     5 				skip_carry
+     6 				    .endm
+     7
+     8 				.macro dec16 addr
+     9 				    lda :addr
+    10 				    bne skip_borrow
+    11 				    dec :addr + 1
+    12 				skip_borrow
+    13 				    dec :addr
+    14 				    .endm
+    15
+    16 				.macro adbw src val
+    17 				    lda :src
+    18 				    add :val
+    19 				    sta :src
+    20 				    bcc skip_carry
+    21 				    inc :src + 1
+    22 				skip_carry
+    23 				    .endm
+    24
+    25 				.macro advance_ptr data ptr width count offset
+    26 				    mwa :data :ptr
+    27 				    lda :count  ; Check to make sure it's not 0
+    28 				    beq done    ; If it is, we're done
+    29 				
+    30 				    ldy #0
+    31 				loop
+    32 				    adbw :ptr :width
+    33 				    iny
+    34 				    cpy :count
+    35 				    bne loop
+    36 				
+    37 				done
+    38 				    adbw :ptr :offset
+    39 				    .endm
+    40
+    41 				.macro copy_data src dest num_pages
+    42 				    mwa #:src tmp_addr1
+    43 				    mwa #:dest tmp_addr2
+    44 				
+    45 				    ldy #0
+    46 				    ldx #0
+    47 				loop 
+    48 				    lda (tmp_addr1), y
+    49 				    sta (tmp_addr2), y
+    50 				    iny
+    51 				    bne loop
+    52 				    inc tmp_addr1 + 1
+    53 				    inc tmp_addr2 + 1
+    54 				    inx
+    55 				    cpx :num_pages
+    56 				    bne loop    
+    57 				    .endm
