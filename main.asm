@@ -17,7 +17,7 @@
 	org $b000
 
 ; RAM: $2000-7FFF - 24K
-map     			= $2000 ; Map (16K+)
+map     			= $2000 ; Map (16K+) aaaaaaaaaaaaaaa
 ; free (almost 4K)
 screen  			= $7000 ; Screen buffer (480 bytes)
 status_line			= $71e0 ; Status Line (40 bytes)
