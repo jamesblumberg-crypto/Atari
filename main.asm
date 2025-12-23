@@ -48,6 +48,7 @@ room_positions		= $ae10	; 128 bytes
 room_pos_doors		= $ae90 ; 64 bytes
 room_type_doors		= $aed0 ; 16 bytes
 charset_dungeon_a_colors = $aee0 ; Dungeon character colors (1K)
+charset_dungeon_b_colors = $b2e0 ; fake 
 
 
 ; free
