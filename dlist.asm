@@ -33,9 +33,15 @@ dli1
 	pha
 	lda #1
 	sta WSYNC
-	;mva #>charset_dungeon_a CHBASE
-	mva #>cur_charset_a CHBASE
-	;blit_screen()
+	lda charset_a
+	bne use_charset_b
+	mva #>cur_charset_a CHBASE	
+	jmp done
+
+use_charset_b
+	mva #>cur_charset_b CHBASE
+
+done
 	mwa #dli2 VDSLST
 	pla
 	rti
