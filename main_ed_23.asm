@@ -61,10 +61,10 @@ monsters_b_colors   = $af53 ; 51 bytes
 
 ; B000-BFFF (Code)
 
-;stick_up    = %0001
-;stick_down  = %0010 
-;stick_left  = %0100
-;stick_right = %1000
+stick_up    = %0001
+stick_down  = %0010 
+stick_left  = %0100
+stick_right = %1000
 
 map_ptr 	= $92
 screen_ptr 	= $94
@@ -125,15 +125,6 @@ num_monsters		= $c2
 starting_monster	= $c3
 no_clip				= $c4
 char_colors_ptr		= $c5 ; 16 bit
-
-stick_dir			= $d8
-stick_btn			= $d9
-stick_action		= $da
-
-player_ptr			= $de 
-dir_ptr				= $e0
-tmp1 				= $e2
-;tmp2 				= $e3
 
 ; Colors
 white = $0a
@@ -216,7 +207,7 @@ done
 	lda clock
 	cmp input_timer
 	bne done
-	;read_joystick()
+	read_joystick()
 	blit_screen()
 	lda clock
 	add #input_speed
@@ -239,72 +230,72 @@ done
 done
 	.endm
 
-;.proc read_joystick
-;	lda STICK0
-;	and #STICK_UP
-;	beq check_up
-;
-;	lda STICK0
-;	and #STICK_DOWN
-;	beq check_down
-;
-;	lda STICK0
-;	and #STICK_LEFT
-;	beq check_left
-;
-;	lda STICK0
-;	and #STICK_RIGHT
-;	beq check_right
-;
-;	jmp done
-;
-;check_up
-;	lda no_clip
-;	bne move_up
-;	lda up_tile
-;	cmp #WALKABLE_START
-;	bcc done
-;move_up
-;	dec player_y
-;	update_player_tiles()
-;	jmp done
-;
-;check_down
-;	lda no_clip
-;	bne move_down
-;	lda down_tile
-;	cmp #WALKABLE_START
-;	bcc done
-;move_down
-;	inc player_y
-;	update_player_tiles()
-;	jmp done
-;
-;check_left
-;	lda no_clip
-;	bne move_left
-;	lda left_tile
-;	cmp #WALKABLE_START
-;	bcc done
-;move_left
-;	dec player_x
-;	update_player_tiles()
-;	jmp done
-;
-;check_right
-;	lda no_clip
-;	bne move_right
-;	lda right_tile
-;	cmp #WALKABLE_START
-;	bcc done
-;move_right
-;	inc player_x
-;	update_player_tiles()
-;	jmp done
-;
-;done
-;	rts
-;	.endp
+.proc read_joystick
+	lda STICK0
+	and #stick_up
+	beq check_up
+
+	lda STICK0
+	and #stick_down
+	beq check_down
+
+	lda STICK0
+	and #stick_left
+	beq check_left
+
+	lda STICK0
+	and #stick_right
+	beq check_right
+
+	jmp done
+
+check_up
+	lda no_clip
+	bne move_up
+	lda up_tile
+	cmp #WALKABLE_START
+	bcc done
+move_up
+	dec player_y
+	update_player_tiles()
+	jmp done
+
+check_down
+	lda no_clip
+	bne move_down
+	lda down_tile
+	cmp #WALKABLE_START
+	bcc done
+move_down
+	inc player_y
+	update_player_tiles()
+	jmp done
+
+check_left
+	lda no_clip
+	bne move_left
+	lda left_tile
+	cmp #WALKABLE_START
+	bcc done
+move_left
+	dec player_x
+	update_player_tiles()
+	jmp done
+
+check_right
+	lda no_clip
+	bne move_right
+	lda right_tile
+	cmp #WALKABLE_START
+	bcc done
+move_right
+	inc player_x
+	update_player_tiles()
+	jmp done
+
+done
+	rts
+	.endp
 
 * --------------------------------------- *
 * Proc: delay                             *
@@ -848,7 +839,6 @@ place
 	icl 'dlist.asm'
 	icl 'pmgdata.asm'
 	icl 'map_gen.asm'
-	icl 'input.asm'
 
 	icl 'charset_dungeon_a.asm'
 	icl 'charset_dungeon_b.asm'

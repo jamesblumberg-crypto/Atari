@@ -1,4 +1,4 @@
-	org charset_dungeon_a_colors
+	org charset_dungeon_b_colors
 
 	.byte %01000000
 	.byte %01000010

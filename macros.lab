@@ -5,7 +5,7 @@ Source: macros.asm
      3 				    bne skip_carry
      4 				    inc :addr + 1
      5 				skip_carry
-     6 				    .endm
+     6 				.endm
      7
      8 				.macro dec16 addr
      9 				    lda :addr
@@ -13,7 +13,7 @@ Source: macros.asm
     11 				    dec :addr + 1
     12 				skip_borrow
     13 				    dec :addr
-    14 				    .endm
+    14 				.endm
     15
     16 				.macro adbw src val
     17 				    lda :src
@@ -22,7 +22,7 @@ Source: macros.asm
     20 				    bcc skip_carry
     21 				    inc :src + 1
     22 				skip_carry
-    23 				    .endm
+    23 				.endm
     24
     25 				.macro advance_ptr data ptr width count offset
     26 				    mwa :data :ptr
@@ -38,22 +38,89 @@ Source: macros.asm
     36 				
     37 				done
     38 				    adbw :ptr :offset
-    39 				    .endm
+    39 				.endm
     40
-    41 				.macro copy_data src dest num_pages
+    41 				.macro copy_bytes src dest num_bytes
     42 				    mwa #:src tmp_addr1
     43 				    mwa #:dest tmp_addr2
     44 				
     45 				    ldy #0
-    46 				    ldx #0
-    47 				loop 
-    48 				    lda (tmp_addr1), y
-    49 				    sta (tmp_addr2), y
-    50 				    iny
+    46 				loop
+    47 				    lda (tmp_addr1),y
+    48 				    sta (tmp_addr2),y
+    49 				    iny
+    50 				    cpy #:num_bytes
     51 				    bne loop
-    52 				    inc tmp_addr1 + 1
-    53 				    inc tmp_addr2 + 1
-    54 				    inx
-    55 				    cpx :num_pages
-    56 				    bne loop    
-    57 				    .endm
+    52 				
+    53 				.endm
+    54
+    55 				.macro copy_data src dest num_pages
+    56 				    mwa #:src tmp_addr1
+    57 				    mwa #:dest tmp_addr2
+    58 				
+    59 				    ldy #0
+    60 				    ldx #0
+    61 				loop
+    62 				    lda (tmp_addr1),y
+    63 				    sta (tmp_addr2),y
+    64 				    iny
+    65 				    bne loop
+    66 				    inc tmp_addr1 + 1
+    67 				    inc tmp_addr2 + 1
+    68 				    inx
+    69 				    cpx #:num_pages
+    70 				    bne loop
+    71 				.endm
+    72
+    73 				.macro copy_monster_colors src dest start
+    74 				    mwa #:src tmp_addr1
+    75 				
+    76 				    lda :start
+    77 				    asl
+    78 				    add :start
+    79 				    tay
+    80 				
+    81 				    lda (tmp_addr1),y
+    82 				    sta :dest + 11
+    83 				    iny
+    84 				    lda (tmp_addr1),y
+    85 				    sta :dest + 12
+    86 				    iny
+    87 				    lda (tmp_addr1),y
+    88 				    sta :dest + 13
+    89 				.endm
+    90
+    91
+    92 				.macro copy_monsters src dest start
+    93 				    ; Characters are 8 bytes wide
+    94 				    ; Tiles are 2 chacters wide
+    95 				    ; In the dungeon/outdoor charset, there's an open section starting at character 88
+    96 				    mwa #:src tmp_addr1
+    97 				    mwa #:dest tmp_addr2
+    98 				
+    99 				    adw tmp_addr2 #(88 * 8)
+   100 				
+   101 				    lda :start
+   102 				    cmp #16
+   103 				    bne shift
+   104 				    adw tmp_addr1 #256
+   105 				    jmp done
+   106 				shift
+   107 				    asl
+   108 				    asl
+   109 				    asl
+   110 				    asl
+   111 				    sta tmp
+   112 				    adbw tmp_addr1 tmp
+   113 				
+   114 				done
+   115 				    ldy #0
+   116 				loop
+   117 				    lda (tmp_addr1),y
+   118 				    sta (tmp_addr2),y
+   119 				    iny
+   120 				
+   121 				    cpy #192
+   122 				    bne loop
+   123 				
+   124 				.endm
