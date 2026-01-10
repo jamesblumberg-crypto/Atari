@@ -49,9 +49,7 @@ loop
     iny
     cpy #:num_bytes
     bne loop
-
 .endm
-
 
 .macro copy_data src dest num_pages
     mwa #:src tmp_addr1
@@ -89,7 +87,6 @@ loop
     iny
     lda (tmp_addr1),y
     sta :dest + 13
-
 .endm
 
 .macro copy_monsters src dest start
@@ -101,7 +98,6 @@ loop
     mwa #:dest tmp_addr2        ; Copy cur_charset_X address to tmp_addr2
 
     adw tmp_addr2 #(88 * 8)     ; Move over to location in charset where monsters start
-    
     
     lda :start
     cmp #16
@@ -117,7 +113,6 @@ shift
     adbw tmp_addr1 tmp
 done
 
-
     ldy #0
 loop
     lda (tmp_addr1),y           ; Load monster character
@@ -126,4 +121,19 @@ loop
     cpy #192
     bne loop                    ; Y > 0, so keep looping
 
+.endm
+
+
+.macro ldi addr
+    ldy #0
+    lda (:addr),y
+.endm
+
+.macro sti addr
+    ldy #0
+    sta (:addr),y
+.endm
+
+.macro clr addr
+    mva #0 :addr
 .endm

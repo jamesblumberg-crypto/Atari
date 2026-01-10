@@ -3,7 +3,7 @@
 ; Mission: EdPossible
 ; youtube.com/MissionEdPossible
 ; Assemble in MADS: mads -l -t main.asm
-; Episode 11: Scrolling
+; Episode 24 - Doors
 
 ; ATASCII Table: https://www.atariwiki.org/wiki/attach/Atari%20ATASCII%20Table/ascii_atascii_table.pdf
 ; ATASCII 0-31 Screen code 64-95
@@ -33,6 +33,7 @@ cur_charset_a		= $7800 ; Current character set A (1K)
 cur_charset_b		= $7c00 ; Current character set B (1K)
 
 ; 16K Cartridge ROM: $8000-BFFF - 16K
+
 ; 8000-8FFF
 charset_dungeon_a 	= $8000 ; Main character set (1K)
 charset_dungeon_b 	= $8400 ; Main character set (1K)
@@ -124,6 +125,15 @@ num_monsters		= $c2
 starting_monster    = $c3
 no_clip				= $c4
 char_colors_ptr		= $c5 ; 16 bit
+
+stick_dir 			= $d8
+stick_btn			= $d9
+stick_action		= $da
+
+player_ptr			= $de 
+dir_ptr				= $e0
+tmp1 				= $e2
+tmp2 				= $e3
 
 ; Colors
 white = $0a
