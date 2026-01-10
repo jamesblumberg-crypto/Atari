@@ -1,6 +1,5 @@
 	org monsters_a_colors
 
-
 	.byte %00000000   ; starting_monster = 0
 	.byte %00000100   ; starting_monster = 0
 	.byte %11001100   ; starting_monster = 0
