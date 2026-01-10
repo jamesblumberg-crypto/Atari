@@ -5,5 +5,3 @@
     mva STRIG0 cur_btn          ; Read joystick button state
     bne up                      ; If button not pressed, skip
 
-; one test from ipad
-; for commit
