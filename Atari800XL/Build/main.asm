@@ -61,10 +61,10 @@ monsters_b_colors		= $af53 ; 51 bytes
 
 ; B000-BFFF (Code)
 
-stick_up    = %0001
-stick_down  = %0010 
-stick_left  = %0100
-stick_right = %1000
+;stick_up    = %0001
+;stick_down  = %0010 
+;stick_left  = %0100
+;stick_right = %1000
 
 map_ptr 	= $92
 screen_ptr 	= $94
@@ -133,7 +133,7 @@ stick_action		= $da
 player_ptr			= $de 
 dir_ptr				= $e0
 tmp1 				= $e2
-tmp2 				= $e3
+;tmp2 				= $e3
 
 ; Colors
 white = $0a
@@ -842,13 +842,13 @@ place
 	.endp
 
 
-	icl 'test_map.asm'
 	icl 'macros.asm'
 	icl 'hardware.asm'
 	icl 'labels.asm'
 	icl 'dlist.asm'
 	icl 'pmgdata.asm'
 	icl 'map_gen.asm'
+	icl 'input.asm'
 
 	icl 'charset_dungeon_a.asm'
 	icl 'charset_dungeon_b.asm'
@@ -859,6 +859,7 @@ place
 	icl 'room_positions.asm'
 	icl 'room_pos_doors'
 	icl 'room_type_doors'
+	;icl 'test_map.asm'
 	icl 'charset_dungeon_a_colors.asm'
 	icl 'charset_dungeon_b_colors.asm'
 	icl 'charset_outdoor_a_colors.asm'
