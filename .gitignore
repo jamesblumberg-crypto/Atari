@@ -1,1 +1,9 @@
 _hold/
+
+# Atari build artifacts
+*.xex
+*.obx
+*.lab
+
+# Office temp files
+~

@@ -20,7 +20,7 @@ map     			= $3000 ; Map
 pmg     			= $4000 ; Player Missle Data
 charset_dungeon_a 	= $5000 ; Main character set
 charset_outdoor_a 	= $6000 ; Character Set for outdoors
-status_line		 	= $6400 ; Status line
+status_line			= $6400 ; Status Line
 monsters_a          = $7000 ; Monster characters
 screen  			= $8000 ; Screen buffer
 
@@ -40,8 +40,8 @@ left_tile	= $9c
 right_tile	= $9d
 on_tile		= $9e
 
-tmp_addr1 = $a0
-tmp_addr2 = $a2
+tmp_addr1	= $a0
+tmp_addr2   = $a2
 
 screen_char_width = 40
 screen_width = 19
@@ -52,9 +52,14 @@ map_height = 49
 playfield_width = 11
 playfield_height = 11
 
+game_timer = $a4
+game_tick = 10
+
+status_ptr = $a5
+
 ; Colors
 white = $0a
-red = $22
+red = $32
 black = $00
 peach = $2c
 blue = $92
@@ -66,16 +71,32 @@ gold = $18
 
 	setup_screen()
 	setup_colors()
-	mva #>charset_dungeon_a CHBAS
+	mva #>charset_outdoor_a CHBAS
 	clear_pmg()
 	load_pmg()
 	setup_pmg()
 	update_player_tiles()
+	display_borders()
+	update_ui()
+
+	reset_timer
 
 game
+	lda RTCLK2
+	cmp game_timer
+	bne game
+
 	read_joystick()
-	blit_screen()
+	reset_timer
+
 	jmp game
+
+.macro reset_timer
+	lda RTCLK2
+	add #game_tick
+	sta game_timer
+	.endm
+
 
 .proc read_joystick
 	lda STICK0
@@ -101,16 +122,14 @@ move_up
 	cmp #55
 	bcc done
 	dec player_y
-	delay #5
 	update_player_tiles()
 	jmp done
-	
+
 move_down
 	lda down_tile
 	cmp #55
 	bcc done
 	inc player_y
-	delay #5
 	update_player_tiles()
 	jmp done
 
@@ -119,16 +138,14 @@ move_left
 	cmp #55
 	bcc done
 	dec player_x
-	delay #5
 	update_player_tiles()
 	jmp done
 
 move_right
 	lda right_tile
-	cmp #55  
+	cmp #55
 	bcc done
 	inc player_x
-	delay #5
 	update_player_tiles()
 	jmp done
 
@@ -158,8 +175,6 @@ wait
 * Sets up colors                          *
 * --------------------------------------- *
 .proc setup_colors
-
-
 	; Character Set Colors
 	mva #white COLOR0 	; %01
 	mva #red COLOR1  	; %10
@@ -251,7 +266,7 @@ loop
 .macro blit_circle_line body, map_space, screen_space
 	mwa map_ptr tmp_addr1
 	mwa screen_ptr tmp_addr2
-
+	
 	adw map_ptr #:map_space
 	adw screen_ptr #:screen_space
 	ldx #:body
@@ -292,14 +307,14 @@ loop
 	mwa #map map_ptr
 
 	ldy player_y
-loop 
+loop
 	adw map_ptr #map_width
 	dey
 	bne loop
 
 	adbw map_ptr player_x
 
-	; Get the tile the player is standing on
+	; Get the tile the player is on
 	ldy #0
 	lda (map_ptr),y
 	sta on_tile
@@ -328,12 +343,200 @@ loop
 
 	rts
 	.endp
-		
+
+.macro blit_char char addr pos
+	lda :char
+	ldy :pos
+	sta (:addr),y
+	.endm
+
+.macro blit_char_row char addr start end
+	lda :char
+	ldy :start
+loop
+	sta (:addr),y
+	iny
+	cpy :end
+	bcc loop
+	.endm
+
+.proc display_borders
+	mwa #status_line status_ptr
+	mwa #screen screen_ptr
+
+	blit_char #UI_NW_BORDER status_ptr #0
+	blit_char_row #UI_HORIZ_BORDER status_ptr #1 #23
+	blit_char #UI_TOP_TEE status_ptr #23
+	blit_char_row #UI_HORIZ_BORDER status_ptr #24 #39
+	blit_char #UI_NE_BORDER status_ptr #39
+	
+	ldx #playfield_height
+loop
+	blit_char #UI_VERT_BORDER screen_ptr #0
+	blit_char #UI_VERT_BORDER screen_ptr #23
+	blit_char #UI_VERT_BORDER screen_ptr #39
+	adw screen_ptr #screen_char_width
+	dex
+	bne loop
+
+	blit_char #UI_SW_BORDER screen_ptr #0
+	blit_char_row #UI_HORIZ_BORDER screen_ptr #1 #23
+	blit_char #UI_BOTTOM_TEE screen_ptr #23
+	blit_char_row #UI_HORIZ_BORDER screen_ptr #24 #39
+	blit_char #UI_SE_BORDER screen_ptr #39
+	
+	rts
+	.endp
+
+.proc update_ui
+	mwa #screen screen_ptr
+	; HP Bar
+	blit_char #UI_HP_ICON_LEFT screen_ptr #25
+	blit_char #UI_HP_ICON_RIGHT screen_ptr #26
+	blit_char #UI_COLON screen_ptr #27
+	blit_char #UI_BAR_LEFT screen_ptr #28
+	blit_char #UI_HP_FULL screen_ptr #29
+	blit_char #UI_HP_FULL screen_ptr #30
+	blit_char #UI_HP_FULL screen_ptr #31
+	blit_char #UI_HP_FULL screen_ptr #32
+	blit_char #UI_HP_FULL screen_ptr #33
+	blit_char #UI_HP_3_QTR screen_ptr #34
+	blit_char #UI_BAR_RIGHT screen_ptr #35
+
+	adw screen_ptr #screen_char_width
+
+	; Skills
+	blit_char #UI_MELEE_ICON_LEFT screen_ptr #25
+	blit_char #UI_MELEE_ICON_RIGHT screen_ptr #26
+	blit_char #UI_COLON screen_ptr #27
+	blit_char #UI_NUMBER_0 screen_ptr #28
+	blit_char #UI_NUMBER_0 screen_ptr #29
+	blit_char #UI_NUMBER_0 screen_ptr #30
+
+	blit_char #UI_RANGED_ICON_LEFT screen_ptr #32
+	blit_char #UI_RANGED_ICON_RIGHT screen_ptr #33
+	blit_char #UI_COLON screen_ptr #34
+	blit_char #UI_NUMBER_0 screen_ptr #35
+	blit_char #UI_NUMBER_0 screen_ptr #36
+	blit_char #UI_NUMBER_0 screen_ptr #37
+
+	adw screen_ptr #screen_char_width
+
+	blit_char #UI_DEFENSE_ICON_LEFT screen_ptr #25
+	blit_char #UI_DEFENSE_ICON_RIGHT screen_ptr #26
+	blit_char #UI_COLON screen_ptr #27
+	blit_char #UI_NUMBER_0 screen_ptr #28
+	blit_char #UI_NUMBER_0 screen_ptr #29
+	blit_char #UI_NUMBER_0 screen_ptr #30
+
+	blit_char #UI_FORTITUDE_ICON_LEFT screen_ptr #32
+	blit_char #UI_FORTITUDE_ICON_RIGHT screen_ptr #33
+	blit_char #UI_COLON screen_ptr #34
+	blit_char #UI_NUMBER_0 screen_ptr #35
+	blit_char #UI_NUMBER_0 screen_ptr #36
+	blit_char #UI_NUMBER_0 screen_ptr #37
+
+	adw screen_ptr #screen_char_width
+
+	; XP Bar
+	blit_char #UI_XP_ICON_LEFT screen_ptr #25
+	blit_char #UI_XP_ICON_RIGHT screen_ptr #26
+	blit_char #UI_COLON screen_ptr #27
+	blit_char #UI_BAR_LEFT screen_ptr #28
+	blit_char #UI_XP_FULL screen_ptr #29
+	blit_char #UI_XP_FULL screen_ptr #30
+	blit_char #UI_XP_FULL screen_ptr #31
+	blit_char #UI_XP_FULL screen_ptr #32
+	blit_char #UI_XP_FULL screen_ptr #33
+	blit_char #UI_XP_FULL screen_ptr #34
+	blit_char #UI_XP_HALF screen_ptr #35
+	blit_char #UI_BAR_EMPTY screen_ptr #36
+	blit_char #UI_BAR_EMPTY screen_ptr #37
+	blit_char #UI_BAR_RIGHT screen_ptr #38
+
+	adw screen_ptr #screen_char_width
+
+	; Inventory
+	blit_char #UI_TORCH_ICON_LEFT screen_ptr #25
+	blit_char #UI_TORCH_ICON_RIGHT screen_ptr #26
+	blit_char #UI_COLON screen_ptr #27
+	blit_char #UI_NUMBER_0 screen_ptr #28
+	blit_char #UI_NUMBER_0 screen_ptr #29
+	blit_char #UI_NUMBER_0 screen_ptr #30
+
+	blit_char #UI_POTION_ICON_LEFT screen_ptr #32
+	blit_char #UI_POTION_ICON_RIGHT screen_ptr #33
+	blit_char #UI_COLON screen_ptr #34
+	blit_char #UI_NUMBER_0 screen_ptr #35
+	blit_char #UI_NUMBER_0 screen_ptr #36
+	blit_char #UI_NUMBER_0 screen_ptr #37
+
+	adw screen_ptr #screen_char_width
+	blit_char #UI_COIN_ICON_LEFT screen_ptr #25
+	blit_char #UI_COIN_ICON_RIGHT screen_ptr #26
+	blit_char #UI_COLON screen_ptr #27
+	blit_char #UI_NUMBER_0 screen_ptr #28
+	blit_char #UI_NUMBER_0 screen_ptr #29
+	blit_char #UI_NUMBER_0 screen_ptr #30
+	blit_char #UI_NUMBER_0 screen_ptr #31
+	blit_char #UI_NUMBER_0 screen_ptr #32
+
+	; Amulet
+	adw screen_ptr #screen_char_width
+	adw screen_ptr #screen_char_width
+	blit_char #UI_AMULET_NW_ICON_LEFT screen_ptr #29
+	blit_char #UI_AMULET_NW_ICON_RIGHT screen_ptr #30
+	blit_char #UI_BLACK_GEM_ICON_LEFT screen_ptr #31
+	blit_char #UI_BLACK_GEM_ICON_RIGHT screen_ptr #32
+	blit_char #UI_AMULET_NE_ICON_LEFT screen_ptr #33
+	blit_char #UI_AMULET_NE_ICON_RIGHT screen_ptr #34
+
+	adw screen_ptr #screen_char_width
+	blit_char #UI_BLUE_GEM_ICON_LEFT screen_ptr #29
+	blit_char #UI_BLUE_GEM_ICON_RIGHT screen_ptr #30
+	blit_char #UI_WHITE_GEM_ICON_LEFT screen_ptr #31
+	blit_char #UI_WHITE_GEM_ICON_RIGHT screen_ptr #32
+	blit_char #UI_RED_GEM_ICON_LEFT screen_ptr #33
+	blit_char #UI_RED_GEM_ICON_RIGHT screen_ptr #34
+
+	adw screen_ptr #screen_char_width
+	blit_char #UI_AMULET_SW_ICON_LEFT screen_ptr #29
+	blit_char #UI_AMULET_SW_ICON_RIGHT screen_ptr #30
+	blit_char #UI_GOLD_GEM_ICON_LEFT screen_ptr #31
+	blit_char #UI_GOLD_GEM_ICON_RIGHT screen_ptr #32
+	blit_char #UI_AMULET_SE_ICON_LEFT screen_ptr #33
+	blit_char #UI_AMULET_SE_ICON_RIGHT screen_ptr #34
+
+	; Keys
+	sbw screen_ptr #(screen_char_width * 2)
+	blit_char #UI_BLUE_KEY_ICON screen_ptr #26
+	blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
+
+	blit_char #UI_BLACK_KEY_CAP_LEFT screen_ptr #35
+	blit_char #UI_BLACK_KEY_ICON_LEFT screen_ptr #36
+	blit_char #UI_BLACK_KEY_ICON_RIGHT screen_ptr #37
+	blit_char #UI_BLACK_KEY_CAP_RIGHT screen_ptr #38
+
+	adw screen_ptr #screen_char_width
+	blit_char #UI_RED_KEY_ICON screen_ptr #26
+	blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
+	blit_char #UI_WHITE_KEY_ICON screen_ptr #36
+	blit_char #UI_KEY_ICON_RIGHT screen_ptr #37
+
+	adw screen_ptr #screen_char_width
+	blit_char #UI_GOLD_KEY_ICON screen_ptr #26
+	blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
+
+	rts
+	.endp
+
+
+
 .proc blit_screen
 	map_offset()
 
 	ldy #0
-	; Line #1 
+	; Line #1
 	adw screen_ptr #screen_char_width
 	adw map_ptr #map_width
 	blit_circle_line 5, 3, 7
@@ -377,7 +580,7 @@ loop
 	adw screen_ptr #screen_char_width
 	adw map_ptr #map_width
 	blit_circle_line 5, 3, 7
-	
+
 	rts
 .endp
 
@@ -389,3 +592,4 @@ loop
 	icl 'charset_outdoor_a.asm'
 	icl 'monsters_a.asm'
 	icl 'macros.asm'
+	icl 'labels.asm'
