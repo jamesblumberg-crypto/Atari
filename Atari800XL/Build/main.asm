@@ -126,7 +126,7 @@ starting_monster    = $c3
 no_clip				= $c4
 char_colors_ptr		= $c5 ; 16 bit
 
-stick_dir 			= $d8
+;stick_dir 			= $d8
 stick_btn			= $d9
 stick_action		= $da
 
@@ -236,72 +236,72 @@ done
 done
 	.endm
 
-.proc read_joystick
-	lda STICK0
-	and #stick_up
-	beq check_up
+; .proc read_joystick
+; 	lda STICK0
+; 	and #stick_up
+; 	beq check_up
 
-	lda STICK0
-	and #stick_down
-	beq check_down
+; 	lda STICK0
+; 	and #stick_down
+; 	beq check_down
 
-	lda STICK0
-	and #stick_left
-	beq check_left
+; 	lda STICK0
+; 	and #stick_left
+; 	beq check_left
 
-	lda STICK0
-	and #stick_right
-	beq check_right
+; 	lda STICK0
+; 	and #stick_right
+; 	beq check_right
 
-	jmp done
+; 	jmp done
 
-check_up
-	lda no_clip
-	bne move_up
-	lda up_tile
-	cmp #WALKABLE_START
-	bcc done
-move_up
-	dec player_y
-	update_player_tiles()
-	jmp done
+; check_up
+; 	lda no_clip
+; 	bne move_up
+; 	lda up_tile
+; 	cmp #WALKABLE_START
+; 	bcc done
+; move_up
+; 	dec player_y
+; 	update_player_tiles()
+; 	jmp done
 
-check_down
-	lda no_clip
-	bne move_down
-	lda down_tile
-	cmp #WALKABLE_START
-	bcc done
-move_down
-	inc player_y
-	update_player_tiles()
-	jmp done
+; check_down
+; 	lda no_clip
+; 	bne move_down
+; 	lda down_tile
+; 	cmp #WALKABLE_START
+; 	bcc done
+; move_down
+; 	inc player_y
+; 	update_player_tiles()
+; 	jmp done
 
-check_left
-	lda no_clip
-	bne move_left
-	lda left_tile
-	cmp #WALKABLE_START
-	bcc done
-move_left
-	dec player_x
-	update_player_tiles()
-	jmp done
+; check_left
+; 	lda no_clip
+; 	bne move_left
+; 	lda left_tile
+; 	cmp #WALKABLE_START
+; 	bcc done
+; move_left
+; 	dec player_x
+; 	update_player_tiles()
+; 	jmp done
 
-check_right
-	lda no_clip
-	bne move_right
-	lda right_tile
-	cmp #WALKABLE_START
-	bcc done
-move_right
-	inc player_x
-	update_player_tiles()
-	jmp done
+; check_right
+; 	lda no_clip
+; 	bne move_right
+; 	lda right_tile
+; 	cmp #WALKABLE_START
+; 	bcc done
+; move_right
+; 	inc player_x
+; 	update_player_tiles()
+; 	jmp done
 
-done
-	rts
-	.endp
+; done
+; 	rts
+; 	.endp
 
 * --------------------------------------- *
 * Proc: delay                             *
