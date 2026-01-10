@@ -52,6 +52,7 @@ loop
 
 .endm
 
+
 .macro copy_data src dest num_pages
     mwa #:src tmp_addr1
     mwa #:dest tmp_addr2
@@ -72,7 +73,9 @@ loop
 
 .macro copy_monster_colors src dest start
     mwa #:src tmp_addr1
-
+    mwa #:dest tmp_addr2
+    
+    ; Multiply starting monster by 3 to start on the correct index
     lda :start
     asl
     add :start
@@ -86,18 +89,20 @@ loop
     iny
     lda (tmp_addr1),y
     sta :dest + 13
-.endm
 
+.endm
 
 .macro copy_monsters src dest start
     ; Characters are 8 bytes wide
-    ; Tiles are 2 chacters wide
+    ; Tiles are 2 bytes wide
     ; In the dungeon/outdoor charset, there's an open section starting at character 88
-    mwa #:src tmp_addr1
-    mwa #:dest tmp_addr2
 
-    adw tmp_addr2 #(88 * 8)
+    mwa #:src tmp_addr1         ; Copy monsters_X address to tmp_addr1 
+    mwa #:dest tmp_addr2        ; Copy cur_charset_X address to tmp_addr2
 
+    adw tmp_addr2 #(88 * 8)     ; Move over to location in charset where monsters start
+    
+    
     lda :start
     cmp #16
     bne shift
@@ -110,29 +115,15 @@ shift
     asl
     sta tmp
     adbw tmp_addr1 tmp
-
 done
+
+
     ldy #0
 loop
-    lda (tmp_addr1),y
-    sta (tmp_addr2),y
+    lda (tmp_addr1),y           ; Load monster character
+    sta (tmp_addr2),y           ; Store monster character into charset
     iny
-
     cpy #192
-    bne loop
+    bne loop                    ; Y > 0, so keep looping
 
-.endm
-
-.macro ldi addr, value
-    ldy #0
-    lda (:addr),y
-.endm
-
-.macro sti addr 
-    ldy #0
-    sta (:addr),y
-.endm
-
-.macro clr addr 
-    mva #0 :addr
 .endm

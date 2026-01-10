@@ -91,16 +91,4 @@ UI_AMULET_SW_ICON_RIGHT	= 83
 UI_AMULET_SE_ICON_LEFT	= 84
 UI_AMULET_SE_ICON_RIGHT	= 85
 
-WALKABLE_START          = 55
-
-STICK_UP               = 14
-STICK_DOWN             = 13
-STICK_LEFT             = 11
-STICK_RIGHT            = 7
-BUTTON_DOWN            = 0
-BUTTON_UP              = 1
-
-north = 1
-south = 2
-west  = 3
-east  = 4
+WALKABLE_START          = 56

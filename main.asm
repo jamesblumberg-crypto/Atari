@@ -11,7 +11,7 @@
 ; ATASCII 96-127 Screen code 96-127
 
 ; NTSC Color Palette: https://atariage.com/forums/uploads/monthly_10_2015/post-6369-0-47505700-1443889945.png
-; PAL Color Palette: https://atariage.com/forums/uploads/monthly_10_2015/post-6369-0-902WALKABLE_START700-1443889950.png
+; PAL Color Palette: https://atariage.com/forums/uploads/monthly_10_2015/post-6369-0-90255700-1443889950.png
 ; PMG Memory Map: https://www.atarimagazines.com/compute/issue64/atari_animation.gif
 
 	org $b000
@@ -25,14 +25,12 @@ placed_doors		= $72e9 ; Doors that have been placed (64 bytes)
 avail_doors			= $7329	; Doors that are available (64 bytes)
 occupied_rooms		= $7369 ; Rooms that are occupied (8 bytes)
 ; free
-cur_char_colors_a	= $7380 ; 16 bytes
-cur_char_colors_b	= $7390	; 16 bytes
+cur_char_colors_a		= $7380 ; Current character colors (16 bytes)
+cur_char_colors_b		= $7390 ; Current character colors (16 bytes)
 ; free
-
 pmg     			= $7400 ; Player Missle Data (1K)
 cur_charset_a		= $7800 ; Current character set A (1K)
 cur_charset_b		= $7c00 ; Current character set B (1K)
-; free
 
 ; 16K Cartridge ROM: $8000-BFFF - 16K
 ; 8000-8FFF
@@ -45,26 +43,27 @@ charset_outdoor_b 	= $8c00 ; Character Set for outdoors (1K)
 monsters_a          = $9000 ; Monster characters (1K)
 monsters_b          = $9400 ; Monster characters (1K)
 ; free
-dlist				= $9800
+dlist				= $9800 ; 112 Bytes
+; free
 room_types			= $a000 ; 3600 Bytes
 room_positions		= $ae10	; 128 bytes
 room_pos_doors		= $ae90 ; 64 bytes
 room_type_doors		= $aed0 ; 16 bytes
-charset_dungeon_a_colors = $aee0 ; 16 bytes
-charset_dungeon_b_colors = $aef0 ; 16 bytes
-charset_outdoor_a_colors = $af00 ; 16 bytes
-charset_outdoor_b_colors = $af10 ; 16 bytes
-monsters_a_colors   = $af20 ; 51 bytes
-monsters_b_colors   = $af53 ; 51 bytes
+charset_dungeon_a_colors		= $aee0 ; 16 bytes
+charset_dungeon_b_colors		= $aef0 ; 16 bytes
+charset_outdoor_a_colors		= $af00 ; 16 bytes
+charset_outdoor_b_colors		= $af10 ; 16 bytes
+monsters_a_colors		= $af20 ; 51 bytes
+monsters_b_colors		= $af53 ; 51 bytes
 
 ; free
 
 ; B000-BFFF (Code)
 
-;stick_up    = %0001
-;stick_down  = %0010 
-;stick_left  = %0100
-;stick_right = %1000
+stick_up    = %0001
+stick_down  = %0010 
+stick_left  = %0100
+stick_right = %1000
 
 map_ptr 	= $92
 screen_ptr 	= $94
@@ -122,18 +121,9 @@ clock				= $bf
 anim_timer			= $c0
 charset_a			= $c1
 num_monsters		= $c2
-starting_monster	= $c3
+starting_monster    = $c3
 no_clip				= $c4
 char_colors_ptr		= $c5 ; 16 bit
-
-stick_dir			= $d8
-stick_btn			= $d9
-stick_action		= $da
-
-player_ptr			= $de 
-dir_ptr				= $e0
-tmp1 				= $e2
-;tmp2 				= $e3
 
 ; Colors
 white = $0a
@@ -143,18 +133,13 @@ peach = $2c
 blue = $92
 gold = $2a
 
+	mva #0 charset_a
+	mva #>charset_outdoor_a CHBAS
+
 	setup_screen()
 	update_player_tiles()
 	display_borders()
 	update_ui()
-	setup_colors()
-	mva #>charset_outdoor_a CHBAS
-	clear_pmg()
-	load_pmg()
-	setup_pmg()
-
-	mva #16 starting_monster
-	mva #8 num_monsters
 
 	lda #16
 	sta player_x
@@ -163,6 +148,9 @@ gold = $2a
 	mva #123 rand
 	mva #201 rand16
 
+	mva #8 num_monsters
+	mva #15 starting_monster
+
 	mwa #powers_of_two pow2_ptr
 	mwa #occupied_rooms occupied_rooms_ptr
 
@@ -170,20 +158,22 @@ gold = $2a
 	copy_data charset_dungeon_b cur_charset_b 4
 	copy_bytes charset_dungeon_a_colors cur_char_colors_a 16
 	copy_bytes charset_dungeon_b_colors cur_char_colors_b 16
+	
 	copy_monsters monsters_a cur_charset_a starting_monster
 	copy_monsters monsters_b cur_charset_b starting_monster
 	copy_monster_colors monsters_a_colors cur_char_colors_a starting_monster
 	copy_monster_colors monsters_b_colors cur_char_colors_b starting_monster
 
-	new_map()
-	place_monsters #255 num_monsters
-
-
+	setup_colors()
 	
+	clear_pmg()
+	load_pmg()
+	setup_pmg()
 
+	; Charset testing
 	; mwa #map map_ptr
 	; mwa #screen screen_ptr
-	; map_width = 28
+	; map_width  = 28
 	; map_height = 28
 	; lda #14
 	; sta player_x
@@ -191,9 +181,8 @@ gold = $2a
 	lda #1
 	sta no_clip
 
-
-
-
+	new_map()
+	place_monsters #255 num_monsters
 
 game
 	mva RTCLK2 clock
@@ -203,20 +192,19 @@ game
 
 .macro set_colors
 	lda charset_a
-	beq use_charset_a
+	beq use_charset_b
 	mwa #cur_char_colors_b char_colors_ptr
 	jmp done
-use_charset_a
+use_charset_b
 	mwa #cur_char_colors_a char_colors_ptr
 done
 .endm
-
 
 .macro get_input
 	lda clock
 	cmp input_timer
 	bne done
-	;read_joystick()
+	read_joystick()
 	blit_screen()
 	lda clock
 	add #input_speed
@@ -231,7 +219,6 @@ done
 	lda charset_a
 	eor #$ff
 	sta charset_a
-	;set_colors
 	blit_screen
 	lda clock
 	add #anim_speed
@@ -239,72 +226,72 @@ done
 done
 	.endm
 
-;.proc read_joystick
-;	lda STICK0
-;	and #STICK_UP
-;	beq check_up
-;
-;	lda STICK0
-;	and #STICK_DOWN
-;	beq check_down
-;
-;	lda STICK0
-;	and #STICK_LEFT
-;	beq check_left
-;
-;	lda STICK0
-;	and #STICK_RIGHT
-;	beq check_right
-;
-;	jmp done
-;
-;check_up
-;	lda no_clip
-;	bne move_up
-;	lda up_tile
-;	cmp #WALKABLE_START
-;	bcc done
-;move_up
-;	dec player_y
-;	update_player_tiles()
-;	jmp done
-;
-;check_down
-;	lda no_clip
-;	bne move_down
-;	lda down_tile
-;	cmp #WALKABLE_START
-;	bcc done
-;move_down
-;	inc player_y
-;	update_player_tiles()
-;	jmp done
-;
-;check_left
-;	lda no_clip
-;	bne move_left
-;	lda left_tile
-;	cmp #WALKABLE_START
-;	bcc done
-;move_left
-;	dec player_x
-;	update_player_tiles()
-;	jmp done
-;
-;check_right
-;	lda no_clip
-;	bne move_right
-;	lda right_tile
-;	cmp #WALKABLE_START
-;	bcc done
-;move_right
-;	inc player_x
-;	update_player_tiles()
-;	jmp done
-;
-;done
-;	rts
-;	.endp
+.proc read_joystick
+	lda STICK0
+	and #stick_up
+	beq check_up
+
+	lda STICK0
+	and #stick_down
+	beq check_down
+
+	lda STICK0
+	and #stick_left
+	beq check_left
+
+	lda STICK0
+	and #stick_right
+	beq check_right
+
+	jmp done
+
+check_up
+	lda no_clip
+	bne move_up
+	lda up_tile
+	cmp #WALKABLE_START
+	bcc done
+move_up
+	dec player_y
+	update_player_tiles()
+	jmp done
+
+check_down
+	lda no_clip
+	bne move_down
+	lda down_tile
+	cmp #WALKABLE_START
+	bcc done
+move_down
+	inc player_y
+	update_player_tiles()
+	jmp done
+
+check_left
+	lda no_clip
+	bne move_left
+	lda left_tile
+	cmp #WALKABLE_START
+	bcc done
+move_left
+	dec player_x
+	update_player_tiles()
+	jmp done
+
+check_right
+	lda no_clip
+	bne move_right
+	lda right_tile
+	cmp #WALKABLE_START
+	bcc done
+move_right
+	inc player_x
+	update_player_tiles()
+	jmp done
+
+done
+	rts
+	.endp
 
 * --------------------------------------- *
 * Proc: delay                             *
@@ -405,57 +392,54 @@ loop
 	rts
 	.endp
 
+* --------------------------------------- *
+* Proc: fix_color                         *
+* Fixes colors for a character if needed  *
+* --------------------------------------- *
 .macro fix_color
-	; Save Y register
-	sta tmp
+	; A = character index to fix color if needed
+	sta tmp					; Save character to temp var
 	tya
 	pha
-	lda tmp
+	lda tmp					; Reload the character
+	and #$07				; Get last 3 bits
+	add #1					; Add 1 so that we can shift correct number of times
+	sta tmp2				; Store bit shift amount to tmp2
+	lda tmp					; Reload char
+	lsr						; Divide by 8 to get color index
+	lsr						; 
+	lsr						; 
+	tay					; Store into x to be able to use as an offset
+	lda (char_colors_ptr),y	; Get the color bits for this character
 
-	; Get number of LSRs to perform (how many times to shift)
-	and #$07
-	add #1
-	sta tmp2
-	
-	; Get color index
-	lda tmp
-	lsr
-	lsr
-	lsr
-	tay
-	lda (char_colors_ptr),y
-
-	; Shift right as necessary to put the desired bit into the carry flag
 shift_bits
-	lsr
-	dec tmp2
-	bne shift_bits
+	lsr						; Shift until bit is in the carry flag
+	dec tmp2				; Reduce shift counter
+	bne shift_bits			; Keep looping if shift counter isn't 0
 
-	; Check the carry flag to see if it has a 1 - if so, it needs to be yellow, otherwise blue
-	bcc done
+	bcc done				; If the carry flag is *not* set, we're done
 
 add_color
-	lda tmp
-	add #128
-	sta tmp
+	lda tmp					; Load character back into A
+	add #128				; Add 128 to change to secondary color
+	sta tmp					; Re-save back to tmp after adding
 
 done
-	; Restore the Y register
-	pla
+	pla						; Pull old X from the stack via A
 	tay
-	lda tmp
-.endm
+	lda tmp					; Re-load character to A
+	.endm
 
 .macro blit_tile
 	lda (map_ptr),y			; Load the tile from the map
 	asl						; Multiply by two to get left character
-	fix_color
+	fix_color				; Fix the color if needed
 	sta (screen_ptr),y		; Store the left character
 	inc16 screen_ptr		; Advance the screen pointer
-	lda (map_ptr),y
-	asl
-	add #1
-	fix_color				; Add one to get right character
+	lda (map_ptr),y			; Load the tile from the map
+	asl						; Multiply by two to get left character
+	add #1					; Add one to get right character
+	fix_color				; Fix the color if needed
 	sta (screen_ptr),y		; Store the right character
 	adw map_ptr #1			; Advance the map pointer
 	adw screen_ptr #1		; Advance the screen pointer	
@@ -807,65 +791,74 @@ no_eor
 	rts
 	.endp
 
+; Pick and place monsters
+; x = max monster number
+; a = quantity of monsters
 .proc place_monsters (.byte x,a) .reg
-	sta tmp2
+; 44 = monster tile start
+	sta tmp2				; Copy max monster num from a to tmp2
 pick
-	random16
-	cmp tmp2
-	bcs pick
+	random16				; Get random number in A
+	cmp tmp2				; Compare with max monster num
+	bcs pick				; If the number is greater than max monster number, re-pick
 
-	add #44
-	sta tmp
+	add #44					; Monster is good, so add 44 to move it to the proper character
+	sta tmp					; Store monster num into tmp
 
 place
-	random16
-	cmp #map_width
-	bcs place
-	sta tmp_x
+	random16				; Get random number for X and store it in A
+	cmp #map_width			; Verify that it's within the map horizontally
+	bcs place				; If not, get another value
+	sta tmp_x				; It's good, so store in tmp_x
 
-	random16
-	cmp #map_height
-	bcs place
-	sta tmp_y
+	random16				; Get random number for Y and store it in A
+	cmp #map_height			; Verify that it's within the map vertically
+	bcs place				; If not, start over with getting X again
+	sta tmp_y				; We have both valid X and Y, so store into tmp_y
 
+	; Move the map to the location of the monster
 	advance_ptr #map map_ptr #map_width tmp_y tmp_x
 	ldy #0
-	lda (map_ptr),y
-	cmp #MAP_FLOOR
-	bne place
-	lda tmp
-	sta (map_ptr),y
-	dex
-	bne pick
+	lda (map_ptr),y			; Get the character at the current position
+	cmp #MAP_FLOOR			; Verify that it's a floor tile (only place on floors)
+	bne place				; If not, start all over again
+	lda tmp					; It must be a floor tile, so load in monster from tmp
+	sta (map_ptr),y			; Copy it to the map
+	dex						; Reduce x so that we can get another monster with the loop
+	bne pick				; Get the next monster
 
+	; Otherwise, we're done picking and placing monsters
 	rts
 	.endp
 
 
+	icl 'test_map.asm'
 	icl 'macros.asm'
 	icl 'hardware.asm'
 	icl 'labels.asm'
 	icl 'dlist.asm'
 	icl 'pmgdata.asm'
 	icl 'map_gen.asm'
-	icl 'input.asm'
 
 	icl 'charset_dungeon_a.asm'
 	icl 'charset_dungeon_b.asm'
 	icl 'charset_outdoor_a.asm'
-	icl 'charset_outdoor_b.asm'
 	icl 'monsters_a.asm'
 	icl 'monsters_b.asm'
 	icl 'room_types.asm'
 	icl 'room_positions.asm'
 	icl 'room_pos_doors'
 	icl 'room_type_doors'
-	;icl 'test_map.asm'
 	icl 'charset_dungeon_a_colors.asm'
 	icl 'charset_dungeon_b_colors.asm'
 	icl 'charset_outdoor_a_colors.asm'
 	icl 'charset_outdoor_b_colors.asm'
 	icl 'monsters_a_colors.asm'
 	icl 'monsters_b_colors.asm'
+	
+
 powers_of_two
 	.byte 1,2,4,8,16,32,64,128
+
+bitmasks
+	.byte $ff, $f7, $f0, $70
