@@ -190,6 +190,8 @@ gold = $2a
 	; sta player_y
 	lda #0
 	sta no_clip
+	sta stick_btn
+	sta stick_action
 
 	new_map()
 	place_monsters #255 num_monsters
