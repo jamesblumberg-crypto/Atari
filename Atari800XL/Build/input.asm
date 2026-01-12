@@ -54,28 +54,37 @@ calc_x
 check_up
     lda stick_dir
     and #STICK_UP
-    bne check_down              ; If not pressed, check next
-    sbw dir_ptr #map_width      ; Move pointer up one row
-    rts
+    beq handle_up               ; If pressed (bit is 0), handle it
 
 check_down
     lda stick_dir
     and #STICK_DOWN
-    bne check_left
-    adw dir_ptr #map_width      ; Move pointer down one row
-    rts
+    beq handle_down
 
 check_left
     lda stick_dir
     and #STICK_LEFT
-    bne check_right
-    dec16 dir_ptr               ; Move pointer left one column
-    rts
+    beq handle_left
 
 check_right
     lda stick_dir
     and #STICK_RIGHT
-    bne done
+    beq handle_right
+    jmp done                    ; No direction pressed
+
+handle_up
+    sbw dir_ptr #map_width      ; Move pointer up one row
+    rts
+
+handle_down
+    adw dir_ptr #map_width      ; Move pointer down one row
+    rts
+
+handle_left
+    dec16 dir_ptr               ; Move pointer left one column
+    rts
+
+handle_right
     inc16 dir_ptr               ; Move pointer right one column
     rts
 
@@ -115,31 +124,37 @@ do_move
     ; Determine which direction and move player
     lda STICK0
     and #STICK_UP
-    bne check_move_down
+    beq move_up
+
+    lda STICK0
+    and #STICK_DOWN
+    beq move_down
+
+    lda STICK0
+    and #STICK_LEFT
+    beq move_left
+
+    lda STICK0
+    and #STICK_RIGHT
+    beq move_right
+    jmp done                    ; No direction pressed
+
+move_up
     dec player_y                ; Move up
     update_player_tiles()
     rts
 
-check_move_down
-    lda STICK0
-    and #STICK_DOWN
-    bne check_move_left
+move_down
     inc player_y                ; Move down
     update_player_tiles()
     rts
 
-check_move_left
-    lda STICK0
-    and #STICK_LEFT
-    bne check_move_right
+move_left
     dec player_x                ; Move left
     update_player_tiles()
     rts
 
-check_move_right
-    lda STICK0
-    and #STICK_RIGHT
-    bne done
+move_right
     inc player_x                ; Move right
     update_player_tiles()
     rts
