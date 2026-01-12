@@ -140,24 +140,57 @@ do_move
     jmp done                    ; No direction pressed
 
 move_up
+    check_and_close_door()      ; Close door at current position if standing on one
     dec player_y                ; Move up
     update_player_tiles()
     rts
 
 move_down
+    check_and_close_door()      ; Close door at current position if standing on one
     inc player_y                ; Move down
     update_player_tiles()
     rts
 
 move_left
+    check_and_close_door()      ; Close door at current position if standing on one
     dec player_x                ; Move left
     update_player_tiles()
     rts
 
 move_right
+    check_and_close_door()      ; Close door at current position if standing on one
     inc player_x                ; Move right
     update_player_tiles()
     rts
+
+done
+    rts
+    .endp
+
+; Check if player is standing on a doorway and close it behind them
+.proc check_and_close_door
+    ; Calculate current player position in map
+    mwa #map player_ptr
+
+    ldy player_y
+    beq check_x
+calc_y
+    adw player_ptr #map_width
+    dey
+    bne calc_y
+
+check_x
+    adbw player_ptr player_x
+
+    ; Check if current tile is a doorway
+    ldy #0
+    lda (player_ptr),y
+    cmp #MAP_DOORWAY            ; Is it an open doorway?
+    bne done                    ; If not, we're done
+
+close_door
+    lda #MAP_DOOR               ; Change doorway back to closed door
+    sta (player_ptr),y
 
 done
     rts
