@@ -7,8 +7,8 @@ MAP_WALL                = 1
 MAP_FLOOR               = 127
 MAP_UP                  = 121
 MAP_DOWN                = 120
-MAP_DOOR                = 4
-MAP_DOORWAY             = 122
+MAP_DOOR                = 5
+MAP_DOORWAY             = 30
 
 UI_VERT_BORDER          = 1
 UI_HORIZ_BORDER         = 4

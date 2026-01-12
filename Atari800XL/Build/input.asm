@@ -117,6 +117,8 @@ done
     ; Check if target tile is walkable
     ldy #0
     lda (dir_ptr),y             ; Load the tile at the direction pointer
+    cmp #MAP_DOORWAY            ; Is it an open doorway?
+    beq do_move                 ; Yes, allow movement
     cmp #WALKABLE_START         ; Compare with walkable threshold
     bcc done                    ; If less than walkable start, don't move
 
