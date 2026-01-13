@@ -194,7 +194,7 @@ gold = $2a
 	sta stick_action
 
 	new_map()
-	place_monsters #255 num_monsters
+	place_monsters #11 num_monsters
 
 game
 	mva RTCLK2 clock
@@ -834,12 +834,115 @@ place
 	lda (map_ptr),y			; Get the character at the current position
 	cmp #MAP_FLOOR			; Verify that it's a floor tile (only place on floors)
 	bne place				; If not, start all over again
+
+	; Check if there are monsters nearby (spacing check)
+	jsr check_nearby_monsters
+	bne place				; If monsters nearby (A != 0), find a new location
+
 	lda tmp					; It must be a floor tile, so load in monster from tmp
 	sta (map_ptr),y			; Copy it to the map
 	dex						; Reduce x so that we can get another monster with the loop
 	bne pick				; Get the next monster
 
 	; Otherwise, we're done picking and placing monsters
+	rts
+	.endp
+
+; Check if there are monsters in nearby tiles
+; Input: map_ptr points to the location to check
+; Output: A = 0 if no monsters nearby, A = 1 if monsters found
+.proc check_nearby_monsters
+	; Save current map pointer
+	mwa map_ptr tmp_addr1
+
+	; Check tile above-left
+	sbw map_ptr #map_width
+	dec16 map_ptr
+	ldy #0
+	lda (map_ptr),y
+	cmp #44					; Monster tiles start at 44
+	bcc not_monster1
+	cmp #56					; First 12 monsters end at 55
+	bcc found_monster		; If 44 <= tile < 56, it's a monster
+not_monster1
+
+	; Check tile above
+	inc16 map_ptr
+	lda (map_ptr),y
+	cmp #44
+	bcc not_monster2
+	cmp #56
+	bcc found_monster
+not_monster2
+
+	; Check tile above-right
+	inc16 map_ptr
+	lda (map_ptr),y
+	cmp #44
+	bcc not_monster3
+	cmp #56
+	bcc found_monster
+not_monster3
+
+	; Move back to center row
+	adw map_ptr #map_width
+	sbw map_ptr #2			; Back to left position
+
+	; Check tile left
+	lda (map_ptr),y
+	cmp #44
+	bcc not_monster4
+	cmp #56
+	bcc found_monster
+not_monster4
+
+	; Check tile right (skip center, that's where we're placing)
+	adw map_ptr #2
+	lda (map_ptr),y
+	cmp #44
+	bcc not_monster5
+	cmp #56
+	bcc found_monster
+not_monster5
+
+	; Move to bottom row
+	adw map_ptr #map_width
+	sbw map_ptr #2			; Back to left position
+
+	; Check tile below-left
+	lda (map_ptr),y
+	cmp #44
+	bcc not_monster6
+	cmp #56
+	bcc found_monster
+not_monster6
+
+	; Check tile below
+	inc16 map_ptr
+	lda (map_ptr),y
+	cmp #44
+	bcc not_monster7
+	cmp #56
+	bcc found_monster
+not_monster7
+
+	; Check tile below-right
+	inc16 map_ptr
+	lda (map_ptr),y
+	cmp #44
+	bcc not_monster8
+	cmp #56
+	bcc found_monster
+not_monster8
+
+	; No monsters found nearby
+	mwa tmp_addr1 map_ptr	; Restore map pointer
+	lda #0					; Return 0 (no monsters)
+	rts
+
+found_monster
+	mwa tmp_addr1 map_ptr	; Restore map pointer
+	lda #1					; Return 1 (monster found)
 	rts
 	.endp
 
