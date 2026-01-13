@@ -863,7 +863,8 @@ place
 	cmp #44					; Monster tiles start at 44
 	bcc not_monster1
 	cmp #56					; First 12 monsters end at 55
-	bcc found_monster		; If 44 <= tile < 56, it's a monster
+	bcs not_monster1		; If >= 56, not a monster
+	jmp found_monster		; If 44 <= tile < 56, it's a monster
 not_monster1
 
 	; Check tile above
@@ -872,7 +873,8 @@ not_monster1
 	cmp #44
 	bcc not_monster2
 	cmp #56
-	bcc found_monster
+	bcs not_monster2
+	jmp found_monster
 not_monster2
 
 	; Check tile above-right
@@ -881,7 +883,8 @@ not_monster2
 	cmp #44
 	bcc not_monster3
 	cmp #56
-	bcc found_monster
+	bcs not_monster3
+	jmp found_monster
 not_monster3
 
 	; Move back to center row
@@ -893,7 +896,8 @@ not_monster3
 	cmp #44
 	bcc not_monster4
 	cmp #56
-	bcc found_monster
+	bcs not_monster4
+	jmp found_monster
 not_monster4
 
 	; Check tile right (skip center, that's where we're placing)
@@ -902,7 +906,8 @@ not_monster4
 	cmp #44
 	bcc not_monster5
 	cmp #56
-	bcc found_monster
+	bcs not_monster5
+	jmp found_monster
 not_monster5
 
 	; Move to bottom row
@@ -914,7 +919,8 @@ not_monster5
 	cmp #44
 	bcc not_monster6
 	cmp #56
-	bcc found_monster
+	bcs not_monster6
+	jmp found_monster
 not_monster6
 
 	; Check tile below
@@ -923,7 +929,8 @@ not_monster6
 	cmp #44
 	bcc not_monster7
 	cmp #56
-	bcc found_monster
+	bcs not_monster7
+	jmp found_monster
 not_monster7
 
 	; Check tile below-right
@@ -932,7 +939,8 @@ not_monster7
 	cmp #44
 	bcc not_monster8
 	cmp #56
-	bcc found_monster
+	bcs not_monster8
+	jmp found_monster
 not_monster8
 
 	; No monsters found nearby
