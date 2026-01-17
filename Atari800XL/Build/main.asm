@@ -739,6 +739,68 @@ loop
 	rts
 	.endp
 
+; Update the HP bar display based on current player HP
+; HP bar has 6 segments, each represents ~16.67 HP
+.proc update_hp_bar
+	mwa #screen screen_ptr
+	adw screen_ptr #28          ; Position at start of HP bar
+
+	; Calculate number of full segments (HP / 17)
+	; For simplicity: divide HP by 17 to get number of full bars
+	lda player_hp
+	ldx #0                      ; X will count full segments
+
+count_segments
+	cmp #17                     ; Is HP >= 17?
+	bcc draw_bars               ; If less, start drawing
+	sec
+	sbc #17                     ; Subtract 17
+	inx                         ; Increment segment counter
+	cpx #6                      ; Max 6 segments
+	bcc count_segments          ; Continue if less than 6
+
+draw_bars
+	stx tmp                     ; Save number of full segments
+
+	; Draw left border
+	ldy #0
+	lda #UI_BAR_LEFT
+	sta (screen_ptr),y
+	inc16 screen_ptr
+
+	; Draw full segments
+	ldx tmp
+draw_full
+	cpx #0
+	beq draw_empty              ; No more full segments
+	lda #UI_HP_FULL
+	sta (screen_ptr),y
+	inc16 screen_ptr
+	dex
+	jmp draw_full
+
+draw_empty
+	; Fill remaining with empty segments
+	lda tmp
+fill_loop
+	cmp #6
+	bcs draw_right              ; If we've drawn 6 total, stop
+	lda #UI_BAR_EMPTY
+	sta (screen_ptr),y
+	inc16 screen_ptr
+	lda tmp
+	clc
+	adc #1
+	sta tmp
+	jmp fill_loop
+
+draw_right
+	lda #UI_BAR_RIGHT
+	sta (screen_ptr),y
+
+	rts
+	.endp
+
 
 .proc blit_screen
 	map_offset()
