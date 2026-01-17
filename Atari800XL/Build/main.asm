@@ -137,7 +137,9 @@ tmp1 				= $e2
 
 ; Player stats
 player_hp			= $e4
-player_melee_dmg	= $e5
+player_max_hp		= $e5
+player_melee_dmg	= $e6
+player_xp			= $e7
 
 ; Colors
 white = $0a
@@ -200,8 +202,11 @@ gold = $2a
 	; Initialize player stats
 	lda #100
 	sta player_hp
+	sta player_max_hp		; Max HP is also 100
 	lda #10
 	sta player_melee_dmg
+	lda #0
+	sta player_xp			; Start with 0 XP
 
 	new_map()
 	place_monsters #11 num_monsters
