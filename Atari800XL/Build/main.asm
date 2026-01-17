@@ -130,10 +130,14 @@ char_colors_ptr		= $c5 ; 16 bit
 stick_btn			= $d9
 stick_action		= $da
 
-player_ptr			= $de 
+player_ptr			= $de
 dir_ptr				= $e0
 tmp1 				= $e2
 ;tmp2 				= $e3
+
+; Player stats
+player_hp			= $e4
+player_melee_dmg	= $e5
 
 ; Colors
 white = $0a
@@ -192,6 +196,12 @@ gold = $2a
 	sta no_clip
 	sta stick_btn
 	sta stick_action
+
+	; Initialize player stats
+	lda #100
+	sta player_hp
+	lda #10
+	sta player_melee_dmg
 
 	new_map()
 	place_monsters #11 num_monsters
