@@ -173,10 +173,37 @@ move_right
 
 attack_monster
     ; Player attacks the monster at dir_ptr
-    ; For now: one hit kills the monster
+    ; Monster attacks back, then dies
+
+    ; Monster counter-attacks! Deal damage to player
+    lda player_hp
+    sec
+    sbc #5                      ; Monster does 5 damage
+    sta player_hp
+    bcs monster_died            ; If carry set, HP didn't go negative
+
+    ; Player HP went below 0, set to 0
+    lda #0
+    sta player_hp
+
+monster_died
+    ; Give player XP (10 XP per monster)
+    lda player_xp
+    clc
+    adc #10
+    sta player_xp
+
+    ; Remove monster from map
     ldy #0
     lda #MAP_FLOOR              ; Replace monster with floor tile
     sta (dir_ptr),y
+
+    ; Check if player died
+    lda player_hp
+    bne still_alive
+    jmp player_death            ; Player HP is 0, game over
+
+still_alive
     rts
 
 done
@@ -210,5 +237,11 @@ close_door
 
 done
     rts
+    .endp
+
+; Player death - simple infinite loop for now
+.proc player_death
+death_loop
+    jmp death_loop              ; Freeze the game
     .endp
 
