@@ -201,6 +201,9 @@ monster_died
     ; Update the HP bar display
     update_hp_bar()
 
+    ; Update the XP bar display
+    update_xp_bar()
+
     ; Check if player died
     lda player_hp
     bne still_alive
