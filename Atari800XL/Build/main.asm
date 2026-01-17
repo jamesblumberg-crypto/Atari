@@ -817,7 +817,12 @@ pick
 	add #44					; Monster is good, so add 44 to move it to the proper character
 	sta tmp					; Store monster num into tmp
 
+	; Set retry counter to prevent infinite loops
+	ldy #50					; Try 50 times to find a valid spot
 place
+	dey						; Decrement retry counter
+	beq skip_monster		; If we've tried 50 times, skip this monster
+
 	random16				; Get random number for X and store it in A
 	cmp #map_width			; Verify that it's within the map horizontally
 	bcs place				; If not, get another value
@@ -830,17 +835,25 @@ place
 
 	; Move the map to the location of the monster
 	advance_ptr #map map_ptr #map_width tmp_y tmp_x
+	sty tmp1				; Save Y (retry counter) to tmp1
 	ldy #0
 	lda (map_ptr),y			; Get the character at the current position
 	cmp #MAP_FLOOR			; Verify that it's a floor tile (only place on floors)
-	bne place				; If not, start all over again
+	ldy tmp1				; Restore Y
+	bne place				; If not floor, start all over again
 
 	; Check if there are monsters nearby (spacing check)
+	sty tmp1				; Save Y again
 	jsr check_nearby_monsters
+	ldy tmp1				; Restore Y
+	cmp #0					; Check if monsters were found
 	bne place				; If monsters nearby (A != 0), find a new location
 
 	lda tmp					; It must be a floor tile, so load in monster from tmp
+	ldy #0
 	sta (map_ptr),y			; Copy it to the map
+
+skip_monster
 	dex						; Reduce x so that we can get another monster with the loop
 	bne pick				; Get the next monster
 
