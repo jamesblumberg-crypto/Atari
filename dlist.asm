@@ -2,6 +2,8 @@
 * Proc: setup_screen                      *
 * Sets up the display list for the screen *
 * --------------------------------------- *
+	org dlist
+
 .proc setup_screen
 blank8 = $70    ; 8 blank lines
 lms = $40	    ; Load Memory Scan
@@ -25,14 +27,21 @@ dlist
 	.byte antic5, antic5, antic5, antic5, antic5
 	.byte antic5, antic5, antic5, antic5, antic5 + NMIEN_DLI, antic4
 	.byte jvb, <dlist, >dlist
-	.endp
+	
 
 dli1
 	pha
 	lda #1
 	sta WSYNC
-	mva #>charset_dungeon_a CHBASE
-	blit_screen()
+	lda charset_a
+	bne use_charset_b
+	mva #>cur_charset_a CHBASE	
+	jmp done
+
+use_charset_b
+	mva #>cur_charset_b CHBASE
+
+done
 	mwa #dli2 VDSLST
 	pla
 	rti
@@ -45,3 +54,5 @@ dli2
 	mwa #dli1 VDSLST
 	pla
 	rti
+
+	.endp

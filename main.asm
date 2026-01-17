@@ -14,48 +14,107 @@
 ; PAL Color Palette: https://atariage.com/forums/uploads/monthly_10_2015/post-6369-0-90255700-1443889950.png
 ; PMG Memory Map: https://www.atarimagazines.com/compute/issue64/atari_animation.gif
 
-	org $2000
+	org $b000
 
-map     			= $3000 ; Map
-pmg     			= $4000 ; Player Missle Data
-charset_dungeon_a 	= $5000 ; Main character set
-charset_outdoor_a 	= $6000 ; Character Set for outdoors
-status_line			= $6400 ; Status Line
-monsters_a          = $7000 ; Monster characters
-screen  			= $8000 ; Screen buffer
+; RAM: $2000-7FFF - 24K
+map     			= $2000 ; Map (16K+)
+; free (almost 4K)
+screen  			= $7000 ; Screen buffer (480 bytes)
+status_line			= $71e0 ; Status Line (40 bytes)
+tmp_room			= $7208 ; Temp room (225 bytes)
+placed_doors		= $72e9 ; Doors that have been placed (64 bytes)
+avail_doors			= $7329	; Doors that are available (64 bytes)
+occupied_rooms		= $7369 ; Rooms that are occupied (8 bytes)
+; free
+pmg     			= $7400 ; Player Missle Data (1K)
+cur_charset_a		= $7800 ; Currently copied character set (A) (1K)
+cur_charset_b		= $7c00 ; Currently copied character set (B) (1K)
+; free
+
+; 16K Cartridge ROM: $8000-BFFF - 16K
+; 8000-8FFF
+charset_dungeon_a 	= $8000 ; Main character set (1K)
+charset_dungeon_b 	= $8400 ; Main character set (1K)
+charset_outdoor_a 	= $8800 ; Character Set for outdoors (1K)
+charset_outdoor_b 	= $8c00 ; Character Set for outdoors (1K)
+
+; 9000-9FFF
+monsters_a          = $9000 ; Monster characters (1K)
+monsters_b          = $9400 ; Monster characters (1K)
+; free
+dlist				= $9800
+room_types			= $a000 ; 3600 Bytes
+room_positions		= $ae10	; 128 bytes
+room_pos_doors		= $ae90 ; 64 bytes
+room_type_doors		= $aed0 ; 16 bytes
+charset_dungeon_a_colors = $aee0 ; Dungeon character colors (1K)
+
+
+; free
+
+; B000-BFFF (Code)
 
 stick_up    = %0001
 stick_down  = %0010 
 stick_left  = %0100
 stick_right = %1000
 
-map_ptr 	= $92
-screen_ptr 	= $94
-player_x	= $96
-player_y	= $97
-tmp			= $98
-up_tile		= $9a
-down_tile	= $9b
-left_tile	= $9c
-right_tile	= $9d
-on_tile		= $9e
+map_ptr 			= $92
+screen_ptr 			= $94
+player_x			= $96
+player_y			= $97
+tmp					= $98
+up_tile				= $9a
+down_tile			= $9b
+left_tile			= $9c
+right_tile			= $9d
+on_tile				= $9e
+tmp_addr1			= $a0
+tmp_addr2   		= $a2
 
-tmp_addr1	= $a0
-tmp_addr2   = $a2
+screen_char_width 	= 40
+screen_width 		= 19
+screen_height 		= 11
+border				= 6
+room_width			= 15
+room_height			= 15
+;map_width 			= room_width * 8 + 7 + border * 2
+;map_height 			= room_height * 8 + 7 + border * 2
+map_room_columns	= 8
+map_room_rows		= 8
 
-screen_char_width = 40
-screen_width = 19
-screen_height = 11
-map_width = 49
-map_height = 49
+playfield_width 	= 11
+playfield_height	= 11
 
-playfield_width = 11
-playfield_height = 11
+input_speed 		= 5
+anim_speed 			= 20
 
-game_timer = $a4
-game_tick = 10
-
-status_ptr = $a5
+input_timer 		= $a4
+status_ptr 			= $a5 ; 16 bit
+rand				= $a7
+room_type			= $a8
+room_pos			= $a9
+room_x				= $aa
+room_y				= $ab
+room_ptr			= $ac ; 16 bit
+tmp_x				= $ae
+tmp_y				= $af
+num_rooms			= $b0
+max_rooms			= $b1
+placed_doors_ptr	= $b2 ; 16 bit
+avail_doors_ptr		= $b4 ; 16 bit
+room_col			= $b6
+room_row			= $b7
+pow2_ptr			= $b8 ; 16 bit
+occupied_rooms_ptr  = $ba ; 16 bit
+doors				= $bc
+tmp2				= $bd
+rand16				= $be
+clock				= $bf
+anim_timer			= $c0
+charset_a			= $c1
+no_clip				= $c4
+char_colors_ptr	 	= $c5 ; 16 bit
 
 ; Colors
 white = $0a
@@ -63,88 +122,141 @@ red = $32
 black = $00
 peach = $2c
 blue = $92
-gold = $18
+gold = $2a
 
 	lda #16
 	sta player_x
 	sta player_y
 
-	setup_screen()
+	mva #123 rand
+	mva #200 rand16
+
+	mwa #powers_of_two pow2_ptr
+	mwa #occupied_rooms occupied_rooms_ptr
+
 	setup_colors()
+
+	copy_data charset_dungeon_a cur_charset_a 4
+	copy_data charset_dungeon_b cur_charset_b 4
+	copy_monsters monsters_a cur_charset_a 0 12
+	copy_monsters monsters_b cur_charset_b 0 12
+
 	mva #>charset_outdoor_a CHBAS
 	clear_pmg()
 	load_pmg()
 	setup_pmg()
+
+	;new_map()
+	;place_monsters #255 #12
+	setup_screen()
 	update_player_tiles()
 	display_borders()
 	update_ui()
 
-	reset_timer
+	mwa #charset_dungeon_a_colors char_colors_ptr
+
+	mwa #map map_ptr
+	mwa #screen screen_ptr
+	map_width = 28
+	map_height = 28
+	lda #14
+	sta player_x
+	sta player_y
+	lda #1
+	sta no_clip
+	
 
 game
-	lda RTCLK2
-	cmp game_timer
-	bne game
+	mva RTCLK2 clock
+	animate 
+	get_input
+	jmp game 
 
+.macro get_input
+	lda clock
+	cmp input_timer
+	bne done
 	read_joystick()
-	reset_timer
-
-	jmp game
-
-.macro reset_timer
-	lda RTCLK2
-	add #game_tick
-	sta game_timer
+	blit_screen()
+	lda clock 
+	add #input_speed
+	sta input_timer
+done
 	.endm
 
+.macro animate
+	lda clock
+	cmp anim_timer
+	bne done
+	lda charset_a
+	eor #$ff
+	sta charset_a
+	blit_screen
+	lda clock
+	add #anim_speed
+	sta anim_timer
+done
+	.endm
 
 .proc read_joystick
 	lda STICK0
 	and #stick_up
-	beq move_up
+	beq check_up
 
 	lda STICK0
 	and #stick_down
-	beq move_down
+	beq check_down
 
 	lda STICK0
 	and #stick_left
-	beq move_left
+	beq check_left
 
 	lda STICK0
 	and #stick_right
-	beq move_right
+	beq check_right
 
 	jmp done
 
-move_up
+check_up
+	lda no_clip
+	bne move_up
 	lda up_tile
-	cmp #55
+	cmp #WALKABLE_START
 	bcc done
+move_up
 	dec player_y
 	update_player_tiles()
 	jmp done
 
-move_down
+check_down
+	lda no_clip
+	bne move_down
 	lda down_tile
-	cmp #55
+	cmp #WALKABLE_START
 	bcc done
+move_down
 	inc player_y
 	update_player_tiles()
 	jmp done
 
-move_left
+check_left
+	lda no_clip
+	bne move_left
 	lda left_tile
-	cmp #55
+	cmp #WALKABLE_START
 	bcc done
+move_left
 	dec player_x
 	update_player_tiles()
 	jmp done
 
-move_right
+check_right
+	lda no_clip
+	bne move_right
 	lda right_tile
-	cmp #55
+	cmp #WALKABLE_START
 	bcc done
+move_right
 	inc player_x
 	update_player_tiles()
 	jmp done
@@ -252,12 +364,54 @@ loop
 	rts
 	.endp
 
+.macro fix_color
+	; Save Y register
+	sta tmp
+	tya 
+	pha
+	lda tmp
+
+	; Get number of LSRs to perform (how many times to shift)
+	and #$07
+	add #1
+	sta tmp2
+	
+	; Get the color from the character set
+	lda tmp 
+	lsr
+	lsr
+	lsr
+	tay
+	lda (char_colors_ptr),y
+
+shift_bits
+	lsr
+	dec tmp2
+	bne shift_bits
+
+	bcc done
+
+add_color
+	lda tmp
+	add #128
+	sta tmp
+
+done
+	; Restore Y register
+	pla
+	tay
+	lda tmp
+.endm
+
 .macro blit_tile
 	lda (map_ptr),y			; Load the tile from the map
 	asl						; Multiply by two to get left character
+	fix_color
 	sta (screen_ptr),y		; Store the left character
 	inc16 screen_ptr		; Advance the screen pointer
+	lda (map_ptr),y			; Load the tile from the map
 	add #1					; Add one to get right character
+	fix_color
 	sta (screen_ptr),y		; Store the right character
 	adw map_ptr #1			; Advance the map pointer
 	adw screen_ptr #1		; Advance the screen pointer	
@@ -531,7 +685,6 @@ loop
 	.endp
 
 
-
 .proc blit_screen
 	map_offset()
 
@@ -582,14 +735,52 @@ loop
 	blit_circle_line 5, 3, 7
 
 	rts
-.endp
+	.endp
 
+; Uses a linear-feedback shift register (LFSR) to generate 8-bit pseudo-random numbers
+; More info: https://en.wikipedia.org/wiki/Linear-feedback_shift_register
+; Also here: https://forums.atariage.com/topic/159268-random-numbers/#comment-1958751
+; Also here: https://github.com/bbbradsmith/prng_6502
+.proc random8
+	lda rand				; Load in seed or last number generated
+	lsr						; Shift 1 place to the right
+	bcc no_eor				; Carry flag contains the last bit prior to shifting - if 0, skip XOR
+	eor #$b4				; XOR with feedback value that produces a good sequence
+no_eor
+	sta rand				; Store the random number
+	rts
+	.endp
+
+.proc random16
+	lda rand				; Load in seed or last number generated
+	lsr						; Shift 1 place to the right
+	rol rand16
+	bcc no_eor				; Carry flag contains the last bit prior to shifting - if 0, skip XOR
+	eor #$b4				; XOR with feedback value that produces a good sequence
+no_eor
+	sta rand				; Store the random number
+	eor rand16
+	rts
+	.endp
+
+	icl 'macros.asm'
 	icl 'hardware.asm'
+	icl 'labels.asm'
 	icl 'dlist.asm'
 	icl 'pmgdata.asm'
-	icl 'map.asm'
+	icl 'map_gen.asm'
+
 	icl 'charset_dungeon_a.asm'
+	icl 'charset_dungeon_b.asm'
 	icl 'charset_outdoor_a.asm'
 	icl 'monsters_a.asm'
-	icl 'macros.asm'
-	icl 'labels.asm'
+	icl 'monsters_b.asm'
+	icl 'room_types.asm'
+	icl 'room_positions.asm'
+	icl 'room_pos_doors'
+	icl 'room_type_doors'
+	icl 'test_map.asm'
+	icl 'charset_dungeon_a_colors.asm'
+
+powers_of_two
+	.byte 1,2,4,8,16,32,64,128
