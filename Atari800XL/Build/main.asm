@@ -842,13 +842,12 @@ place
 	bne restore_and_retry	; If not floor, restore counter and try again
 
 	; Check if there are monsters nearby (spacing check)
-	; TEMPORARILY DISABLED FOR TESTING
-	;ldy tmp1				; Restore Y
-	;sty tmp1				; Save Y again
-	;jsr check_nearby_monsters
-	;ldy tmp1				; Restore Y
-	;cmp #0					; Check if monsters were found
-	;bne place				; If monsters nearby (A != 0), find a new location
+	ldy tmp1				; Restore Y
+	sty tmp1				; Save Y again
+	jsr check_nearby_monsters
+	ldy tmp1				; Restore Y
+	cmp #0					; Check if monsters were found
+	bne place				; If monsters nearby (A != 0), find a new location
 
 	lda tmp					; It must be a floor tile, so load in monster from tmp
 	ldy #0
