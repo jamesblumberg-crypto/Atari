@@ -194,7 +194,7 @@ gold = $2a
 	sta stick_action
 
 	new_map()
-	place_monsters #11 num_monsters
+	;place_monsters #11 num_monsters  ; Temporarily disabled for testing
 
 game
 	mva RTCLK2 clock
