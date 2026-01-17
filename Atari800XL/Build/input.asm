@@ -114,9 +114,17 @@ done
     lda no_clip
     bne do_move                 ; If no_clip enabled, skip collision check
 
-    ; Check if target tile is walkable
+    ; Check if target tile is a monster
     ldy #0
     lda (dir_ptr),y             ; Load the tile at the direction pointer
+    cmp #44                     ; Is it >= monster start (44)?
+    bcc check_walkable          ; If < 44, check if walkable
+    cmp #56                     ; Is it < monster end (56)?
+    bcs check_walkable          ; If >= 56, check if walkable
+    jmp attack_monster          ; It's a monster (44-55), attack it!
+
+check_walkable
+    lda (dir_ptr),y             ; Reload the tile
     cmp #WALKABLE_START         ; Compare with walkable threshold
     bcc done                    ; If less than walkable start, don't move
 
@@ -161,6 +169,14 @@ move_right
     check_and_close_door()      ; Close door at current position if standing on one
     inc player_x                ; Move right
     update_player_tiles()
+    rts
+
+attack_monster
+    ; Player attacks the monster at dir_ptr
+    ; For now: one hit kills the monster
+    ldy #0
+    lda #MAP_FLOOR              ; Replace monster with floor tile
+    sta (dir_ptr),y
     rts
 
 done
