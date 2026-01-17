@@ -864,26 +864,24 @@ skip_monster
 ; Check if there are monsters in nearby tiles
 ; Input: map_ptr points to the location to check
 ; Output: A = 0 if no monsters nearby, A = 1 if monsters found
-; Checks a 5x5 area (2 tiles in each direction) to ensure good spacing
+; Checks a 3x3 area (1 tile in each direction) to ensure good spacing
 .proc check_nearby_monsters
 	; Save current map pointer
 	mwa map_ptr tmp_addr1
 
-	; Move to top-left corner (2 rows up, 2 columns left)
+	; Move to top-left corner (1 row up, 1 column left)
 	sbw map_ptr #map_width
-	sbw map_ptr #map_width
-	dec16 map_ptr
 	dec16 map_ptr
 
-	; Check 5 rows
-	ldx #5
+	; Check 3 rows
+	ldx #3
 row_loop
 	; Save row start position
 	mwa map_ptr tmp_addr2
 
-	; Check 5 columns in this row
+	; Check 3 columns in this row
 	ldy #0
-	lda #5
+	lda #3
 	sta tmp2
 col_loop
 	lda (map_ptr),y
