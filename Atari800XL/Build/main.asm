@@ -839,10 +839,10 @@ place
 	ldy #0
 	lda (map_ptr),y			; Get the character at the current position
 	cmp #MAP_FLOOR			; Verify that it's a floor tile (only place on floors)
-	ldy tmp1				; Restore Y
-	bne place				; If not floor, start all over again
+	bne restore_and_retry	; If not floor, restore counter and try again
 
 	; Check if there are monsters nearby (spacing check)
+	ldy tmp1				; Restore Y
 	sty tmp1				; Save Y again
 	jsr check_nearby_monsters
 	ldy tmp1				; Restore Y
@@ -852,6 +852,11 @@ place
 	lda tmp					; It must be a floor tile, so load in monster from tmp
 	ldy #0
 	sta (map_ptr),y			; Copy it to the map
+	jmp skip_monster		; Done with this monster
+
+restore_and_retry
+	ldy tmp1				; Restore Y counter
+	jmp place				; Try again
 
 skip_monster
 	dex						; Reduce x so that we can get another monster with the loop
