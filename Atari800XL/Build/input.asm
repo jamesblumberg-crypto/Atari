@@ -198,6 +198,9 @@ monster_died
     lda #MAP_FLOOR              ; Replace monster with floor tile
     sta (dir_ptr),y
 
+    ; Update the HP bar display
+    update_hp_bar()
+
     ; Check if player died
     lda player_hp
     bne still_alive
