@@ -993,18 +993,14 @@ no_eor
 ; a = quantity of monsters
 .proc place_monsters (.byte x,a) .reg
 ; 88 = monster tile start
-; X = max monster type, A = quantity
-; Swap them so X = quantity (for loop), tmp2 = max type
-	pha					; Save A (quantity) to stack
-	stx tmp2			; Store max monster type to tmp2
-	pla					; Pull quantity back to A
-	tax					; Transfer to X (now X = quantity for loop counter)
+; NOTE: Despite comment, X=quantity (for dex loop), A=max_type (for comparison)!
+	sta tmp2				; Store max monster type from A to tmp2
 pick
-	random16			; Get random number in A
-	cmp tmp2			; Compare with max monster type
-	bcs pick			; If the number is greater than max monster type, re-pick
+	random16				; Get random number in A
+	cmp tmp2				; Compare with max monster type
+	bcs pick				; If the number is greater than max monster type, re-pick
 
-	add #88				; Monster is good, so add 88 to move it to the proper character
+	add #88					; Monster is good, so add 88 to move it to the proper character
 	sta tmp					; Store monster num into tmp
 
 	; Set retry counter to prevent infinite loops
