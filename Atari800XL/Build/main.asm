@@ -51,19 +51,18 @@ monsters_b_colors   = $af53 ; 51 bytes
 ; stick_left  = %0100
 ; stick_right = %1000
 
-map_ptr 	= $92
-screen_ptr 	= $94
-player_x	= $96
-player_y	= $97
-tmp			= $98
-up_tile		= $9a
-down_tile	= $9b
-left_tile	= $9c
-right_tile	= $9d
-on_tile		= $9e
-
-tmp_addr1	= $a0
-tmp_addr2   = $a2
+map_ptr 			= $92
+screen_ptr 			= $94
+player_x			= $96
+player_y			= $97
+tmp					= $98
+up_tile				= $9a
+down_tile			= $9b
+left_tile			= $9c
+right_tile			= $9d
+on_tile				= $9e	
+tmp_addr1			= $a0
+tmp_addr2  			= $a2
 
 screen_char_width 	= 40
 screen_width 		= 19
@@ -113,23 +112,23 @@ char_colors_ptr		= $c5 ; 16 bit
 
 	
 ;stick_dir    = $d8
-stick_btn    = $d9
-stick_action = $da
+stick_btn    		= $d9
+stick_action 		= $da
 
-player_ptr           = $de
-dir_ptr              = $e0
-tmp1 = $e2
+player_ptr          = $de
+dir_ptr             = $e0
+tmp1 				= $e2
 ; tmp2 = $e3
 
 
 
 ; Colors
-white = $0a
-red = $32
-black = $00
-peach = $2c
-blue = $92
-gold = $2a
+white 				= $0a
+red 				= $32
+black 				= $00
+peach 				= $2c
+blue 				= $92
+gold 			= $2a
 	
 	mwa #map map_ptr
 
