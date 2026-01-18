@@ -106,10 +106,10 @@ none                            ; Nothing to do
     beq blocked                 ; Not moving (dir_ptr == 0)
 
 check_monster
-    ; Check if target tile is a monster (tiles 88-103)
-    cmp #88                     ; Is it >= monster start?
+    ; Check if target tile is a monster (tiles 44-51 for 8 monsters)
+    cmp #44                     ; Is it >= monster start?
     bcc check_passable          ; No, check if passable
-    cmp #104                    ; Is it < monster end (88 + 16 chars for 8 monsters)?
+    cmp #52                     ; Is it < monster end (44 + 8)?
     bcs check_passable          ; No, check if passable
     jsr attack_monster          ; Yes, attack the monster!
     rts                         ; Don't move after attacking
