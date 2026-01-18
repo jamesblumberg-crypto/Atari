@@ -127,9 +127,9 @@ done
     ; Check if target tile is a monster
     cmp #88                     ; Is it >= monster start (88)?
     bcc check_walkable          ; If < 88, check if walkable
-    cmp #112                    ; Is it < monster end (112)?
-    bcs check_walkable          ; If >= 112, check if walkable
-    jmp attack_monster          ; It's a monster (88-111), attack it!
+    cmp #108                    ; Is it < monster end (108)?
+    bcs check_walkable          ; If >= 108, check if walkable
+    jmp attack_monster          ; It's a monster (88-107), attack it!
 
 check_walkable
     lda (dir_ptr),y             ; Reload the tile
