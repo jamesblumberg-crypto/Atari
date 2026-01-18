@@ -1,4 +1,5 @@
-	org charset_dungeon_a	; char 0
+	org charset_dungeon_a	; Two char per tile
+	; char 0
 	.byte %00000000
 	.byte %00000000
 	.byte %00000000
