@@ -125,11 +125,11 @@ done
     beq check_walkable          ; Yes, treat as walkable
 
     ; Check if target tile is a monster
-    cmp #44                     ; Is it >= monster start (44)?
-    bcc check_walkable          ; If < 44, check if walkable
-    cmp #64                    ; Is it < monster end (64)?
-    bcs check_walkable          ; If >= 64, check if walkable
-    jmp attack_monster          ; It's a monster (44-63), attack it!
+    cmp #88                     ; Is it >= monster start (88)?
+    bcc check_walkable          ; If < 88, check if walkable
+    cmp #103                    ; Is it < monster end (103)?
+    bcs check_walkable          ; If >= 103, check if walkable
+    jmp attack_monster          ; It's a monster (88-102), attack it!
 
 check_walkable
     lda (dir_ptr),y             ; Reload the tile

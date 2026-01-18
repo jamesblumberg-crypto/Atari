@@ -992,14 +992,14 @@ no_eor
 ; x = max monster number
 ; a = quantity of monsters
 .proc place_monsters (.byte x,a) .reg
-; 44 = monster tile start
+; 88 = monster tile start
 	sta tmp2				; Copy max monster num from a to tmp2
 pick
 	random16				; Get random number in A
 	cmp tmp2				; Compare with max monster num
 	bcs pick				; If the number is greater than max monster number, re-pick
 
-	add #44					; Monster is good, so add 44 to move it to the proper character
+	add #88					; Monster is good, so add 88 to move it to the proper character
 	sta tmp					; Store monster num into tmp
 
 	; Set retry counter to prevent infinite loops
@@ -1077,11 +1077,11 @@ row_loop
 	sta tmp2
 col_loop
 	lda (map_ptr),y
-	cmp #44					; Monster tiles start at 44
+	cmp #88					; Monster tiles start at 88
 	bcc next_col
-	cmp #64					; Monster tiles end at 63
+	cmp #103				; Monster tiles end at 102
 	bcs next_col
-	jmp found_monster		; If 44 <= tile < 64, it's a monster
+	jmp found_monster		; If 88 <= tile < 103, it's a monster
 
 next_col
 	inc16 map_ptr
