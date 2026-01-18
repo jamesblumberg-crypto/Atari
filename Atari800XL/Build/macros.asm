@@ -118,8 +118,17 @@ loop
     lda (tmp_addr1),y           ; Load monster character
     sta (tmp_addr2),y           ; Store monster character into charset
     iny
-    cpy #192
-    bne loop                    ; Y > 0, so keep looping
+    cpy #192                    ; Copy first 192 bytes (24 chars = 12 monsters)
+    bne loop
+
+    ; Continue copying the remaining 192 bytes for monsters 12-23
+    inc tmp_addr1 + 1           ; Move source pointer to next page
+    inc tmp_addr2 + 1           ; Move dest pointer to next page
+loop2
+    lda (tmp_addr1),y           ; Load monster character (Y starts at 192)
+    sta (tmp_addr2),y           ; Store monster character into charset
+    iny
+    bne loop2                   ; Continue until Y wraps to 0 (384 bytes total)
 
 .endm
 

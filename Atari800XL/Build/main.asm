@@ -167,7 +167,7 @@ gold = $2a
 	mva #123 rand
 	mva #201 rand16
 
-	mva #15 num_monsters
+	mva #24 num_monsters
 	mva #0 starting_monster
 
 	mwa #powers_of_two pow2_ptr
@@ -1079,9 +1079,9 @@ col_loop
 	lda (map_ptr),y
 	cmp #88					; Monster tiles start at 88
 	bcc next_col
-	cmp #103				; Monster tiles end at 102
+	cmp #112				; Monster tiles end at 111
 	bcs next_col
-	jmp found_monster		; If 88 <= tile < 103, it's a monster
+	jmp found_monster		; If 88 <= tile < 112, it's a monster
 
 next_col
 	inc16 map_ptr
