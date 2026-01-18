@@ -1,19 +1,5 @@
-; EdVenture - An Adventure in Atari 8-Bit Assembly
-; github.com/edsalisbury/edventure
-; Mission: EdPossible
-; youtube.com/MissionEdPossible
-; Assemble in MADS: mads -l -t main.asm
-; Episode 11: Scrolling
-
-; ATASCII Table: https://www.atariwiki.org/wiki/attach/Atari%20ATASCII%20Table/ascii_atascii_table.pdf
-; ATASCII 0-31 Screen code 64-95
-; ATASCII 32-95 Screen code 0-63
-; ATASCII 96-127 Screen code 96-127
-
-; NTSC Color Palette: https://atariage.com/forums/uploads/monthly_10_2015/post-6369-0-47505700-1443889945.png
-; PAL Color Palette: https://atariage.com/forums/uploads/monthly_10_2015/post-6369-0-902WALKABLE_START700-1443889950.png
-; PMG Memory Map: https://www.atarimagazines.com/compute/issue64/atari_animation.gif
-
+; Atari 800XL Assembly Source File
+; Main program file
 	org $b000
 ; RAM: $2000-7FFF - 24K
 map     			= $2000 ; Map (16K+)
