@@ -167,8 +167,8 @@ gold = $2a
 	mva #123 rand
 	mva #201 rand16
 
-	mva #8 num_monsters
-	mva #0 starting_monster
+	mva #15 num_monsters
+	mva #15 starting_monster
 
 	mwa #powers_of_two pow2_ptr
 	mwa #occupied_rooms occupied_rooms_ptr
@@ -999,7 +999,7 @@ pick
 	cmp tmp2				; Compare with max monster num
 	bcs pick				; If the number is greater than max monster number, re-pick
 
-	add #88					; Monster is good, so add 88 to move it to the proper character
+	add #44					; Monster is good, so add 44 to move it to the proper character
 	sta tmp					; Store monster num into tmp
 
 	; Set retry counter to prevent infinite loops
@@ -1077,9 +1077,9 @@ row_loop
 	sta tmp2
 col_loop
 	lda (map_ptr),y
-	cmp #88					; Monster tiles start at 88
+	cmp #44					; Monster tiles start at 44
 	bcc next_col
-	cmp #64					; First 12 monsters end at 63
+	cmp #64					; Monster tiles end at 63
 	bcs next_col
 	jmp found_monster		; If 44 <= tile < 64, it's a monster
 

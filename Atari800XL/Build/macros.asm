@@ -97,7 +97,7 @@ loop
     mwa #:src tmp_addr1         ; Copy monsters_X address to tmp_addr1 
     mwa #:dest tmp_addr2        ; Copy cur_charset_X address to tmp_addr2
 
-    adw tmp_addr2 #(88 * 8)     ; Move over to location in charset where monsters start
+    adw tmp_addr2 #(44 * 8)     ; Move over to location in charset where monsters start
     
     lda :start
     cmp #16
