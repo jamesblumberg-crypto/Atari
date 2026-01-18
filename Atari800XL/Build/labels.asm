@@ -6,9 +6,9 @@ DOOR_EAST               = %0001
 MAP_WALL                = 1
 MAP_FLOOR               = 127
 MAP_UP                  = 121
-MAP_DOWN                = 122
+MAP_DOWN                = 120
 MAP_DOOR                = 4
-MAP_DOORWAY             = 123
+MAP_DOORWAY             = 59
 
 UI_VERT_BORDER          = 1
 UI_HORIZ_BORDER         = 4
@@ -91,14 +91,15 @@ UI_AMULET_SW_ICON_RIGHT	= 83
 UI_AMULET_SE_ICON_LEFT	= 84
 UI_AMULET_SE_ICON_RIGHT	= 85
 
-WALKABLE_START          = 55
+PASSABLE_MIN          = 55
 
-STICK_UP                = %0001
-STICK_DOWN              = %0010
-STICK_LEFT              = %0100
-STICK_RIGHT             = %1000
-BUTTON_DOWN             = 0
-BUTTON_UP               = 1
+STICK_UP    = %0001
+STICK_DOWN  = %0010 
+STICK_LEFT  = %0100
+STICK_RIGHT = %1000
+
+BUTTON_DOWN = 0
+BUTTON_UP   = 1
 
 NORTH                   = 1
 SOUTH                   = 2
