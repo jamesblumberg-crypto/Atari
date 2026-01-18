@@ -144,9 +144,34 @@ blocked
 
 ; Attack a monster at dir_ptr location
 ; Simple one-hit kill for now
+; .proc attack_monster
+;     ldy #0
+;     lda #MAP_FLOOR              ; Replace monster with floor
+;     sta (dir_ptr),y             ; Remove monster from map
+;     rts
+;     .endp
 .proc attack_monster
     ldy #0
-    lda #MAP_FLOOR              ; Replace monster with floor
-    sta (dir_ptr),y             ; Remove monster from map
+    lda (dir_ptr),y         ; Grab the monster tile (44-51 right now)
+    sta tmp                 ; Save it briefly if needed later
+
+    ; === YOU STRIKE FIRST ===
+    lda #MAP_FLOOR
+    sta (dir_ptr),y         ; Monster dies instantly (keep your one-hit for now)
+
+    ; === MONSTER COUNTERS (the bite back) ===
+    lda player_hp
+    sec
+    sbc #5                  ; Monster hits for 5 dmg — tweak this later for variety
+    sta player_hp
+    bcs no_death            ; Still alive?
+
+    lda #0
+    sta player_hp
+    jmp player_death        ; Your death handler (add if not there yet)
+
+no_death
+    jsr update_hp_bar       ; Show the ouch! Bar drops visibly
+
     rts
-    .endp
+.endp
