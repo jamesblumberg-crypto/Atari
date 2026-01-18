@@ -125,16 +125,17 @@ done
     beq check_walkable          ; Yes, treat as walkable
 
     ; Check if target tile is a monster
-    cmp #88                     ; Is it >= monster start (88)?
-    bcc check_walkable          ; If < 88, check if walkable
-    cmp #100                    ; Is it < monster end (100)?
-    bcs check_walkable          ; If >= 100, check if walkable
-    jmp attack_monster          ; It's a monster (88-99), attack it!
+    cmp #44                     ; Is it >= monster start (44)?
+    bcc check_walkable          ; If < 44, check if walkable
+    cmp #64                    ; Is it < monster end (64)?
+    bcs check_walkable          ; If >= 64, check if walkable
+    jmp attack_monster          ; It's a monster (44-63), attack it!
 
 check_walkable
     lda (dir_ptr),y             ; Reload the tile
     cmp #WALKABLE_START         ; Compare with walkable threshold
-    bcc done                    ; If less than walkable start, don't move
+    bcs do_move                 ; If >= walkable start, allow movement
+    rts                         ; Otherwise don't move, just return
 
 do_move
     ; Determine which direction and move player
@@ -153,7 +154,7 @@ do_move
     lda STICK0
     and #STICK_RIGHT
     beq move_right
-    jmp done                    ; No direction pressed
+    rts                         ; No direction pressed
 
 move_up
     check_and_close_door()      ; Close door at current position if standing on one
@@ -179,46 +180,99 @@ move_right
     update_player_tiles()
     rts
 
+; Grok attack_monster
 attack_monster
-    ; Player attacks the monster at dir_ptr
-    ; Monster attacks back, then dies
+    ldy #0
+    lda (dir_ptr),y         ; Grab monster tile ID (44-55)
+    sta tmp                 ; Save ID
 
-    ; Monster counter-attacks! Deal damage to player
-    lda player_hp
     sec
-    sbc #5                      ; Monster does 5 damage
-    sta player_hp
-    bcs monster_died            ; If carry set, HP didn't go negative
+    sbc #44                 ; Index 0-11
+    tax
+    lda monster_hp_table,x
+    sta monster_hp          ; Load mon HP
+    lda monster_dmg_table,x
+    sta monster_dmg         ; Load mon DMG
 
-    ; Player HP went below 0, set to 0
-    lda #0
-    sta player_hp
+combat_loop
+    ; === YOU STRIKE FIRST ===
+    lda monster_hp
+    sec
+    sbc player_melee_dmg    ; Your blade (starts @10)
+    sta monster_hp
+    bcs both_alive          ; Mon survives? Counter time
 
-monster_died
-    ; Give player XP (10 XP per monster)
+    ; === MONSTER DIES === (metaphor slayed!)
+    lda #MAP_FLOOR
+    sta (dir_ptr),y
     lda player_xp
     clc
-    adc #10
+    adc #10                 ; XP drop
     sta player_xp
+    jsr update_hp_bar       ; Refresh your bar (glow-up)
+    jsr update_xp_bar       ; Show XP gain!
+    jmp combat_end
 
-    ; Remove monster from map
-    ldy #0
-    lda #MAP_FLOOR              ; Replace monster with floor tile
-    sta (dir_ptr),y
-
-    ; Update the HP bar display
-    update_hp_bar()
-
-    ; Update the XP bar display
-    update_xp_bar()
-
-    ; Check if player died
+both_alive
+    ; === MONSTER COUNTERS ===
     lda player_hp
-    bne still_alive
-    jmp player_death            ; Player HP is 0, game over
+    sec
+    sbc monster_dmg
+    bcc player_died         ; HP went negative, you died
+    sta player_hp
+    jsr update_hp_bar       ; Show the hit (drama!)
+    jmp combat_loop         ; You survived, fight again!
 
-still_alive
+player_died
+    ; === YOU FALL ===
+    lda #0
+    sta player_hp
+    jsr update_hp_bar       ; Show 0 HP
+    jmp player_death
+
+combat_end
     rts
+    
+; attack_monster
+;     ; Player attacks the monster at dir_ptr
+;     ; Monster attacks back, then dies
+
+;     ; Monster counter-attacks! Deal damage to player
+;     lda player_hp
+;     sec
+;     sbc #5                      ; Monster does 5 damage
+;     sta player_hp
+;     bcs monster_died            ; If carry set, HP didn't go negative
+
+;     ; Player HP went below 0, set to 0
+;     lda #0
+;     sta player_hp
+
+; monster_died
+;     ; Give player XP (10 XP per monster)
+;     lda player_xp
+;     clc
+;     adc #10
+;     sta player_xp
+
+;     ; Remove monster from map
+;     ldy #0
+;     lda #MAP_FLOOR              ; Replace monster with floor tile
+;     sta (dir_ptr),y
+
+;     ; Update the HP bar display
+;     update_hp_bar()
+
+;     ; Update the XP bar display
+;     update_xp_bar()
+
+;     ; Check if player died
+;     lda player_hp
+;     bne still_alive
+;     jmp player_death            ; Player HP is 0, game over
+
+; still_alive
+;     rts
 
 done
     rts
@@ -253,8 +307,36 @@ done
     rts
     .endp
 
-; Player death - simple infinite loop for now
+; Player death - flash screen and freeze
 .proc player_death
+    ; Flash the screen by changing background color
+    lda #$32                    ; Red
+    sta COLOR4
+
+    ; Small delay
+    ldx #60
+delay_loop
+    lda RTCLK2
+wait_tick
+    cmp RTCLK2
+    beq wait_tick
+    dex
+    bne delay_loop
+
+    ; Back to black
+    lda #$00
+    sta COLOR4
+
+    ; Another delay
+    ldx #60
+delay_loop2
+    lda RTCLK2
+wait_tick2
+    cmp RTCLK2
+    beq wait_tick2
+    dex
+    bne delay_loop2
+
 death_loop
     jmp death_loop              ; Freeze the game
     .endp

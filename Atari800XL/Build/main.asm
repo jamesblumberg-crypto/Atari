@@ -141,6 +141,9 @@ player_max_hp		= $e5
 player_melee_dmg	= $e6
 player_xp			= $e7
 
+monster_hp     		= $f0  ; Grok Temp: current mon HP
+monster_dmg			= $f1  ; Grok Temp: current mon DMG
+
 ; Colors
 white = $0a
 red = $32
@@ -164,7 +167,7 @@ gold = $2a
 	mva #123 rand
 	mva #201 rand16
 
-	mva #8 num_monsters
+	mva #15 num_monsters
 	mva #15 starting_monster
 
 	mwa #powers_of_two pow2_ptr
@@ -208,12 +211,24 @@ gold = $2a
 	lda #0
 	sta player_xp			; Start with 0 XP
 
+	jmp skip_monster_tables	; Jump over the data tables
+
+	; Grok Monster tables: index 0-11 = tile 44-55
+	; Fodder(44-47): quick kills | Mid(48-51): endurance | Boss(52-55): epics
+monster_hp_table
+    .byte 10,10,10,10, 20,20,20,20, 50,50,50,50  ; 44-55
+    .byte 60,60,60,60,70,70,70,70                      ; 56-63 BIG
+monster_dmg_table
+    .byte 3,3,3,3,  5,5,5,5,  8,8,8,8
+    .byte 12,12,12,12,15,15,15,15                    ; BRUTAL
+
+skip_monster_tables
 	; Initialize the HP and XP bars to match player stats
 	update_hp_bar()
 	update_xp_bar()
 
 	new_map()
-	place_monsters #11 num_monsters
+	place_monsters #19 num_monsters
 
 game
 	mva RTCLK2 clock
@@ -1064,9 +1079,9 @@ col_loop
 	lda (map_ptr),y
 	cmp #88					; Monster tiles start at 88
 	bcc next_col
-	cmp #100				; First 12 monsters end at 99
+	cmp #64					; First 12 monsters end at 63
 	bcs next_col
-	jmp found_monster		; If 88 <= tile < 100, it's a monster
+	jmp found_monster		; If 44 <= tile < 64, it's a monster
 
 next_col
 	inc16 map_ptr
