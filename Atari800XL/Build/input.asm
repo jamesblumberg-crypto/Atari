@@ -102,8 +102,17 @@ none                            ; Nothing to do
     
 ; Player Movement
 .proc player_move
-    ldi dir_ptr                 ; Dereference direction pointer     
+    ldi dir_ptr                 ; Dereference direction pointer
     beq blocked                 ; Not moving (dir_ptr == 0)
+
+check_monster
+    ; Check if target tile is a monster (tiles 88-103)
+    cmp #88                     ; Is it >= monster start?
+    bcc check_passable          ; No, check if passable
+    cmp #104                    ; Is it < monster end (88 + 16 chars for 8 monsters)?
+    bcs check_passable          ; No, check if passable
+    jsr attack_monster          ; Yes, attack the monster!
+    rts                         ; Don't move after attacking
 
 check_passable
     is_passable()               ; Detect collision
@@ -130,5 +139,14 @@ passable
 
 blocked
     clc                         ; Tile is blocked, so clear the carry flag
+    rts
+    .endp
+
+; Attack a monster at dir_ptr location
+; Simple one-hit kill for now
+.proc attack_monster
+    ldy #0
+    lda #MAP_FLOOR              ; Replace monster with floor
+    sta (dir_ptr),y             ; Remove monster from map
     rts
     .endp
