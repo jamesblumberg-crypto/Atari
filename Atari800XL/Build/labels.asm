@@ -6,7 +6,7 @@ DOOR_EAST               = %0001
 MAP_WALL                = 1
 MAP_FLOOR               = 127
 MAP_UP                  = 121
-MAP_DOWN                = 120
+MAP_DOWN                = 122
 MAP_DOOR                = 4
 MAP_DOORWAY             = 123
 
