@@ -801,6 +801,71 @@ draw_right
 	rts
 	.endp
 
+; Update the XP bar display based on current player XP
+; XP bar has 7 segments (longer than HP bar)
+; Each segment represents ~14 XP (100 / 7 ≈ 14.3)
+.proc update_xp_bar
+	mwa #screen screen_ptr
+	adw screen_ptr #screen_char_width  ; Move down one row
+	adw screen_ptr #screen_char_width  ; Move down two rows
+	adw screen_ptr #screen_char_width  ; Move down three rows
+	adw screen_ptr #28                  ; Position at start of XP bar
+
+	; Calculate number of full segments (XP / 14)
+	lda player_xp
+	ldx #0                      ; X will count full segments
+
+count_xp_segments
+	cmp #14                     ; Is XP >= 14?
+	bcc draw_xp_bars            ; If less, start drawing
+	sec
+	sbc #14                     ; Subtract 14
+	inx                         ; Increment segment counter
+	cpx #7                      ; Max 7 segments
+	bcc count_xp_segments       ; Continue if less than 7
+
+draw_xp_bars
+	stx tmp                     ; Save number of full segments
+
+	; Draw left border
+	ldy #0
+	lda #UI_BAR_LEFT
+	sta (screen_ptr),y
+	inc16 screen_ptr
+
+	; Draw full segments
+	ldx tmp
+draw_xp_full
+	cpx #0
+	beq draw_xp_empty           ; No more full segments
+	lda #UI_XP_FULL
+	sta (screen_ptr),y
+	inc16 screen_ptr
+	dex
+	jmp draw_xp_full
+
+draw_xp_empty
+	; Fill remaining with empty segments
+	lda tmp
+fill_xp_loop
+	cmp #7
+	bcs draw_xp_right           ; If we've drawn 7 total, stop
+	lda #UI_BAR_EMPTY
+	sta (screen_ptr),y
+	inc16 screen_ptr
+	lda tmp
+	clc
+	adc #1
+	sta tmp
+	jmp fill_xp_loop
+
+draw_xp_right
+	lda #UI_BAR_RIGHT
+	sta (screen_ptr),y
+
+	rts
+	.endp
+
 
 .proc blit_screen
 	map_offset()
