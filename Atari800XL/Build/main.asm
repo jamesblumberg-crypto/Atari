@@ -168,7 +168,7 @@ gold = $2a
 	mva #201 rand16
 
 	mva #15 num_monsters
-	mva #15 starting_monster
+	mva #0 starting_monster
 
 	mwa #powers_of_two pow2_ptr
 	mwa #occupied_rooms occupied_rooms_ptr
