@@ -208,6 +208,10 @@ gold = $2a
 	lda #0
 	sta player_xp			; Start with 0 XP
 
+	; Initialize the HP and XP bars to match player stats
+	update_hp_bar()
+	update_xp_bar()
+
 	new_map()
 	place_monsters #11 num_monsters
 
@@ -802,30 +806,12 @@ draw_right
 	.endp
 
 ; Update the XP bar display based on current player XP
-; XP bar has 7 segments (longer than HP bar)
-; Each segment represents ~14 XP (100 / 7 ≈ 14.3)
+; XP bar has 9 segments, each represents ~11 XP (100 XP to fill)
+; Supports quarter, half, 3/4, and full bar segments
 .proc update_xp_bar
 	mwa #screen screen_ptr
-	adw screen_ptr #screen_char_width  ; Move down one row
-	adw screen_ptr #screen_char_width  ; Move down two rows
-	adw screen_ptr #screen_char_width  ; Move down three rows
-	adw screen_ptr #28                  ; Position at start of XP bar
-
-	; Calculate number of full segments (XP / 14)
-	lda player_xp
-	ldx #0                      ; X will count full segments
-
-count_xp_segments
-	cmp #14                     ; Is XP >= 14?
-	bcc draw_xp_bars            ; If less, start drawing
-	sec
-	sbc #14                     ; Subtract 14
-	inx                         ; Increment segment counter
-	cpx #7                      ; Max 7 segments
-	bcc count_xp_segments       ; Continue if less than 7
-
-draw_xp_bars
-	stx tmp                     ; Save number of full segments
+	adw screen_ptr #(screen_char_width * 3)  ; Move to XP bar row
+	adw screen_ptr #28                        ; Position at start of XP bar
 
 	; Draw left border
 	ldy #0
@@ -833,33 +819,75 @@ draw_xp_bars
 	sta (screen_ptr),y
 	inc16 screen_ptr
 
-	; Draw full segments
-	ldx tmp
-draw_xp_full
-	cpx #0
-	beq draw_xp_empty           ; No more full segments
-	lda #UI_XP_FULL
-	sta (screen_ptr),y
-	inc16 screen_ptr
-	dex
-	jmp draw_xp_full
+	; We'll draw 9 segments total (positions 29-37)
+	; Each full segment = 11 XP, with partial segments for finer detail
+	ldx #0                                    ; X = segment counter (0-8)
 
-draw_xp_empty
-	; Fill remaining with empty segments
-	lda tmp
-fill_xp_loop
-	cmp #7
-	bcs draw_xp_right           ; If we've drawn 7 total, stop
-	lda #UI_BAR_EMPTY
-	sta (screen_ptr),y
-	inc16 screen_ptr
-	lda tmp
+draw_segment
+	cpx #9                                    ; Have we drawn all 9 segments?
+	bcs draw_right                            ; Yes, draw right border
+
+	; Calculate XP threshold for this segment (segment * 11)
+	; segment * 11 = segment * 8 + segment * 2 + segment
+	txa
+	asl                                       ; * 2
+	asl                                       ; * 4
+	asl                                       ; * 8
+	sta tmp2                                  ; tmp2 = segment * 8
+	txa
+	asl                                       ; * 2
 	clc
-	adc #1
-	sta tmp
-	jmp fill_xp_loop
+	adc tmp2                                  ; A = segment * 8 + segment * 2
+	sta tmp2
+	txa
+	clc
+	adc tmp2                                  ; A = segment * 8 + segment * 2 + segment
+	sta tmp2                                  ; tmp2 = segment * 11
 
-draw_xp_right
+	; Compare player XP with threshold
+	lda player_xp
+	cmp tmp2
+	bcc draw_empty_segment                    ; If XP < threshold, segment is empty
+
+	; Calculate how much XP into this segment we are
+	sec
+	sbc tmp2                                  ; A = XP - (segment * 11)
+	cmp #11
+	bcs draw_full_segment                     ; If >= 11, segment is full
+
+	; Partial segment (1-10 XP into segment)
+	cmp #9
+	bcs draw_3qtr_segment                     ; 9-10 XP = 3/4
+	cmp #6
+	bcs draw_half_segment                     ; 6-8 XP = 1/2
+	jmp draw_qtr_segment                      ; 1-5 XP = 1/4
+
+draw_full_segment
+	lda #UI_XP_FULL
+	jmp store_segment
+
+draw_3qtr_segment
+	lda #UI_XP_3_QTR
+	jmp store_segment
+
+draw_half_segment
+	lda #UI_XP_HALF
+	jmp store_segment
+
+draw_qtr_segment
+	lda #UI_XP_QTR
+	jmp store_segment
+
+draw_empty_segment
+	lda #UI_BAR_EMPTY
+
+store_segment
+	sta (screen_ptr),y
+	inc16 screen_ptr
+	inx
+	jmp draw_segment
+
+draw_right
 	lda #UI_BAR_RIGHT
 	sta (screen_ptr),y
 
