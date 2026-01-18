@@ -993,11 +993,12 @@ no_eor
 ; a = quantity of monsters
 .proc place_monsters (.byte x,a) .reg
 ; 88 = monster tile start
-	sta tmp2				; Copy max monster num from a to tmp2
+	sta tmp3				; Save quantity to tmp3
+	stx tmp2				; Copy max monster type from X to tmp2
 pick
 	random16				; Get random number in A
-	cmp tmp2				; Compare with max monster num
-	bcs pick				; If the number is greater than max monster number, re-pick
+	cmp tmp2				; Compare with max monster type
+	bcs pick				; If the number is greater than max monster type, re-pick
 
 	add #88					; Monster is good, so add 88 to move it to the proper character
 	sta tmp					; Store monster num into tmp
@@ -1046,7 +1047,7 @@ restore_and_retry
 	jmp place				; Try again
 
 skip_monster
-	dex						; Reduce x so that we can get another monster with the loop
+	dec tmp3				; Reduce quantity counter
 	bne pick				; Get the next monster
 
 	; Otherwise, we're done picking and placing monsters
