@@ -114,9 +114,17 @@ done
     lda no_clip
     bne do_move                 ; If no_clip enabled, skip collision check
 
-    ; Check if target tile is a monster
+    ; Check if target tile is a special tile (stairs, doors)
     ldy #0
     lda (dir_ptr),y             ; Load the tile at the direction pointer
+    cmp #MAP_UP                 ; Is it up stairs (121)?
+    beq check_walkable          ; Yes, treat as walkable
+    cmp #MAP_DOWN               ; Is it down stairs (120)?
+    beq check_walkable          ; Yes, treat as walkable
+    cmp #MAP_DOORWAY            ; Is it an open doorway (123)?
+    beq check_walkable          ; Yes, treat as walkable
+
+    ; Check if target tile is a monster
     cmp #44                     ; Is it >= monster start (44)?
     bcc check_walkable          ; If < 44, check if walkable
     cmp #56                     ; Is it < monster end (56)?
