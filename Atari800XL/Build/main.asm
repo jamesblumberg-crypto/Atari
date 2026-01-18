@@ -999,7 +999,7 @@ pick
 	cmp tmp2				; Compare with max monster num
 	bcs pick				; If the number is greater than max monster number, re-pick
 
-	add #44					; Monster is good, so add 44 to move it to the proper character
+	add #88					; Monster is good, so add 88 to move it to the proper character
 	sta tmp					; Store monster num into tmp
 
 	; Set retry counter to prevent infinite loops
@@ -1077,7 +1077,7 @@ row_loop
 	sta tmp2
 col_loop
 	lda (map_ptr),y
-	cmp #44					; Monster tiles start at 44
+	cmp #88					; Monster tiles start at 88
 	bcc next_col
 	cmp #64					; First 12 monsters end at 63
 	bcs next_col
