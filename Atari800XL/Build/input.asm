@@ -143,10 +143,28 @@ blocked
     .endp
 
 ; Attack a monster at dir_ptr location
-; Simple one-hit kill for now
 .proc attack_monster
     ldy #0
-    lda #MAP_FLOOR              ; Replace monster with floor
-    sta (dir_ptr),y             ; Remove monster from map
+    lda (dir_ptr),y             ; Load monster tile ID (44-51)
+    sec
+    sbc #44                     ; Convert to index (0-7)
+    tax                         ; Use as index
+    lda monster_hp_table,x      ; Load monster's max HP
+    sta monster_hp              ; Store in monster_hp variable
+
+combat_loop
+    ; Player attacks monster
+    lda monster_hp
+    sec
+    sbc player_melee_dmg        ; Subtract player's damage
+    sta monster_hp              ; Update monster HP
+    bmi monster_dead            ; If negative, monster is dead
+    bne combat_loop             ; If still positive, keep attacking
+
+monster_dead
+    ; Monster died - remove from map
+    ldy #0
+    lda #MAP_FLOOR
+    sta (dir_ptr),y
     rts
     .endp

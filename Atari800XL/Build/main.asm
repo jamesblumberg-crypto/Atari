@@ -121,6 +121,10 @@ dir_ptr              = $e0
 tmp1 = $e2
 ; tmp2 = $e3
 
+; Combat variables
+monster_hp           = $e3
+player_melee_dmg     = $e4
+
 
 
 ; Colors
@@ -171,7 +175,11 @@ gold = $2a
 	copy_monster_colors monsters_b_colors cur_char_colors_b starting_monster
 	
 	new_map()
-	
+
+	; Initialize combat stats
+	lda #10
+	sta player_melee_dmg        ; Player does 10 damage per hit
+
 	place_monsters #255 num_monsters
 	
 
@@ -718,6 +726,10 @@ place
 	rts
 	.endp
 
+; Monster HP table - indexed by monster type (0-7)
+; Monster tiles are 44-51, so subtract 44 to get index
+monster_hp_table
+	.byte 10, 20, 20, 30, 30, 40, 40, 50
 
 	icl 'macros.asm'
 	icl 'hardware.asm'
