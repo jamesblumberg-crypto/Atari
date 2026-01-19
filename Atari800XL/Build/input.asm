@@ -150,7 +150,7 @@ blocked
 ;     sta (dir_ptr),y             ; Remove monster from map
 ;     rts
 ;     .endp
-.proc attack_monster
+.proc attack_monster_old
     ldy #0
     lda (dir_ptr),y         ; Grab the monster tile (44-51 right now)
     sta tmp                 ; Save it briefly if needed later
@@ -168,10 +168,82 @@ blocked
 
     lda #0
     sta player_hp
-    jmp player_death        ; Your death handler (add if not there yet)
+    ;jmp player_death        ; Your death handler (add if not there yet)
 
 no_death
     jsr update_hp_bar       ; Show the ouch! Bar drops visibly
 
     rts
+.endp
+
+; New attack routine that also applies monster damage to the player
+.proc attack_monster
+    ldy #0
+    lda (dir_ptr),y         ; Grab the monster tile (44-51 right now)
+    sta tmp                 ; Save the monster tile for damage lookup
+
+    ; === YOU STRIKE FIRST ===
+    lda #MAP_FLOOR
+    sta (dir_ptr),y         ; Monster dies instantly
+
+    ; === MONSTER COUNTERS ===
+    lda tmp
+    sec
+    sbc #44                 ; Normalize monster tile to index 0-7
+    tax
+    lda monster_damage_table,x
+    sta monster_dmg
+
+    lda player_hp
+    sec
+    sbc monster_dmg         ; Apply monster damage
+    bcs no_death            ; Still alive?
+
+    lda #0                  ; Clamp at zero on underflow
+    sta player_hp
+    jsr update_hp_bar
+    jsr player_death        ; Show death text and handle future logic
+    rts
+no_death
+    sta player_hp
+    jsr update_hp_bar
+
+    ; TODO: add player_death handling when ready
+    rts
+.endp
+
+monster_damage_table
+    .byte 3,4,5,6,7,8,9,10  ; Per-monster damage for tiles 44-51
+
+.proc player_death
+    ; Write "You Died" centered on the status line
+    mwa #status_line status_ptr
+    ldy #16                  ; Start column to roughly center 7 characters on 40-col line
+    lda #'Y'
+    sta (status_ptr),y
+    iny
+    lda #'o'
+    sta (status_ptr),y
+    iny
+    lda #'u'
+    sta (status_ptr),y
+    iny
+    lda #' '
+    sta (status_ptr),y
+    iny
+    lda #'D'
+    sta (status_ptr),y
+    iny
+    lda #'i'
+    sta (status_ptr),y
+    iny
+    lda #'e'
+    sta (status_ptr),y
+    iny
+    lda #'d'
+    sta (status_ptr),y
+
+    ; Freeze the game loop
+death_loop
+    jmp death_loop
 .endp
