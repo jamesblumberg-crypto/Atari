@@ -151,6 +151,8 @@ blocked
     tax                         ; Use as index
     lda monster_hp_table,x      ; Load monster's max HP
     sta monster_hp              ; Store in monster_hp variable
+    lda monster_dmg_table,x     ; Load monster's damage
+    sta monster_dmg             ; Store in monster_dmg variable
 
 combat_loop
     ; Player attacks monster
@@ -159,12 +161,26 @@ combat_loop
     sbc player_melee_dmg        ; Subtract player's damage
     sta monster_hp              ; Update monster HP
     bmi monster_dead            ; If negative, monster is dead
-    bne combat_loop             ; If still positive, keep attacking
+    beq monster_dead            ; If zero, monster is dead
+
+monster_counter
+    ; Monster survived - it counter-attacks!
+    lda player_hp
+    sec
+    sbc monster_dmg             ; Subtract monster's damage
+    sta player_hp               ; Update player HP
+    bmi player_dead             ; If negative, player died
+    beq player_dead             ; If zero, player died
+    jmp combat_loop             ; Continue combat
 
 monster_dead
     ; Monster died - remove from map
     ldy #0
     lda #MAP_FLOOR
     sta (dir_ptr),y
+    rts
+
+player_dead
+    ; Player died - for now just return (will handle death in item #5)
     rts
     .endp

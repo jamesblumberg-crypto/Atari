@@ -124,6 +124,9 @@ tmp1 = $e2
 ; Combat variables
 monster_hp           = $e3
 player_melee_dmg     = $e4
+monster_dmg          = $e5
+player_hp            = $e6
+player_max_hp        = $e7
 
 
 
@@ -179,6 +182,10 @@ gold = $2a
 	; Initialize combat stats
 	lda #10
 	sta player_melee_dmg        ; Player does 10 damage per hit
+
+	lda #100
+	sta player_hp               ; Player starts with 100 HP
+	sta player_max_hp           ; Max HP is also 100
 
 	place_monsters #255 num_monsters
 	
@@ -730,6 +737,10 @@ place
 ; Monster tiles are 44-51, so subtract 44 to get index
 monster_hp_table
 	.byte 10, 20, 20, 30, 30, 40, 40, 50
+
+; Monster damage table - indexed by monster type (0-7)
+monster_dmg_table
+	.byte 5, 5, 10, 10, 15, 15, 20, 25
 
 	icl 'macros.asm'
 	icl 'hardware.asm'
