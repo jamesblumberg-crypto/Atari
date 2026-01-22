@@ -291,8 +291,6 @@ draw_right
 
 	; Calculate number of full segments (10 XP each)
 	lda player_xp
-	clc
-	adc #9                     ; Bias for ceiling division
 	ldx #0                     ; X counts full segments
 calc_segments
 	cmp #10                    ; Is XP >= 10?
