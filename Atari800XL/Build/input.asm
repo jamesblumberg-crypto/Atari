@@ -194,8 +194,47 @@ player_dead
     ; Update HP bar to show 0 HP
     jsr update_hp_bar
 
+    ; Death animation - flash screen red 5 times
+    lda #5                      ; Number of flashes
+    sta tmp2                    ; Save flash counter
+death_flash
+    ; Save current colors
+    lda COLOR0
+    sta tmp1
+
+    ; Flash to red
+    lda #red
+    sta COLOR0
+    sta COLOR1
+    sta COLOR2
+    sta COLOR4
+
+    ; Delay
+    ldx #10
+    jsr delay
+
+    ; Restore colors
+    lda tmp1
+    sta COLOR0
+    mva #red COLOR1
+    mva #blue COLOR2
+    mva #black COLOR4
+
+    ; Delay
+    ldx #10
+    jsr delay
+
+    dec tmp2
+    bne death_flash
+
+    ; Final effect - turn everything dark red
+    lda #$32                    ; Dark red
+    sta COLOR0
+    sta COLOR1
+    sta COLOR2
+    sta COLOR4
+
 death_loop
     ; Game over - infinite loop freezes the game
-    ; Empty HP bar shows player is dead
     jmp death_loop
     .endp
