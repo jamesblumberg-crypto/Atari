@@ -820,6 +820,11 @@ monster_hp_table
 monster_dmg_table
 	.byte 3, 5, 7, 9, 11, 13, 15, 17
 
+; Monster XP reward table - indexed by monster type (0-7)
+; XP rewards scale with monster difficulty (HP and damage)
+monster_xp_table
+	.byte 5, 10, 10, 15, 15, 20, 20, 25
+
 	icl 'macros.asm'
 	icl 'hardware.asm'
 	icl 'labels.asm'
