@@ -143,72 +143,45 @@ blocked
     .endp
 
 ; Attack a monster at dir_ptr location
-; Simple one-hit kill for now
-; .proc attack_monster
-;     ldy #0
-;     lda #MAP_FLOOR              ; Replace monster with floor
-;     sta (dir_ptr),y             ; Remove monster from map
-;     rts
-;     .endp
-.proc attack_monster_old
-    ldy #0
-    lda (dir_ptr),y         ; Grab the monster tile (44-51 right now)
-    sta tmp                 ; Save it briefly if needed later
-
-    ; === YOU STRIKE FIRST ===
-    lda #MAP_FLOOR
-    sta (dir_ptr),y         ; Monster dies instantly (keep your one-hit for now)
-
-    ; === MONSTER COUNTERS (the bite back) ===
-    lda player_hp
-    sec
-    sbc #5                  ; Monster hits for 5 dmg — tweak this later for variety
-    sta player_hp
-    bcs no_death            ; Still alive?
-
-    lda #0
-    sta player_hp
-    ;jmp player_death        ; Your death handler (add if not there yet)
-
-no_death
-    jsr update_hp_bar       ; Show the ouch! Bar drops visibly
-
-    rts
-.endp
-
-; New attack routine that also applies monster damage to the player
 .proc attack_monster
     ldy #0
-    lda (dir_ptr),y         ; Grab the monster tile (44-51 right now)
-    sta tmp                 ; Save the monster tile for damage lookup
-
-    ; === YOU STRIKE FIRST ===
-    lda #MAP_FLOOR
-    sta (dir_ptr),y         ; Monster dies instantly
-
-    ; === MONSTER COUNTERS ===
-    lda tmp
+    lda (dir_ptr),y             ; Load monster tile ID (44-51)
     sec
-    sbc #44                 ; Normalize monster tile to index 0-7
-    tax
-    lda monster_damage_table,x
-    sta monster_dmg
+    sbc #44                     ; Convert to index (0-7)
+    tax                         ; Use as index
+    lda monster_hp_table,x      ; Load monster's max HP
+    sta monster_hp              ; Store in monster_hp variable
+    lda monster_dmg_table,x     ; Load monster's damage
+    sta monster_dmg             ; Store in monster_dmg variable
 
+combat_loop
+    ; Player attacks monster
+    lda monster_hp
+    sec
+    sbc player_melee_dmg        ; Subtract player's damage
+    sta monster_hp              ; Update monster HP
+    bmi monster_dead            ; If negative, monster is dead
+    beq monster_dead            ; If zero, monster is dead
+
+monster_counter
+    ; Monster survived - it counter-attacks!
     lda player_hp
     sec
-    sbc monster_dmg         ; Apply monster damage
-    bcs no_death            ; Still alive?
+    sbc monster_dmg             ; Subtract monster's damage
+    sta player_hp               ; Update player HP
+    bmi player_dead             ; If negative, player died
+    beq player_dead             ; If zero, player died
+    jmp combat_loop             ; Continue combat
 
-    lda #0                  ; Clamp at zero on underflow
-    sta player_hp
-    jsr update_hp_bar
-    jsr player_death        ; Show death text and handle future logic
+monster_dead
+    ; Monster died - remove from map
+    ldy #0
+    lda #MAP_FLOOR
+    sta (dir_ptr),y
     rts
-no_death
-    sta player_hp
-    jsr update_hp_bar
 
-    ; TODO: add player_death handling when ready
+player_dead
+    ; Player died - for now just return (will handle death in item #5)
     rts
 .endp
 
