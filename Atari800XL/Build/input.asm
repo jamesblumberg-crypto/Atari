@@ -145,10 +145,10 @@ blocked
 ; Attack a monster at dir_ptr location
 .proc attack_monster
     ldy #0
-    lda (dir_ptr),y             ; Load monster tile ID (88-107)
+    lda (dir_ptr),y             ; Load monster tile ID (44-51)
     sta tmp                     ; Save tile ID for later XP calculation
     sec
-    sbc #88                     ; Convert tile 88-107 to index 0-19
+    sbc #44                     ; Convert tile 44-51 to index 0-7
     tax                         ; Use as index
     lda monster_hp_table,x      ; Load monster's max HP
     sta monster_hp              ; Store in monster_hp variable
@@ -184,7 +184,7 @@ monster_dead
     ; Monster died - award XP based on monster type
     lda tmp                     ; Recall monster tile ID we saved earlier
     sec
-    sbc #88                     ; Convert tile 88-107 to index 0-19
+    sbc #44                     ; Convert tile 44-51 to index 0-7
     tax
     lda monster_xp_table,x      ; Load XP reward from table
     clc
