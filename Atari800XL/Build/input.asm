@@ -177,10 +177,6 @@ monster_counter
     ; Update the HP bar to show damage
     jsr update_hp_bar
 
-    ; Small delay so combat isn't instant
-    ldx #3                      ; Very brief delay
-    jsr delay
-
     jmp combat_loop             ; Continue combat
 
 monster_dead
@@ -188,10 +184,6 @@ monster_dead
     ldy #0
     lda #MAP_FLOOR
     sta (dir_ptr),y
-
-    ; Update HP bar to show current HP after combat
-    jsr update_hp_bar
-
     rts
 
 player_dead
