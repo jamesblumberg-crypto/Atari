@@ -169,6 +169,14 @@ monster_counter
     sec
     sbc monster_dmg             ; Subtract monster's damage
     sta player_hp               ; Update player HP
+
+    ; Update the HP bar to show damage
+    jsr update_hp_bar
+
+    ; Add delay so player can see the damage
+    ldx #20                     ; Delay ~1/3 second
+    jsr delay
+
     bmi player_dead             ; If negative, player died
     beq player_dead             ; If zero, player died
     jmp combat_loop             ; Continue combat
@@ -184,6 +192,13 @@ player_dead
     ; Player died - set HP to 0
     lda #0
     sta player_hp               ; Ensure HP is exactly 0
+
+    ; Update HP bar to show 0 HP
+    jsr update_hp_bar
+
+    ; Small delay before showing death message
+    ldx #30
+    jsr delay
 
     ; Display "You Died" on status line (using Atari screen codes)
     ; Status line is at top of screen
