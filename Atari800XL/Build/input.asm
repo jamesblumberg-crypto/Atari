@@ -178,7 +178,7 @@ monster_counter
     jsr update_hp_bar
 
     ; Add delay so player can see the damage
-    ldx #20                     ; Delay ~1/3 second
+    ldx #10                     ; Delay ~1/6 second (reduced)
     jsr delay
 
     jmp combat_loop             ; Continue combat
@@ -202,33 +202,33 @@ player_dead
     ldx #30
     jsr delay
 
-    ; Display "You Died" on status line (using Atari screen codes)
+    ; Display "YOU DIED" on status line (using Atari internal screen codes)
     ; Status line is at top of screen
     mwa #status_line tmp_addr1
     ldy #16                     ; Center position on 40-column line
 
-    lda #57                     ; 'Y' (uppercase)
+    lda #57                     ; 'Y'
     sta (tmp_addr1),y
     iny
-    lda #111                    ; 'o' (lowercase)
+    lda #47                     ; 'O'
     sta (tmp_addr1),y
     iny
-    lda #117                    ; 'u' (lowercase)
+    lda #53                     ; 'U'
     sta (tmp_addr1),y
     iny
     lda #0                      ; space
     sta (tmp_addr1),y
     iny
-    lda #36                     ; 'D' (uppercase)
+    lda #36                     ; 'D'
     sta (tmp_addr1),y
     iny
-    lda #105                    ; 'i' (lowercase)
+    lda #41                     ; 'I'
     sta (tmp_addr1),y
     iny
-    lda #101                    ; 'e' (lowercase)
+    lda #37                     ; 'E'
     sta (tmp_addr1),y
     iny
-    lda #100                    ; 'd' (lowercase)
+    lda #36                     ; 'D'
     sta (tmp_addr1),y
 
 death_loop
