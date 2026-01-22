@@ -284,9 +284,65 @@ draw_right
 	rts
 .endp
 
+; XP bar has 9 segments, each represents 10 XP (90 XP for full bar)
 .proc update_xp_bar
-    ; TODO: draw XP bar
-    rts
+	mwa #screen screen_ptr
+	adw screen_ptr #(screen_char_width * 3 + 28)  ; Position at start of XP bar (row 3, col 28)
+
+	; Calculate number of full segments (10 XP each)
+	lda player_xp
+	clc
+	adc #9                     ; Bias for ceiling division
+	ldx #0                     ; X counts full segments
+calc_segments
+	cmp #10                    ; Is XP >= 10?
+	bcc draw_bars              ; If less, start drawing
+	sec
+	sbc #10                    ; Subtract 10
+	inx                        ; Increment segment counter
+	cpx #9                     ; Max 9 segments
+	bcc calc_segments
+
+draw_bars
+	stx tmp                    ; Save number of full segments
+
+	; Draw left border
+	ldy #0
+	lda #UI_BAR_LEFT
+	sta (screen_ptr),y
+	inc16 screen_ptr
+
+	; Draw full segments
+	ldx tmp
+draw_full
+	cpx #0
+	beq draw_empty             ; No more full segments
+	lda #UI_XP_FULL
+	sta (screen_ptr),y
+	inc16 screen_ptr
+	dex
+	jmp draw_full
+
+draw_empty
+	; Fill remaining with empty segments up to 9
+	lda tmp
+fill_loop
+	cmp #9
+	bcs draw_right             ; Already drew 9 slots
+	lda #UI_BAR_EMPTY
+	sta (screen_ptr),y
+	inc16 screen_ptr
+	lda tmp
+	clc
+	adc #1
+	sta tmp
+	jmp fill_loop
+
+draw_right
+	lda #UI_BAR_RIGHT
+	sta (screen_ptr),y
+
+	rts
 .endp
 
 
@@ -606,18 +662,18 @@ loop
 
 	adw screen_ptr #screen_char_width
 
-	; XP Bar
+	; XP Bar (start empty - player has 0 XP initially)
 	blit_char #UI_XP_ICON_LEFT screen_ptr #25
 	blit_char #UI_XP_ICON_RIGHT screen_ptr #26
 	blit_char #UI_COLON screen_ptr #27
 	blit_char #UI_BAR_LEFT screen_ptr #28
-	blit_char #UI_XP_FULL screen_ptr #29
-	blit_char #UI_XP_FULL screen_ptr #30
-	blit_char #UI_XP_FULL screen_ptr #31
-	blit_char #UI_XP_FULL screen_ptr #32
-	blit_char #UI_XP_FULL screen_ptr #33
-	blit_char #UI_XP_FULL screen_ptr #34
-	blit_char #UI_XP_HALF screen_ptr #35
+	blit_char #UI_BAR_EMPTY screen_ptr #29
+	blit_char #UI_BAR_EMPTY screen_ptr #30
+	blit_char #UI_BAR_EMPTY screen_ptr #31
+	blit_char #UI_BAR_EMPTY screen_ptr #32
+	blit_char #UI_BAR_EMPTY screen_ptr #33
+	blit_char #UI_BAR_EMPTY screen_ptr #34
+	blit_char #UI_BAR_EMPTY screen_ptr #35
 	blit_char #UI_BAR_EMPTY screen_ptr #36
 	blit_char #UI_BAR_EMPTY screen_ptr #37
 	blit_char #UI_BAR_RIGHT screen_ptr #38
