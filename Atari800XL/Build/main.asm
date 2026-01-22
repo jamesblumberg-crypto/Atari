@@ -878,8 +878,11 @@ monster_dmg_table
 
 ; Monster XP reward table - indexed by monster type (0-7)
 ; XP rewards scale with monster difficulty (HP and damage)
+; Format: HP/Damage -> XP reward
 monster_xp_table
-	.byte 5, 10, 10, 15, 15, 20, 20, 25
+	.byte 10, 15, 20, 25, 30, 35, 40, 50
+	; 10HP/3dmg->10XP, 20HP/5dmg->15XP, 20HP/7dmg->20XP, 30HP/9dmg->25XP,
+	; 30HP/11dmg->30XP, 40HP/13dmg->35XP, 40HP/15dmg->40XP, 50HP/17dmg->50XP
 
 	icl 'macros.asm'
 	icl 'hardware.asm'
