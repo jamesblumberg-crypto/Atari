@@ -177,8 +177,8 @@ monster_counter
     ; Update the HP bar to show damage
     jsr update_hp_bar
 
-    ; Add delay so player can see the damage
-    ldx #10                     ; Delay ~1/6 second (reduced)
+    ; Small delay so combat isn't instant
+    ldx #3                      ; Very brief delay
     jsr delay
 
     jmp combat_loop             ; Continue combat
@@ -188,6 +188,10 @@ monster_dead
     ldy #0
     lda #MAP_FLOOR
     sta (dir_ptr),y
+
+    ; Update HP bar to show current HP after combat
+    jsr update_hp_bar
+
     rts
 
 player_dead
@@ -198,39 +202,8 @@ player_dead
     ; Update HP bar to show 0 HP
     jsr update_hp_bar
 
-    ; Small delay before showing death message
-    ldx #30
-    jsr delay
-
-    ; Display "YOU DIED" on status line (using Atari internal screen codes)
-    ; Status line is at top of screen
-    mwa #status_line tmp_addr1
-    ldy #16                     ; Center position on 40-column line
-
-    lda #57                     ; 'Y'
-    sta (tmp_addr1),y
-    iny
-    lda #47                     ; 'O'
-    sta (tmp_addr1),y
-    iny
-    lda #53                     ; 'U'
-    sta (tmp_addr1),y
-    iny
-    lda #0                      ; space
-    sta (tmp_addr1),y
-    iny
-    lda #36                     ; 'D'
-    sta (tmp_addr1),y
-    iny
-    lda #41                     ; 'I'
-    sta (tmp_addr1),y
-    iny
-    lda #37                     ; 'E'
-    sta (tmp_addr1),y
-    iny
-    lda #36                     ; 'D'
-    sta (tmp_addr1),y
-
 death_loop
-    jmp death_loop              ; Freeze the game (infinite loop)
+    ; Game over - infinite loop freezes the game
+    ; Empty HP bar shows player is dead
+    jmp death_loop
     .endp
