@@ -181,9 +181,39 @@ monster_dead
     rts
 
 player_dead
-    ; Player died - set HP to 0 and freeze the game
+    ; Player died - set HP to 0
     lda #0
     sta player_hp               ; Ensure HP is exactly 0
+
+    ; Display "You Died" on status line (using Atari screen codes)
+    ; Status line is at top of screen
+    mwa #status_line tmp_addr1
+    ldy #16                     ; Center position on 40-column line
+
+    lda #57                     ; 'Y' (uppercase)
+    sta (tmp_addr1),y
+    iny
+    lda #111                    ; 'o' (lowercase)
+    sta (tmp_addr1),y
+    iny
+    lda #117                    ; 'u' (lowercase)
+    sta (tmp_addr1),y
+    iny
+    lda #0                      ; space
+    sta (tmp_addr1),y
+    iny
+    lda #36                     ; 'D' (uppercase)
+    sta (tmp_addr1),y
+    iny
+    lda #105                    ; 'i' (lowercase)
+    sta (tmp_addr1),y
+    iny
+    lda #101                    ; 'e' (lowercase)
+    sta (tmp_addr1),y
+    iny
+    lda #100                    ; 'd' (lowercase)
+    sta (tmp_addr1),y
+
 death_loop
     jmp death_loop              ; Freeze the game (infinite loop)
     .endp
