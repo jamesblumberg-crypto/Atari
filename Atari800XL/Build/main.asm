@@ -221,6 +221,9 @@ monster_hp_table
 monster_dmg_table
     .byte 3,3,3,3,  5,5,5,5,  8,8,8,8
     .byte 12,12,12,12,15,15,15,15                    ; BRUTAL
+monster_xp_table
+    .byte 5,5,5,5,  10,10,10,10,  20,20,20,20    ; XP rewards scale with difficulty
+    .byte 30,30,30,30,40,40,40,40                ; Higher HP/damage = more XP
 
 skip_monster_tables
 	; Initialize the HP and XP bars to match player stats

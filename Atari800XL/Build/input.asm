@@ -205,9 +205,14 @@ combat_loop
     ; === MONSTER DIES === (metaphor slayed!)
     lda #MAP_FLOOR
     sta (dir_ptr),y
-    lda player_xp
+    ; Award XP based on monster type (tougher monsters = more XP)
+    lda tmp                 ; Recall monster tile ID we saved earlier
+    sec
+    sbc #44                 ; Convert to index (0-19)
+    tax
+    lda monster_xp_table,x  ; Load XP reward from table
     clc
-    adc #10                 ; XP drop
+    adc player_xp           ; Add to current XP
     sta player_xp
     jsr update_hp_bar       ; Refresh your bar (glow-up)
     jsr update_xp_bar       ; Show XP gain!
