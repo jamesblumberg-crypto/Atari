@@ -126,10 +126,7 @@ player_melee_dmg     = $e4
 monster_dmg          = $e5
 player_hp            = $e6
 player_max_hp        = $e7
-
-
-monster_hp     		= $f0  ; Grok Temp: current mon HP
-monster_dmg			= $f1  ; Grok Temp: current mon DMG
+player_xp            = $e8
 
 ; Colors
 white 				= $0a
