@@ -183,4 +183,40 @@ monster_dead
 player_dead
     ; Player died - for now just return (will handle death in item #5)
     rts
-    .endp
+.endp
+
+monster_damage_table
+    .byte 3,4,5,6,7,8,9,10  ; Per-monster damage for tiles 44-51
+
+.proc player_death
+    ; Write "You Died" centered on the status line
+    mwa #status_line status_ptr
+    ldy #16                  ; Start column to roughly center 7 characters on 40-col line
+    lda #'Y'
+    sta (status_ptr),y
+    iny
+    lda #'o'
+    sta (status_ptr),y
+    iny
+    lda #'u'
+    sta (status_ptr),y
+    iny
+    lda #' '
+    sta (status_ptr),y
+    iny
+    lda #'D'
+    sta (status_ptr),y
+    iny
+    lda #'i'
+    sta (status_ptr),y
+    iny
+    lda #'e'
+    sta (status_ptr),y
+    iny
+    lda #'d'
+    sta (status_ptr),y
+
+    ; Freeze the game loop
+death_loop
+    jmp death_loop
+.endp

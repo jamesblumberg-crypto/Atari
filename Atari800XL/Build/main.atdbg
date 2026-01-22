@@ -1,4 +1,0 @@
-.onexeclear
-.loadobj main.obj
-.onexerun .unloadsym kerneldb
-g
