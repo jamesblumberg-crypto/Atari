@@ -164,7 +164,7 @@ gold 			= $2a
 	lda #100
 	sta player_hp
 	sta player_max_hp
-	lda #10
+	lda #15
 	sta player_melee_dmg
 	lda #0
 	sta player_xp
@@ -187,8 +187,8 @@ gold 			= $2a
 	new_map()
 
 	; Initialize combat stats
-	lda #10
-	sta player_melee_dmg        ; Player does 10 damage per hit
+	lda #15
+	sta player_melee_dmg        ; Player does 15 damage per hit
 
 	lda #100
 	sta player_hp               ; Player starts with 100 HP
@@ -818,7 +818,7 @@ monster_hp_table
 
 ; Monster damage table - indexed by monster type (0-7)
 monster_dmg_table
-	.byte 5, 5, 10, 10, 15, 15, 20, 25
+	.byte 3, 5, 7, 9, 11, 13, 15, 17
 
 	icl 'macros.asm'
 	icl 'hardware.asm'
