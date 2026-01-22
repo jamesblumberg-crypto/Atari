@@ -170,6 +170,10 @@ monster_counter
     sbc monster_dmg             ; Subtract monster's damage
     sta player_hp               ; Update player HP
 
+    ; Check if player died (must check before calling subroutines)
+    bmi player_dead             ; If negative, player died
+    beq player_dead             ; If zero, player died
+
     ; Update the HP bar to show damage
     jsr update_hp_bar
 
@@ -177,8 +181,6 @@ monster_counter
     ldx #20                     ; Delay ~1/3 second
     jsr delay
 
-    bmi player_dead             ; If negative, player died
-    beq player_dead             ; If zero, player died
     jmp combat_loop             ; Continue combat
 
 monster_dead
