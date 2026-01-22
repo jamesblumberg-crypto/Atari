@@ -146,7 +146,7 @@ blocked
 .proc attack_monster
     ldy #0
     lda (dir_ptr),y             ; Load monster tile ID (44-51)
-    sta tmp                     ; Save tile ID for later XP calculation
+    sta tmp1                    ; Save tile ID for later XP calculation (use tmp1, not tmp!)
     sec
     sbc #44                     ; Convert tile 44-51 to index 0-7
     tax                         ; Use as index
@@ -182,7 +182,7 @@ monster_counter
 
 monster_dead
     ; Monster died - award XP based on monster type
-    lda tmp                     ; Recall monster tile ID we saved earlier
+    lda tmp1                    ; Recall monster tile ID we saved earlier (in tmp1, not tmp)
     sec
     sbc #44                     ; Convert tile 44-51 to index 0-7
     tax
