@@ -117,6 +117,22 @@ check_monster
 check_passable
     is_passable()               ; Detect collision
     bcc blocked                 ; Carry flag == 0, so colliding
+
+    ; Check if current tile is a doorway - if so, close it after moving
+    ldy #0
+    lda (player_ptr),y          ; Load current tile (where player is standing)
+    cmp #MAP_DOORWAY            ; Is it a doorway?
+    bne move_player             ; No, just move
+
+close_doorway
+    ; Standing on doorway - save old position, move, then close the door
+    mwa player_ptr tmp_addr1    ; Save old position in tmp_addr1
+    mwa dir_ptr player_ptr      ; Move the player to the correct location
+    lda #MAP_DOOR               ; Load door tile
+    sta (tmp_addr1),y           ; Close the door at the old position
+    rts
+
+move_player
     mwa dir_ptr player_ptr      ; Move the player to the correct location
 
 blocked                         ; We are blocked
