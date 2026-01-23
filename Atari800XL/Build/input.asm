@@ -194,6 +194,9 @@ monster_dead
     ; Update XP bar to show new XP
     jsr update_xp_bar
 
+    ; Check if player leveled up
+    jsr check_level_up
+
     ; Remove monster from map
     ldy #0
     lda #MAP_FLOOR
