@@ -153,9 +153,9 @@ gold 			= $2a
 	setup_pmg()
 
 
-	
+
 	mva #16 starting_monster
-	mva #8 num_monsters
+	mva #4 num_monsters
 
 	lda #16
 	sta player_x
@@ -197,8 +197,8 @@ gold 			= $2a
 	sta player_hp               ; Player starts with 100 HP
 	sta player_max_hp           ; Max HP is also 100
 
-	place_monsters #255 num_monsters
-	
+	place_monsters num_monsters #8
+
 skip_monster_tables
 	; Initialize the HP and XP bars to match player stats
 	jsr update_hp_bar
