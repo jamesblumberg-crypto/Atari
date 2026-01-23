@@ -127,6 +127,7 @@ monster_dmg          = $e5
 player_hp            = $e6
 player_max_hp        = $e7
 player_xp            = $e8
+player_level         = $e9
 
 ; Colors
 white 				= $0a
@@ -168,6 +169,8 @@ gold 			= $2a
 	sta player_melee_dmg
 	lda #0
 	sta player_xp
+	lda #1
+	sta player_level
 	
 	mva #123 rand
 	mva #201 rand16
@@ -340,6 +343,49 @@ draw_right
 	lda #UI_BAR_RIGHT
 	sta (screen_ptr),y
 
+	rts
+.endp
+
+; Check if player has enough XP to level up
+; If player_xp >= 90, level up:
+;   - Increment player_level
+;   - Reset player_xp (carry over excess)
+;   - Restore player_hp to player_max_hp
+;   - Increase player_melee_dmg by 25%
+;   - Update HP and XP bars
+.proc check_level_up
+	lda player_xp
+	cmp #90                    ; Check if XP >= 90
+	bcc no_level_up            ; If less than 90, no level up
+
+level_up
+	; Subtract 90 from XP (carry over excess)
+	lda player_xp
+	sec
+	sbc #90
+	sta player_xp
+
+	; Increment level
+	inc player_level
+
+	; Restore HP to max
+	lda player_max_hp
+	sta player_hp
+
+	; Increase damage by 25% (new_dmg = old_dmg + old_dmg/4)
+	lda player_melee_dmg
+	sta tmp                    ; Save original damage
+	lsr                        ; Divide by 2
+	lsr                        ; Divide by 4 (now A = damage/4)
+	clc
+	adc tmp                    ; Add original damage (A = damage + damage/4 = 1.25 * damage)
+	sta player_melee_dmg
+
+	; Update both bars to reflect changes
+	jsr update_hp_bar
+	jsr update_xp_bar
+
+no_level_up
 	rts
 .endp
 
