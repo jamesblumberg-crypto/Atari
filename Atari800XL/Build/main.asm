@@ -203,6 +203,7 @@ skip_monster_tables
 	; Initialize the HP and XP bars to match player stats
 	jsr update_hp_bar
 	jsr update_xp_bar
+	jsr update_level_display
 
 	lda #0
 	sta no_clip
@@ -346,6 +347,23 @@ draw_right
 	rts
 .endp
 
+; Update the level display in the HUD (top right after HP bar)
+; Displays level 1-9 as a single digit at position 38
+.proc update_level_display
+	mwa #screen screen_ptr
+	adw screen_ptr #38         ; Position at level number (col 38)
+
+	; Convert level to UI_NUMBER character
+	; UI_NUMBER_0 = 44, so UI_NUMBER_0 + level = correct character
+	lda player_level
+	clc
+	adc #UI_NUMBER_0           ; Add base offset to get UI_NUMBER_X
+	ldy #0
+	sta (screen_ptr),y
+
+	rts
+.endp
+
 ; Check if player has enough XP to level up
 ; If player_xp >= 90, level up:
 ;   - Increment player_level
@@ -381,9 +399,10 @@ level_up
 	adc tmp                    ; Add original damage (A = damage + damage/4 = 1.25 * damage)
 	sta player_melee_dmg
 
-	; Update both bars to reflect changes
+	; Update all displays to reflect changes
 	jsr update_hp_bar
 	jsr update_xp_bar
+	jsr update_level_display
 
 no_level_up
 	rts
@@ -670,6 +689,10 @@ loop
 	blit_char #UI_HP_FULL screen_ptr #33
 	blit_char #UI_HP_3_QTR screen_ptr #34
 	blit_char #UI_BAR_RIGHT screen_ptr #35
+
+	; Level display (LV:X format)
+	blit_char #UI_COLON screen_ptr #37
+	blit_char #UI_NUMBER_1 screen_ptr #38
 
 	adw screen_ptr #screen_char_width
 
