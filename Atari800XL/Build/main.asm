@@ -1028,15 +1028,17 @@ place
 	rts
 	.endp
 
-; Place a bow item at player start position (16,16)
-; Offset = 16 * 139 + 16 = 2240
+; Place a bow item one tile right of player start (17,16)
+; Offset = 16 * 139 + 17 = 2241
 .proc place_bow
 	mwa #map map_ptr
-	adw map_ptr #2240           ; Pre-calculated: 16 rows * 139 width + 16 cols
+	adw map_ptr #2241           ; Pre-calculated: 16 rows * 139 width + 17 cols
 
-	; Place the bow at player start - will be visible immediately
+	; DEBUG: Place a monster (44) first to verify position works
+	; If you see a monster, the position is correct and issue is with tile 56 graphics
+	; Change back to MAP_BOW once confirmed
 	ldy #0
-	lda #MAP_BOW
+	lda #44                     ; Monster tile for testing (change to MAP_BOW when working)
 	sta (map_ptr),y
 
 	rts
