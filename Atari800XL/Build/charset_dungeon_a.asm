@@ -1006,23 +1006,23 @@
 	.byte %00000000
 	.byte %00000000
 	.byte %00000000
-	; char 112
-	.byte %01011001
-	.byte %01011010
-	.byte %01011001
-	.byte %01011010
-	.byte %01011001
-	.byte %01011010
-	.byte %01001000
+	; char 112 - BOW (left half - curved bow)
 	.byte %00000000
-	; char 113
-	.byte %01100101
-	.byte %10100101
-	.byte %01100101
-	.byte %10100101
-	.byte %01100101
-	.byte %10100101
-	.byte %00100001
+	.byte %00010100
+	.byte %01000001
+	.byte %01000001
+	.byte %01000001
+	.byte %01000001
+	.byte %00010100
+	.byte %00000000
+	; char 113 - BOW (right half - arrow)
+	.byte %00000000
+	.byte %00000000
+	.byte %00000011
+	.byte %10101011
+	.byte %10101011
+	.byte %00000011
+	.byte %00000000
 	.byte %00000000
 	; char 114
 	.byte %00000000
