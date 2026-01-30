@@ -1028,14 +1028,13 @@ place
 	rts
 	.endp
 
-; Place a bow item at a fixed position near player start
-; Player starts at (16,16), place bow at (18,16)
-; Offset = 16 * 139 + 18 = 2242
+; Place a bow item at player start position (16,16)
+; Offset = 16 * 139 + 16 = 2240
 .proc place_bow
 	mwa #map map_ptr
-	adw map_ptr #2242           ; Pre-calculated: 16 rows * 139 width + 18 cols
+	adw map_ptr #2240           ; Pre-calculated: 16 rows * 139 width + 16 cols
 
-	; Place the bow
+	; Place the bow at player start - will be visible immediately
 	ldy #0
 	lda #MAP_BOW
 	sta (map_ptr),y
