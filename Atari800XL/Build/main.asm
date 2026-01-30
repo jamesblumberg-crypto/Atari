@@ -1028,53 +1028,16 @@ place
 	rts
 	.endp
 
-; Place a bow item near player starting position (16,16)
-; Searches in a 16x16 area around start to ensure it's reachable
+; Place a bow item at a fixed position near player start
+; Player starts at (16,16), place bow at (18,16)
+; Offset = 16 * 139 + 18 = 2242
 .proc place_bow
-place_loop
-	; Generate X in range 10-26 (near player start X=16)
-	jsr random16
-	and #$0f                    ; Mask to 0-15
-	clc
-	adc #10                     ; Add offset: result is 10-25
-	sta tmp_x
+	mwa #map map_ptr
+	adw map_ptr #2242           ; Pre-calculated: 16 rows * 139 width + 18 cols
 
-	; Generate Y in range 10-26 (near player start Y=16)
-	jsr random16
-	and #$0f                    ; Mask to 0-15
-	clc
-	adc #10                     ; Add offset: result is 10-25
-	sta tmp_y
-
-	; Calculate map position manually: map + (tmp_y * map_width) + tmp_x
-	; This avoids using advance_ptr macro in a loop (label conflicts)
-	mwa #map map_ptr            ; Start at map base
-
-	; Add tmp_y rows (multiply by map_width)
-	ldy tmp_y
-	beq add_x                   ; Skip if Y is 0
-add_rows
-	adw map_ptr #map_width
-	dey
-	bne add_rows
-
-add_x
-	; Add tmp_x columns
-	lda map_ptr
-	clc
-	adc tmp_x
-	sta map_ptr
-	bcc no_carry
-	inc map_ptr+1
-no_carry
-
-	; Check if this tile is floor
+	; Place the bow
 	ldy #0
-	lda (map_ptr),y
-	cmp #MAP_FLOOR              ; Only place on floor tiles
-	bne place_loop
-
-	lda #MAP_BOW                ; Place the bow
+	lda #MAP_BOW
 	sta (map_ptr),y
 
 	rts
