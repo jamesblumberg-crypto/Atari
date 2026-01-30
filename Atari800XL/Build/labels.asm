@@ -10,8 +10,8 @@ MAP_DOWN                = 120
 MAP_DOOR                = 4
 MAP_DOORWAY             = 59
 
-; Item tiles
-MAP_BOW                 = 52    ; Bow pickup item
+; Item tiles (must be > 55 to avoid monster graphics overwrite range 44-55)
+MAP_BOW                 = 56    ; Bow pickup item (uses chars 112-113)
 
 UI_VERT_BORDER          = 1
 UI_HORIZ_BORDER         = 4
