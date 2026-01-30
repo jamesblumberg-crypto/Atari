@@ -934,22 +934,22 @@
 	.byte %00000000
 	.byte %00000000
 	.byte %00000000
-	; char 104
+	; char 104 - BOW (left half - curved bow)
+	.byte %00000000
+	.byte %00010100
+	.byte %01000001
+	.byte %01000001
+	.byte %01000001
+	.byte %01000001
+	.byte %00010100
+	.byte %00000000
+	; char 105 - BOW (right half - arrow)
 	.byte %00000000
 	.byte %00000000
-	.byte %00000000
-	.byte %00000000
-	.byte %00000000
-	.byte %00000000
-	.byte %00000000
-	.byte %00000000
-	; char 105
-	.byte %00000000
-	.byte %00000000
-	.byte %00000000
-	.byte %00000000
-	.byte %00000000
-	.byte %00000000
+	.byte %00000011
+	.byte %10101011
+	.byte %10101011
+	.byte %00000011
 	.byte %00000000
 	.byte %00000000
 	; char 106
