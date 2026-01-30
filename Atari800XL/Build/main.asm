@@ -209,7 +209,6 @@ gold 			= $2a
 	sta player_max_hp           ; Max HP is also 100
 
 	place_monsters num_monsters #8
-	jsr place_bow               ; Place a bow somewhere on the map
 
 skip_monster_tables
 	; Initialize the HP and XP bars to match player stats
@@ -221,8 +220,9 @@ skip_monster_tables
 
 	lda #0
 	sta no_clip
-	
+
 	init_player_ptr()
+	jsr place_bow               ; Place bow on floor adjacent to player
 
 game
 	mva RTCLK2 clock
@@ -1028,19 +1028,57 @@ place
 	rts
 	.endp
 
-; Place a bow item one tile right of player start (17,16)
-; Offset = 16 * 139 + 17 = 2241
+; Place a bow item on a floor tile adjacent to player
 .proc place_bow
-	mwa #map map_ptr
-	adw map_ptr #2241           ; Pre-calculated: 16 rows * 139 width + 17 cols
+	; Use player_ptr as our base - it's already set up by init_player_ptr
+	lda player_ptr
+	sta map_ptr
+	lda player_ptr+1
+	sta map_ptr+1
 
-	; DEBUG: Place a monster (44) first to verify position works
-	; If you see a monster, the position is correct and issue is with tile 56 graphics
-	; Change back to MAP_BOW once confirmed
+	; Try right of player (add 1)
+	inc16 map_ptr
 	ldy #0
-	lda #44                     ; Monster tile for testing (change to MAP_BOW when working)
-	sta (map_ptr),y
+	lda (map_ptr),y
+	cmp #MAP_FLOOR
+	beq found_floor
 
+	; Try below player (add map_width from player position)
+	lda player_ptr
+	sta map_ptr
+	lda player_ptr+1
+	sta map_ptr+1
+	adw map_ptr #map_width
+	lda (map_ptr),y
+	cmp #MAP_FLOOR
+	beq found_floor
+
+	; Try left of player (subtract 1 from player)
+	lda player_ptr
+	sta map_ptr
+	lda player_ptr+1
+	sta map_ptr+1
+	dec16 map_ptr
+	lda (map_ptr),y
+	cmp #MAP_FLOOR
+	beq found_floor
+
+	; Try above player (subtract map_width)
+	lda player_ptr
+	sta map_ptr
+	lda player_ptr+1
+	sta map_ptr+1
+	sbw map_ptr #map_width
+	lda (map_ptr),y
+	cmp #MAP_FLOOR
+	beq found_floor
+
+	; No floor found adjacent - skip placing bow
+	rts
+
+found_floor
+	lda #MAP_BOW
+	sta (map_ptr),y
 	rts
 	.endp
 
