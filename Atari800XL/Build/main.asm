@@ -1028,17 +1028,22 @@ place
 	rts
 	.endp
 
-; Place a bow item randomly on the map
+; Place a bow item near player starting position (16,16)
+; Searches in a 16x16 area around start to ensure it's reachable
 .proc place_bow
 place_loop
+	; Generate X in range 10-26 (near player start X=16)
 	jsr random16
-	cmp #map_width
-	bcs place_loop
+	and #$0f                    ; Mask to 0-15
+	clc
+	adc #10                     ; Add offset: result is 10-25
 	sta tmp_x
 
+	; Generate Y in range 10-26 (near player start Y=16)
 	jsr random16
-	cmp #map_height
-	bcs place_loop
+	and #$0f                    ; Mask to 0-15
+	clc
+	adc #10                     ; Add offset: result is 10-25
 	sta tmp_y
 
 	advance_ptr #map map_ptr #map_width tmp_y tmp_x
