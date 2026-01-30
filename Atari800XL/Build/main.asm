@@ -1034,9 +1034,11 @@ place
 	mwa #map map_ptr
 	adw map_ptr #2241           ; Pre-calculated: 16 rows * 139 width + 17 cols
 
-	; Place the bow - should be visible to the right of player
+	; DEBUG: Place a monster (44) first to verify position works
+	; If you see a monster, the position is correct and issue is with tile 56 graphics
+	; Change back to MAP_BOW once confirmed
 	ldy #0
-	lda #MAP_BOW
+	lda #44                     ; Monster tile for testing (change to MAP_BOW when working)
 	sta (map_ptr),y
 
 	rts
