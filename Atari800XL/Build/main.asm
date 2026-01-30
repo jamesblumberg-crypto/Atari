@@ -129,6 +129,11 @@ player_max_hp        = $e7
 player_xp            = $e8
 player_level         = $e9
 
+; Weapon system variables
+player_ranged_dmg    = $ea  ; Ranged weapon damage (bow)
+has_bow              = $eb  ; 0 = no bow, 1 = has bow
+equipped_weapon      = $ec  ; 0 = melee, 1 = ranged (bow)
+
 ; Colors
 white 				= $0a
 red 				= $32
@@ -171,6 +176,12 @@ gold 			= $2a
 	sta player_xp
 	lda #1
 	sta player_level
+
+	; Initialize weapon system
+	lda #0
+	sta player_ranged_dmg   ; No ranged damage until bow acquired
+	sta has_bow             ; Player starts without bow
+	sta equipped_weapon     ; Start with melee equipped (0 = melee)
 	
 	mva #123 rand
 	mva #201 rand16
@@ -198,12 +209,15 @@ gold 			= $2a
 	sta player_max_hp           ; Max HP is also 100
 
 	place_monsters num_monsters #8
+	jsr place_bow               ; Place a bow somewhere on the map
 
 skip_monster_tables
 	; Initialize the HP and XP bars to match player stats
 	jsr update_hp_bar
 	jsr update_xp_bar
 	jsr update_level_display
+	jsr update_melee_display
+	jsr update_ranged_display
 
 	lda #0
 	sta no_clip
@@ -214,6 +228,7 @@ game
 	mva RTCLK2 clock
 	animate
 	get_input
+	jsr read_keyboard           ; Check for weapon switching keys
 	jmp game
 
 .macro set_colors
@@ -364,6 +379,84 @@ draw_right
 	rts
 .endp
 
+; Update the melee damage display in the HUD (row 1, positions 28-30)
+; Displays 3-digit number (000-255)
+.proc update_melee_display
+    mwa #screen screen_ptr
+    adw screen_ptr #(screen_char_width + 28)  ; Row 1, col 28
+
+    ; Convert player_melee_dmg to 3 digits
+    lda player_melee_dmg
+    jsr display_3_digits
+
+    rts
+.endp
+
+; Update the ranged damage display in the HUD (row 1, positions 35-37)
+; Displays 3-digit number (000-255)
+.proc update_ranged_display
+    mwa #screen screen_ptr
+    adw screen_ptr #(screen_char_width + 35)  ; Row 1, col 35
+
+    ; Convert player_ranged_dmg to 3 digits
+    lda player_ranged_dmg
+    jsr display_3_digits
+
+    rts
+.endp
+
+; Helper: Display a 3-digit number from A register at screen_ptr
+; Destroys: A, X, Y, tmp, tmp2
+.proc display_3_digits
+    sta tmp                     ; Save value to convert
+
+    ; Calculate hundreds digit
+    ldx #0
+hundreds_loop
+    cmp #100
+    bcc tens
+    sec
+    sbc #100
+    inx
+    jmp hundreds_loop
+
+tens
+    sta tmp2                    ; Save remainder for tens
+    txa
+    clc
+    adc #UI_NUMBER_0            ; Convert to UI character
+    ldy #0
+    sta (screen_ptr),y          ; Display hundreds digit
+
+    ; Calculate tens digit
+    lda tmp2
+    ldx #0
+tens_loop
+    cmp #10
+    bcc ones
+    sec
+    sbc #10
+    inx
+    jmp tens_loop
+
+ones
+    sta tmp2                    ; Save remainder for ones
+    txa
+    clc
+    adc #UI_NUMBER_0            ; Convert to UI character
+    ldy #1
+    sta (screen_ptr),y          ; Display tens digit
+
+    ; Display ones digit
+    lda tmp2
+    clc
+    adc #UI_NUMBER_0            ; Convert to UI character
+    ldy #2
+    sta (screen_ptr),y          ; Display ones digit
+
+    rts
+.endp
+
 ; Check if player has enough XP to level up
 ; If player_xp >= 90, level up:
 ;   - Increment player_level
@@ -403,6 +496,7 @@ level_up
 	jsr update_hp_bar
 	jsr update_xp_bar
 	jsr update_level_display
+	jsr update_melee_display
 
 no_level_up
 	rts
@@ -930,6 +1024,31 @@ place
 	sta (map_ptr),y
 	dex
 	bne pick
+
+	rts
+	.endp
+
+; Place a bow item randomly on the map
+.proc place_bow
+place_loop
+	jsr random16
+	cmp #map_width
+	bcs place_loop
+	sta tmp_x
+
+	jsr random16
+	cmp #map_height
+	bcs place_loop
+	sta tmp_y
+
+	advance_ptr #map map_ptr #map_width tmp_y tmp_x
+	ldy #0
+	lda (map_ptr),y
+	cmp #MAP_FLOOR              ; Only place on floor tiles
+	bne place_loop
+
+	lda #MAP_BOW                ; Place the bow
+	sta (map_ptr),y
 
 	rts
 	.endp
