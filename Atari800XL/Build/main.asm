@@ -209,7 +209,7 @@ gold 			= $2a
 	sta player_max_hp           ; Max HP is also 100
 
 	place_monsters num_monsters #8
-	jsr place_bow               ; Place a bow somewhere on the map
+	;jsr place_bow               ; Place a bow somewhere on the map (TEMP DISABLED FOR DEBUG)
 
 skip_monster_tables
 	; Initialize the HP and XP bars to match player stats
