@@ -28,3 +28,11 @@ RTCLK2 = $0014  ; Real-time clock (least significant byte)
 NMIEN  = $d40e
 VDSLST = $0200
 WSYNC  = $d40a
+
+; Keyboard
+CH     = $02fc  ; Keyboard character code (shadow register)
+CH_NONE = $ff   ; No key pressed
+
+; Key codes for weapon switching
+KEY_B  = $15    ; 'B' key code - equip bow
+KEY_M  = $25    ; 'M' key code - equip melee

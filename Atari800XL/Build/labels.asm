@@ -10,6 +10,9 @@ MAP_DOWN                = 120
 MAP_DOOR                = 4
 MAP_DOORWAY             = 59
 
+; Item tiles
+MAP_BOW                 = 52    ; Bow pickup item
+
 UI_VERT_BORDER          = 1
 UI_HORIZ_BORDER         = 4
 UI_TOP_TEE              = 10

@@ -108,11 +108,18 @@ none                            ; Nothing to do
 check_monster
     ; Check if target tile is a monster (tiles 44-51 for 8 monsters)
     cmp #44                     ; Is it >= monster start?
-    bcc check_passable          ; No, check if passable
+    bcc check_item              ; No, check for items
     cmp #52                     ; Is it < monster end (44 + 8)?
-    bcs check_passable          ; No, check if passable
+    bcs check_item              ; No, check for items
     jsr attack_monster          ; Yes, attack the monster!
     rts                         ; Don't move after attacking
+
+check_item
+    ldi dir_ptr                 ; Re-load tile from direction
+    cmp #MAP_BOW                ; Is it a bow pickup?
+    bne check_passable          ; No, check if passable
+    jsr pickup_bow              ; Yes, pick up the bow!
+    ; Continue to move onto the tile after pickup
 
 check_passable
     is_passable()               ; Detect collision
@@ -172,10 +179,22 @@ blocked
     sta monster_dmg             ; Store in monster_dmg variable
 
 combat_loop
-    ; Player attacks monster
+    ; Player attacks monster - use equipped weapon's damage
+    lda equipped_weapon         ; Check which weapon is equipped
+    bne use_ranged_dmg          ; If non-zero, use ranged weapon
+
+use_melee_dmg
+    lda player_melee_dmg        ; Load melee damage
+    jmp do_attack
+
+use_ranged_dmg
+    lda player_ranged_dmg       ; Load ranged (bow) damage
+
+do_attack
+    sta tmp2                    ; Store damage amount temporarily (tmp1 has monster tile ID!)
     lda monster_hp
     sec
-    sbc player_melee_dmg        ; Subtract player's damage
+    sbc tmp2                    ; Subtract player's damage
     sta monster_hp              ; Update monster HP
     bmi monster_dead            ; If negative, monster is dead
     beq monster_dead            ; If zero, monster is dead
@@ -270,4 +289,55 @@ death_flash
 death_loop
     ; Game over - infinite loop freezes the game
     jmp death_loop
+    .endp
+
+; Pick up a bow item at dir_ptr location
+.proc pickup_bow
+    ; Set has_bow flag
+    lda #1
+    sta has_bow
+
+    ; Give the bow 10 damage (can be upgraded)
+    lda #10
+    sta player_ranged_dmg
+
+    ; Remove bow from map (replace with floor)
+    ldy #0
+    lda #MAP_FLOOR
+    sta (dir_ptr),y
+
+    ; Update the ranged damage display on HUD
+    jsr update_ranged_display
+
+    rts
+    .endp
+
+; Read keyboard for weapon switching
+; Called from main game loop
+.proc read_keyboard
+    lda CH                      ; Read keyboard character code
+    cmp #CH_NONE                ; No key pressed?
+    beq done                    ; Yes, exit
+
+check_bow_key
+    cmp #KEY_B                  ; 'B' key pressed?
+    bne check_melee_key         ; No, check next key
+    lda has_bow                 ; Do we have a bow?
+    beq done                    ; No bow, can't equip it
+    lda #1                      ; Yes, equip ranged weapon
+    sta equipped_weapon
+    lda #CH_NONE                ; Clear the key press
+    sta CH
+    rts
+
+check_melee_key
+    cmp #KEY_M                  ; 'M' key pressed?
+    bne done                    ; No, exit
+    lda #0                      ; Equip melee weapon
+    sta equipped_weapon
+    lda #CH_NONE                ; Clear the key press
+    sta CH
+
+done
+    rts
     .endp
