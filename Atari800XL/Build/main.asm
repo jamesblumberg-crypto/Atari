@@ -209,7 +209,7 @@ gold 			= $2a
 	sta player_max_hp           ; Max HP is also 100
 
 	place_monsters num_monsters #8
-	;jsr place_bow               ; Place a bow somewhere on the map (TEMP DISABLED FOR DEBUG)
+	jsr place_bow               ; Place a bow somewhere on the map
 
 skip_monster_tables
 	; Initialize the HP and XP bars to match player stats
@@ -1046,7 +1046,29 @@ place_loop
 	adc #10                     ; Add offset: result is 10-25
 	sta tmp_y
 
-	advance_ptr #map map_ptr #map_width tmp_y tmp_x
+	; Calculate map position manually: map + (tmp_y * map_width) + tmp_x
+	; This avoids using advance_ptr macro in a loop (label conflicts)
+	mwa #map map_ptr            ; Start at map base
+
+	; Add tmp_y rows (multiply by map_width)
+	ldy tmp_y
+	beq add_x                   ; Skip if Y is 0
+add_rows
+	adw map_ptr #map_width
+	dey
+	bne add_rows
+
+add_x
+	; Add tmp_x columns
+	lda map_ptr
+	clc
+	adc tmp_x
+	sta map_ptr
+	bcc no_carry
+	inc map_ptr+1
+no_carry
+
+	; Check if this tile is floor
 	ldy #0
 	lda (map_ptr),y
 	cmp #MAP_FLOOR              ; Only place on floor tiles
