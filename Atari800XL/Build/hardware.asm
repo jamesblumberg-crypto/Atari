@@ -36,3 +36,11 @@ CH_NONE = $ff   ; No key pressed
 ; Key codes for weapon switching
 KEY_B  = $15    ; 'B' key code - equip bow
 KEY_M  = $25    ; 'M' key code - equip melee
+
+; Missile hardware registers
+HPOSM0 = $D004  ; Horizontal position missile 0
+HPOSM1 = $D005  ; Horizontal position missile 1
+HPOSM2 = $D006  ; Horizontal position missile 2
+HPOSM3 = $D007  ; Horizontal position missile 3
+SIZEM  = $D00C  ; Size register for all missiles
+HITCLR = $D01E  ; Collision clear register

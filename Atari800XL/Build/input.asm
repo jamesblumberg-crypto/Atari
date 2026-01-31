@@ -40,6 +40,8 @@ check_up
     and #STICK_UP               ; Check to see if it's pushed UP
     bne check_down              ; It's not pushed UP, so move to the next check
     sbw dir_ptr #map_width      ; It is pushed UP, so move the temp pointer up one line
+    lda #NORTH                  ; Track direction for arrow aiming
+    sta player_dir
     rts                         ; We're done updating the dir pointer (this will take priority)
 
 check_down
@@ -47,6 +49,8 @@ check_down
     and #STICK_DOWN             ; Check to see if it's pushed DOWN
     bne check_left              ; It's not pushed DOWN, so move to the next check
     adw dir_ptr #map_width      ; It is pushed DOWN, so move the temp pointer down one line
+    lda #SOUTH                  ; Track direction for arrow aiming
+    sta player_dir
     rts
 
 check_left
@@ -54,6 +58,8 @@ check_left
     and #STICK_LEFT             ; Check to see if it's pushed LEFT
     bne check_right             ; It's not pushed LEFT, so move to the next check
     dec dir_ptr                 ; It is pushed LEFT, so move the temp pointer left one
+    lda #WEST                   ; Track direction for arrow aiming
+    sta player_dir
     rts
 
 check_right
@@ -61,12 +67,23 @@ check_right
     and #STICK_RIGHT            ; Check to see if it's pushed RIGHT
     bne done                    ; If not, we're done checking
     inc dir_ptr                 ; It is pushed RIGHT, so move the temp pointer left one
+    lda #EAST                   ; Track direction for arrow aiming
+    sta player_dir
 
 done
     rts
     .endp
 
 .proc player_action()
+    ; Check if bow is equipped - if so, fire arrow instead
+    lda equipped_weapon
+    beq do_melee_action         ; 0 = melee, do normal action
+
+    ; Bow is equipped - try to fire arrow
+    jsr fire_arrow
+    rts
+
+do_melee_action
     ldi dir_ptr                 ; Load in tile from direction
 
 check_door
@@ -339,5 +356,322 @@ check_melee_key
     sta CH
 
 done
+    rts
+    .endp
+
+; Constants for arrow
+ARROW_SPEED      = 4           ; Pixels per frame
+ARROW_TILE_SIZE  = 8           ; Pixels per map tile
+ARROW_START_Y    = 64          ; Starting scanline (center of player area)
+ARROW_START_X    = 92          ; Starting X (same as player HPOS)
+ARROW_MIN_Y      = 32          ; Top boundary
+ARROW_MAX_Y      = 120         ; Bottom boundary
+ARROW_MIN_X      = 48          ; Left boundary
+ARROW_MAX_X      = 200         ; Right boundary
+
+; Fire an arrow in the direction the player is facing
+; Only fires if no arrow is currently active
+.proc fire_arrow
+    ; Check if arrow already in flight
+    lda arrow_active
+    bne already_active          ; Can't fire another
+
+    ; Initialize arrow at player's position
+    lda #ARROW_START_X
+    sta arrow_x
+    lda #ARROW_START_Y
+    sta arrow_y
+
+    ; Copy player's facing direction
+    lda player_dir
+    sta arrow_dir
+
+    ; Copy player's map position for collision detection
+    lda player_x
+    sta arrow_map_x
+    lda player_y
+    sta arrow_map_y
+
+    ; Reset subtile counter
+    lda #0
+    sta arrow_subtile
+
+    ; Activate arrow
+    lda #1
+    sta arrow_active
+
+    ; Set action flag so we don't fire repeatedly while held
+    inc stick_action
+
+    ; Draw initial arrow missile
+    jsr draw_arrow_missile
+
+already_active
+    rts
+    .endp
+
+; Update arrow position and check for collisions
+; Called every frame from main game loop
+.proc update_arrow
+    ; Check if arrow is active
+    lda arrow_active
+    beq done                    ; No arrow, nothing to do
+
+    ; Clear old missile position
+    jsr clear_arrow_missile
+
+    ; Update subtile counter and check if we crossed a tile boundary
+    lda arrow_subtile
+    clc
+    adc #ARROW_SPEED
+    sta arrow_subtile
+    cmp #ARROW_TILE_SIZE
+    bcc move_screen_only        ; Haven't crossed tile yet
+
+    ; Crossed tile boundary - update map coordinates
+    lda #0
+    sta arrow_subtile           ; Reset subtile counter
+
+    ; Update map coordinate based on direction
+    lda arrow_dir
+    cmp #NORTH
+    bne not_north_map
+    dec arrow_map_y
+    jmp check_map_collision
+not_north_map
+    cmp #SOUTH
+    bne not_south_map
+    inc arrow_map_y
+    jmp check_map_collision
+not_south_map
+    cmp #WEST
+    bne not_west_map
+    dec arrow_map_x
+    jmp check_map_collision
+not_west_map
+    ; EAST
+    inc arrow_map_x
+
+check_map_collision
+    ; Check for collision with map tile at new position
+    jsr check_arrow_collision
+    lda arrow_active
+    beq done                    ; Arrow was deactivated by collision
+
+move_screen_only
+    ; Move arrow on screen based on direction
+    lda arrow_dir
+
+check_north
+    cmp #NORTH
+    bne check_south
+    ; Move up (decrease Y)
+    lda arrow_y
+    sec
+    sbc #ARROW_SPEED
+    sta arrow_y
+    jmp check_bounds
+
+check_south
+    cmp #SOUTH
+    bne check_west
+    ; Move down (increase Y)
+    lda arrow_y
+    clc
+    adc #ARROW_SPEED
+    sta arrow_y
+    jmp check_bounds
+
+check_west
+    cmp #WEST
+    bne check_east
+    ; Move left (decrease X)
+    lda arrow_x
+    sec
+    sbc #ARROW_SPEED
+    sta arrow_x
+    jmp check_bounds
+
+check_east
+    ; Move right (increase X)
+    lda arrow_x
+    clc
+    adc #ARROW_SPEED
+    sta arrow_x
+
+check_bounds
+    ; Check if arrow went off screen
+    lda arrow_y
+    cmp #ARROW_MIN_Y
+    bcc deactivate              ; Too high
+    cmp #ARROW_MAX_Y
+    bcs deactivate              ; Too low
+
+    lda arrow_x
+    cmp #ARROW_MIN_X
+    bcc deactivate              ; Too far left
+    cmp #ARROW_MAX_X
+    bcs deactivate              ; Too far right
+
+    ; Arrow still active - draw at new position
+    jsr draw_arrow_missile
+    jmp done
+
+deactivate
+    jsr deactivate_arrow
+
+done
+    rts
+    .endp
+
+; Check if arrow hit something (wall or monster)
+.proc check_arrow_collision
+    ; Calculate map pointer for arrow position
+    mwa #map map_ptr
+
+    ; Add arrow_map_y rows
+    ldy arrow_map_y
+add_rows
+    cpy #0
+    beq add_cols
+    adw map_ptr #map_width
+    dey
+    jmp add_rows
+
+add_cols
+    ; Add arrow_map_x columns
+    adbw map_ptr arrow_map_x
+
+    ; Check tile at arrow position
+    ldy #0
+    lda (map_ptr),y
+
+    ; Check if it's a monster (tiles 44-51)
+    cmp #44
+    bcc check_wall              ; Less than 44, not a monster
+    cmp #52
+    bcs check_wall              ; 52 or greater, not a monster
+
+    ; Hit a monster! Do damage
+    jsr arrow_hit_monster
+    jsr deactivate_arrow
+    rts
+
+check_wall
+    ; Check if tile is passable (>= PASSABLE_MIN)
+    cmp #PASSABLE_MIN
+    bcs passable                ; Tile is passable, arrow continues
+
+    ; Hit a wall - deactivate arrow
+    jsr deactivate_arrow
+
+passable
+    rts
+    .endp
+
+; Handle arrow hitting a monster
+; map_ptr should point to the monster tile
+.proc arrow_hit_monster
+    ldy #0
+    lda (map_ptr),y             ; Load monster tile ID (44-51)
+    sta tmp1                    ; Save for XP calculation
+    sec
+    sbc #44                     ; Convert to index 0-7
+    tax
+    lda monster_hp_table,x      ; Load monster max HP
+    sta monster_hp
+    lda monster_dmg_table,x     ; Load monster damage (for reference)
+    sta monster_dmg
+
+    ; Apply ranged damage
+    lda monster_hp
+    sec
+    sbc player_ranged_dmg
+    sta monster_hp
+    bmi monster_killed
+    beq monster_killed
+
+    ; Monster survived - it stays on the map (no counter-attack for ranged)
+    rts
+
+monster_killed
+    ; Award XP
+    lda tmp1                    ; Recall monster tile ID
+    sec
+    sbc #44
+    tax
+    lda monster_xp_table,x
+    clc
+    adc player_xp
+    sta player_xp
+
+    ; Update XP bar
+    jsr update_xp_bar
+
+    ; Check for level up
+    jsr check_level_up
+
+    ; Remove monster from map
+    ldy #0
+    lda #MAP_FLOOR
+    sta (map_ptr),y
+
+    rts
+    .endp
+
+; Deactivate the arrow and clear its missile
+.proc deactivate_arrow
+    lda #0
+    sta arrow_active
+
+    ; Clear missile from screen
+    jsr clear_arrow_missile
+
+    ; Move missile off screen
+    lda #0
+    sta HPOSM0
+
+    rts
+    .endp
+
+; Draw arrow missile at current position
+.proc draw_arrow_missile
+    ; Set horizontal position
+    lda arrow_x
+    sta HPOSM0
+
+    ; Draw missile graphics (4 scanlines tall)
+    ; Missile 0 uses bits 0-1 of each byte
+    lda arrow_y
+    tax                         ; X = scanline offset
+
+    ; Draw 4 lines of missile (bits 0-1 = %11 for M0)
+    lda #%00000011              ; Missile 0 on
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+
+    rts
+    .endp
+
+; Clear arrow missile from its current position
+.proc clear_arrow_missile
+    lda arrow_y
+    tax
+
+    ; Clear 4 lines
+    lda #0
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+
     rts
     .endp
