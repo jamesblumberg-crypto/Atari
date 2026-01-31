@@ -15,6 +15,7 @@ cur_char_colors_b	= $7390	; 16 bytes
 ; free
 
 pmg     			= $7400 ; Player Missle Data (1K)
+pmg_missiles		= $7580 ; Missile data (128 bytes, single-line res)
 cur_charset_a		= $7800 ; Current character set A (1K)
 cur_charset_b		= $7c00 ; Current character set B (1K)
 ; free
@@ -134,6 +135,16 @@ player_ranged_dmg    = $ea  ; Ranged weapon damage (bow)
 has_bow              = $eb  ; 0 = no bow, 1 = has bow
 equipped_weapon      = $ec  ; 0 = melee, 1 = ranged (bow)
 
+; Arrow missile variables
+arrow_active         = $ed  ; 0 = no arrow, 1 = arrow in flight
+arrow_x              = $ee  ; Arrow horizontal position (screen coords)
+arrow_y              = $ef  ; Arrow vertical position (scanline)
+arrow_dir            = $f0  ; Arrow direction (1=N, 2=S, 3=W, 4=E)
+arrow_map_x          = $f1  ; Arrow map X coordinate
+arrow_map_y          = $f2  ; Arrow map Y coordinate
+player_dir           = $f3  ; Last direction player moved (for aiming)
+arrow_subtile        = $f4  ; Sub-tile counter (0-7, update map coord when wraps)
+
 ; Colors
 white 				= $0a
 red 				= $32
@@ -182,6 +193,9 @@ gold 			= $2a
 	sta player_ranged_dmg   ; No ranged damage until bow acquired
 	sta has_bow             ; Player starts without bow
 	sta equipped_weapon     ; Start with melee equipped (0 = melee)
+	sta arrow_active        ; No arrow in flight
+	lda #SOUTH              ; Default facing direction
+	sta player_dir
 	
 	mva #123 rand
 	mva #201 rand16
@@ -229,6 +243,7 @@ game
 	animate
 	get_input
 	jsr read_keyboard           ; Check for weapon switching keys
+	jsr update_arrow            ; Update arrow position and check collisions
 	jmp game
 
 .macro set_colors
@@ -586,6 +601,7 @@ loop
 	sta pmg_p1,x
 	sta pmg_p2,x
 	sta pmg_p3,x
+	sta pmg_missiles,x      ; Also clear missiles
 	bne loop
 	rts
 	.endp
