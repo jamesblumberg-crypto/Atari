@@ -415,7 +415,7 @@ already_active
 .proc update_arrow
     ; Check if arrow is active
     lda arrow_active
-    beq done                    ; No arrow, nothing to do
+    bne arrow_is_active                   ; No arrow, nothing to do
 
     ; Clear old missile position
     jsr clear_arrow_missile
