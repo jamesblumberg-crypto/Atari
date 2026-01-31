@@ -458,7 +458,10 @@ check_map_collision
     ; Check for collision with map tile at new position
     jsr check_arrow_collision
     lda arrow_active
-    beq done                    ; Arrow was deactivated by collision
+    bne continue_arrow                   ; Arrow was deactivated by collision
+    rts
+
+continue_arrow
 
 move_screen_only
     ; Move arrow on screen based on direction
