@@ -14,5 +14,5 @@
 	.byte %00000000
 	.byte %00000000
 	.byte %00000000
-	.byte %00110000
+	.byte %00110011	; bits 0-1 set for bow chars 112-113
 	.byte %00010011
