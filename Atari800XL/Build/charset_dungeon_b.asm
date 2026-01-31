@@ -1006,24 +1006,24 @@
 	.byte %00000000
 	.byte %00000000
 	.byte %00000000
-	; char 112 - BOW (left half - curved bow with stippled bg)
-	.byte %10001000
-	.byte %00010100
-	.byte %01000011
-	.byte %00100001
-	.byte %01000011
-	.byte %00100001
-	.byte %00010100
-	.byte %10001000
-	; char 113 - BOW (right half - arrow with stippled bg)
-	.byte %00100010
-	.byte %10001000
-	.byte %00100011
+	; char 112 - BOW (left half - floor pattern with bow shape)
+	.byte %01010101
+	.byte %01010100
+	.byte %01000001
+	.byte %01010001
+	.byte %01000001
+	.byte %01010001
+	.byte %01010100
+	.byte %01010101
+	; char 113 - BOW (right half - floor pattern with arrow)
+	.byte %01010101
+	.byte %01010101
+	.byte %01010111
 	.byte %10101011
 	.byte %10101011
-	.byte %00100011
-	.byte %10001000
-	.byte %00100010
+	.byte %01010111
+	.byte %01010101
+	.byte %01010101
 	; char 114
 	.byte %00000000
 	.byte %01001000
