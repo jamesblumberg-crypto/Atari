@@ -416,7 +416,9 @@ already_active
     ; Check if arrow is active
     lda arrow_active
     bne arrow_is_active                   ; No arrow, nothing to do
+    rts
 
+arrow_is_active
     ; Clear old missile position
     jsr clear_arrow_missile
 
