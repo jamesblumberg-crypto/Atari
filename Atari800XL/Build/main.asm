@@ -1118,11 +1118,11 @@ monster_xp_table
 	icl 'macros.asm'
 	icl 'hardware.asm'
 	icl 'labels.asm'
-	icl 'dlist.asm'
 	icl 'pmgdata.asm'
 	icl 'map_gen.asm'
 	icl 'input.asm'
 	icl 'status_chars.asm'
+	icl 'dlist.asm'
 
 	icl 'charset_dungeon_a.asm'
 	icl 'charset_dungeon_b.asm'
