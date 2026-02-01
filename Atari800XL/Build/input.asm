@@ -415,8 +415,8 @@ already_active
 .proc update_arrow
     ; Check if arrow is active
     lda arrow_active
-    bne arrow_is_active         ; If active, continue
-    rts                         ; Not active, return early
+    bne arrow_is_active                   ; No arrow, nothing to do
+    rts
 
 arrow_is_active
     ; Clear old missile position
@@ -458,8 +458,10 @@ check_map_collision
     ; Check for collision with map tile at new position
     jsr check_arrow_collision
     lda arrow_active
-    bne continue_arrow          ; If still active, continue
-    rts                         ; Deactivated, return early
+    bne continue_arrow                   ; Arrow was deactivated by collision
+    rts
+
+continue_arrow
 
 continue_arrow
 move_screen_only
