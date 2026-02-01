@@ -238,6 +238,16 @@ skip_monster_tables
 	init_player_ptr()
 	jsr place_bow               ; Place bow on floor adjacent to player
 
+	; Initialize variables that need starting values
+	lda #0
+	sta charset_a              ; Start with charset A
+	sta anim_timer             ; Initialize animation timer
+	sta input_timer            ; Initialize input timer
+	mwa #cur_char_colors_a char_colors_ptr  ; Initialize color pointer
+
+	; Draw initial screen before game loop
+	blit_screen()
+
 game
 	mva RTCLK2 clock
 	animate
