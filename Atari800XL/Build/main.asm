@@ -238,6 +238,16 @@ skip_monster_tables
 	init_player_ptr()
 	jsr place_bow               ; Place bow on floor adjacent to player
 
+	; Initialize variables that need starting values
+	lda #0
+	sta charset_a              ; Start with charset A
+	sta anim_timer             ; Initialize animation timer
+	sta input_timer            ; Initialize input timer
+	mwa #cur_char_colors_a char_colors_ptr  ; Initialize color pointer
+
+	; Draw initial screen before game loop
+	blit_screen()
+
 game
 	mva RTCLK2 clock
 	animate
@@ -248,12 +258,12 @@ game
 
 .macro set_colors
 	lda charset_a
-	beq use_charset_a
+	beq sc_use_charset_a
 	mwa #cur_char_colors_b char_colors_ptr
-	jmp done
-use_charset_a
+	jmp sc_done
+sc_use_charset_a
 	mwa #cur_char_colors_a char_colors_ptr
-done
+sc_done
 .endm
 
 ; Update the HP bar display based on current player HP
@@ -656,7 +666,7 @@ loop
 	and #$07
 	add #1
 	sta tmp2
-	
+
 	; Get color index
 	lda tmp
 	lsr
@@ -666,20 +676,20 @@ loop
 	lda (char_colors_ptr),y
 
 	; Shift right as necessary to put the desired bit into the carry flag
-shift_bits
+fc_shift_bits
 	lsr
 	dec tmp2
-	bne shift_bits
+	bne fc_shift_bits
 
 	; Check the carry flag to see if it has a 1 - if so, it needs to be yellow, otherwise blue
-	bcc done
+	bcc fc_done
 
-add_color
+fc_add_color
 	lda tmp
 	add #128
 	sta tmp
 
-done
+fc_done
 	; Restore the Y register
 	pla
 	tay
