@@ -463,7 +463,6 @@ check_map_collision
 
 continue_arrow
 
-continue_arrow
 move_screen_only
     ; Move arrow on screen based on direction
     lda arrow_dir
