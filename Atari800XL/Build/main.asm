@@ -531,28 +531,28 @@ no_level_up
 .macro get_input
 	lda clock
 	cmp input_timer
-	bne done
+	bne input_done
 	read_joystick()
 	blit_screen()
 	lda clock
 	add #input_speed
 	sta input_timer
-done
+input_done
 	.endm
 
 .macro animate
 	lda clock
 	cmp anim_timer
-	bne done
+	bne anim_done
 	lda charset_a
 	eor #$ff
 	sta charset_a
 	;set_colors
-	blit_screen
+	blit_screen()
 	lda clock
 	add #anim_speed
 	sta anim_timer
-done
+anim_done
 	.endm
 
 * --------------------------------------- *
