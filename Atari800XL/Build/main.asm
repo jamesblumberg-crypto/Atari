@@ -676,20 +676,20 @@ loop
 	lda (char_colors_ptr),y
 
 	; Shift right as necessary to put the desired bit into the carry flag
-fc_shift_bits
+shift_bits
 	lsr
 	dec tmp2
-	bne fc_shift_bits
+	bne shift_bits
 
 	; Check the carry flag to see if it has a 1 - if so, it needs to be yellow, otherwise blue
-	bcc fc_done
+	bcc done
 
-fc_add_color
+add_color
 	lda tmp
 	add #128
 	sta tmp
 
-fc_done
+done
 	; Restore the Y register
 	pla
 	tay
