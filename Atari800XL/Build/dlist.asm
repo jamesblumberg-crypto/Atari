@@ -50,7 +50,7 @@ use_charset_b
 
 done
 	mwa #dli2 VDSLST
-	set_colors
+	;set_colors            ; Temporarily disabled for debugging
 	pla
 	rti
 
