@@ -1115,14 +1115,244 @@ monster_xp_table
 	; 10HP/3dmg->10XP, 20HP/5dmg->15XP, 20HP/7dmg->20XP, 30HP/9dmg->25XP,
 	; 30HP/11dmg->30XP, 40HP/13dmg->35XP, 40HP/15dmg->40XP, 50HP/17dmg->50XP
 
+; ============================================
+; Arrow missile procedures (in main code area)
+; ============================================
+
+; Constants for arrow
+ARROW_SPEED      = 4           ; Pixels per frame
+ARROW_TILE_SIZE  = 8           ; Pixels per map tile
+ARROW_START_Y    = 64          ; Starting scanline (center of player area)
+ARROW_START_X    = 92          ; Starting X (same as player HPOS)
+ARROW_MIN_Y      = 32          ; Top boundary
+ARROW_MAX_Y      = 120         ; Bottom boundary
+ARROW_MIN_X      = 48          ; Left boundary
+ARROW_MAX_X      = 200         ; Right boundary
+
+; Fire an arrow in the direction the player is facing
+.proc fire_arrow
+    lda arrow_active
+    bne already_active
+    lda #ARROW_START_X
+    sta arrow_x
+    lda #ARROW_START_Y
+    sta arrow_y
+    lda player_dir
+    sta arrow_dir
+    lda player_x
+    sta arrow_map_x
+    lda player_y
+    sta arrow_map_y
+    lda #0
+    sta arrow_subtile
+    lda #1
+    sta arrow_active
+    inc stick_action
+    jsr draw_arrow_missile
+already_active
+    rts
+    .endp
+
+; Update arrow position and check for collisions
+.proc update_arrow
+    lda arrow_active
+    bne arrow_is_active
+    rts
+arrow_is_active
+    jsr clear_arrow_missile
+    lda arrow_subtile
+    clc
+    adc #ARROW_SPEED
+    sta arrow_subtile
+    cmp #ARROW_TILE_SIZE
+    bcc move_screen_only
+    lda #0
+    sta arrow_subtile
+    lda arrow_dir
+    cmp #NORTH
+    bne not_north_map
+    dec arrow_map_y
+    jmp check_map_collision
+not_north_map
+    cmp #SOUTH
+    bne not_south_map
+    inc arrow_map_y
+    jmp check_map_collision
+not_south_map
+    cmp #WEST
+    bne not_west_map
+    dec arrow_map_x
+    jmp check_map_collision
+not_west_map
+    inc arrow_map_x
+check_map_collision
+    jsr check_arrow_collision
+    lda arrow_active
+    bne move_screen_only
+    rts
+move_screen_only
+    lda arrow_dir
+    cmp #NORTH
+    bne check_south
+    lda arrow_y
+    sec
+    sbc #ARROW_SPEED
+    sta arrow_y
+    jmp check_bounds
+check_south
+    cmp #SOUTH
+    bne check_west
+    lda arrow_y
+    clc
+    adc #ARROW_SPEED
+    sta arrow_y
+    jmp check_bounds
+check_west
+    cmp #WEST
+    bne check_east
+    lda arrow_x
+    sec
+    sbc #ARROW_SPEED
+    sta arrow_x
+    jmp check_bounds
+check_east
+    lda arrow_x
+    clc
+    adc #ARROW_SPEED
+    sta arrow_x
+check_bounds
+    lda arrow_y
+    cmp #ARROW_MIN_Y
+    bcc deactivate
+    cmp #ARROW_MAX_Y
+    bcs deactivate
+    lda arrow_x
+    cmp #ARROW_MIN_X
+    bcc deactivate
+    cmp #ARROW_MAX_X
+    bcs deactivate
+    jsr draw_arrow_missile
+    rts
+deactivate
+    jsr deactivate_arrow
+    rts
+    .endp
+
+; Check if arrow hit something
+.proc check_arrow_collision
+    mwa #map map_ptr
+    ldy arrow_map_y
+add_rows
+    cpy #0
+    beq add_cols
+    adw map_ptr #map_width
+    dey
+    jmp add_rows
+add_cols
+    adbw map_ptr arrow_map_x
+    ldy #0
+    lda (map_ptr),y
+    cmp #44
+    bcc check_wall
+    cmp #52
+    bcs check_wall
+    jsr arrow_hit_monster
+    jsr deactivate_arrow
+    rts
+check_wall
+    cmp #PASSABLE_MIN
+    bcs passable
+    jsr deactivate_arrow
+passable
+    rts
+    .endp
+
+; Handle arrow hitting a monster
+.proc arrow_hit_monster
+    ldy #0
+    lda (map_ptr),y
+    sta tmp1
+    sec
+    sbc #44
+    tax
+    lda monster_hp_table,x
+    sta monster_hp
+    lda monster_dmg_table,x
+    sta monster_dmg
+    lda monster_hp
+    sec
+    sbc player_ranged_dmg
+    sta monster_hp
+    bmi monster_killed
+    beq monster_killed
+    rts
+monster_killed
+    lda tmp1
+    sec
+    sbc #44
+    tax
+    lda monster_xp_table,x
+    clc
+    adc player_xp
+    sta player_xp
+    jsr update_xp_bar
+    jsr check_level_up
+    ldy #0
+    lda #MAP_FLOOR
+    sta (map_ptr),y
+    rts
+    .endp
+
+; Deactivate the arrow
+.proc deactivate_arrow
+    lda #0
+    sta arrow_active
+    jsr clear_arrow_missile
+    lda #0
+    sta HPOSM0
+    rts
+    .endp
+
+; Draw arrow missile at current position
+.proc draw_arrow_missile
+    lda arrow_x
+    sta HPOSM0
+    lda arrow_y
+    tax
+    lda #%00000011
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    rts
+    .endp
+
+; Clear arrow missile
+.proc clear_arrow_missile
+    lda arrow_y
+    tax
+    lda #0
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    rts
+    .endp
+
 	icl 'macros.asm'
 	icl 'hardware.asm'
 	icl 'labels.asm'
+	icl 'dlist.asm'
 	icl 'pmgdata.asm'
 	icl 'map_gen.asm'
 	icl 'input.asm'
 	icl 'status_chars.asm'
-	icl 'dlist.asm'
 
 	icl 'charset_dungeon_a.asm'
 	icl 'charset_dungeon_b.asm'
