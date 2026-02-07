@@ -23,7 +23,7 @@ loop
 	cmp RTCLK2
 	beq loop
 
-	lda #NMIEN_VBI | NMIEN_DLI
+	lda #NMIEN_VBI             ; DLI disabled for debugging (was NMIEN_VBI | NMIEN_DLI)
 	sta NMIEN
 	rts
 
