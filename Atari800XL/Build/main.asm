@@ -250,7 +250,7 @@ skip_monster_tables
 
 game
 	mva RTCLK2 clock
-	;animate                    ; DEBUG: disabled - suspected culprit
+	animate                     ; Re-enabled after fix_color fix
 	get_input                   ; Re-enabled to test
 	jsr read_keyboard           ; Check for weapon switching keys
 	jsr update_arrow            ; Update arrow position and check collisions
