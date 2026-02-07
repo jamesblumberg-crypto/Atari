@@ -23,7 +23,7 @@ loop
 	cmp RTCLK2
 	beq loop
 
-	lda #NMIEN_VBI             ; DLI disabled for debugging (was NMIEN_VBI | NMIEN_DLI)
+	lda #NMIEN_VBI | NMIEN_DLI ; Re-enabled DLI
 	sta NMIEN
 	rts
 
@@ -50,7 +50,7 @@ use_charset_b
 
 done
 	mwa #dli2 VDSLST
-	;set_colors            ; Temporarily disabled for debugging
+	set_colors
 	pla
 	rti
 
