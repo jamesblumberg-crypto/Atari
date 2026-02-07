@@ -250,8 +250,8 @@ skip_monster_tables
 
 game
 	mva RTCLK2 clock
-	animate
-	get_input
+	;animate                    ; DEBUG: disabled
+	;get_input                  ; DEBUG: disabled
 	jsr read_keyboard           ; Check for weapon switching keys
 	jsr update_arrow            ; Update arrow position and check collisions
 	jmp game
