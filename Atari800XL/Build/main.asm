@@ -647,6 +647,7 @@ loop
 	mva #46 SDMCTL ; Single Line resolution
 	mva #3 GRACTL  ; Enable PMG
 	mva #1 GRPRIOR ; Give players priority
+	mva #%00000011 SIZEM ; Make missile 0 double-width (4 color clocks)
 	lda #92
 	sta HPOSP0
 	sta HPOSP1
@@ -1135,12 +1136,12 @@ monster_xp_table
 ; ============================================
 
 ; Constants for arrow
-ARROW_SPEED      = 4           ; Pixels per frame
+ARROW_SPEED      = 2           ; Pixels per frame (slower for visibility)
 ARROW_TILE_SIZE  = 8           ; Pixels per map tile
 ARROW_START_Y    = 64          ; Starting scanline (center of player area)
 ARROW_START_X    = 92          ; Starting X (same as player HPOS)
 ARROW_MIN_Y      = 32          ; Top boundary
-ARROW_MAX_Y      = 120         ; Bottom boundary
+ARROW_MAX_Y      = 200         ; Bottom boundary (extended for full playfield)
 ARROW_MIN_X      = 48          ; Left boundary
 ARROW_MAX_X      = 200         ; Right boundary
 
