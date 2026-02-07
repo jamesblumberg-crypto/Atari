@@ -655,7 +655,11 @@ loop
 	rts
 	.endp
 
-.macro fix_color
+; fix_color - Adjusts tile color based on char_colors_ptr table
+; Input: A = tile character value
+; Output: A = adjusted tile character (possibly with bit 7 set for gold color)
+; Preserves: Y register
+.proc fix_color
 	; Save Y register
 	sta tmp
 	tya
@@ -694,21 +698,22 @@ done
 	pla
 	tay
 	lda tmp
-.endm
+	rts
+.endp
 
 .macro blit_tile
 	lda (map_ptr),y			; Load the tile from the map
 	asl						; Multiply by two to get left character
-	fix_color
+	jsr fix_color			; Apply color adjustment (now a procedure)
 	sta (screen_ptr),y		; Store the left character
 	inc16 screen_ptr		; Advance the screen pointer
 	lda (map_ptr),y
 	asl
 	add #1
-	fix_color				; Add one to get right character
+	jsr fix_color			; Apply color adjustment (now a procedure)
 	sta (screen_ptr),y		; Store the right character
 	adw map_ptr #1			; Advance the map pointer
-	adw screen_ptr #1		; Advance the screen pointer	
+	adw screen_ptr #1		; Advance the screen pointer
 	.endm
 
 .macro blit_circle_line body, map_space, screen_space
