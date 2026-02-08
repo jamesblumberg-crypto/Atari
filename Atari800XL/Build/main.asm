@@ -1335,7 +1335,8 @@ monster_killed
     sta HPOSM0
     lda arrow_y
     tax
-    lda #%00000011
+    ; Missile bytes are packed (M0 uses the high bit pair).
+    lda #%11000000
     sta pmg_missiles,x
     inx
     sta pmg_missiles,x
