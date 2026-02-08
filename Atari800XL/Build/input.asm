@@ -75,15 +75,7 @@ done
     .endp
 
 .proc player_action()
-    ; Check if bow is equipped - if so, fire arrow instead
-    lda equipped_weapon
-    beq do_melee_action         ; 0 = melee, do normal action
-
-    ; Bow is equipped - try to fire arrow
-    jsr fire_arrow
-    rts
-
-do_melee_action
+    ; Always check for doors first, regardless of equipped weapon
     ldi dir_ptr                 ; Load in tile from direction
 
 check_door
@@ -94,11 +86,22 @@ check_door
 
 check_doorway
     cmp #MAP_DOORWAY            ; Check if it's a doorway
-    bne none                    ; Skip to next check
+    bne check_weapon            ; Not a door, check weapon for attack
     close_door()                ; Close the door
     rts
 
-none                            ; Nothing to do
+check_weapon
+    ; Not facing a door - check weapon for ranged/melee attack
+    lda equipped_weapon
+    beq do_melee_action         ; 0 = melee, do normal action
+
+    ; Bow is equipped - try to fire arrow
+    jsr fire_arrow
+    rts
+
+do_melee_action
+    ; Nothing to do for melee action on empty tiles
+    ; (monster combat is handled in player_move)
     rts
     .endp
 

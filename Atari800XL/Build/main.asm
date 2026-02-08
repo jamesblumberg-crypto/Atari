@@ -648,7 +648,7 @@ loop
 	mva #46 SDMCTL ; Single Line resolution
 	mva #3 GRACTL  ; Enable PMG
 	mva #1 GRPRIOR ; Give players priority
-	mva #%00000001 SIZEM ; M0 double-width for a squarer projectile
+	mva #%00000011 SIZEM ; Make missile 0 double-width (4 color clocks)
 	lda #92
 	sta HPOSP0
 	sta HPOSP1
@@ -1152,6 +1152,8 @@ arrow_tick_div   .byte 0       ; Additional slowdown divider
 .proc fire_arrow
     lda arrow_active
     bne already_active
+
+    ; Set base position
     lda #ARROW_START_X
     sta arrow_x
     lda #ARROW_START_Y
@@ -1162,7 +1164,6 @@ arrow_tick_div   .byte 0       ; Additional slowdown divider
     sta arrow_map_x
     lda player_y
     sta arrow_map_y
-    mwa player_ptr arrow_ptr
     lda #0
     sta arrow_subtile
     sta arrow_tick_div
@@ -1326,14 +1327,14 @@ passable
     sta arrow_active
     jsr clear_arrow_missile
     lda #0
-    sta HPOSM0
+    sta HPOSM2              ; Use M2 instead of M0
     rts
     .endp
 
-; Draw arrow missile at current position
+; Draw arrow missile at current position (using M2 for blue color)
 .proc draw_arrow_missile
     lda arrow_x
-    sta HPOSM0
+    sta HPOSM2              ; Use M2 instead of M0
     lda arrow_y
     tax
     ; M0 bit pair only.
