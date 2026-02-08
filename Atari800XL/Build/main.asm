@@ -14,8 +14,8 @@ cur_char_colors_a	= $7380 ; 16 bytes
 cur_char_colors_b	= $7390	; 16 bytes
 ; free
 
-pmg     			= $7400 ; Player Missle Data (1K)
-pmg_missiles		= $7580 ; Missile data (128 bytes, single-line res)
+pmg     			= $7400 ; Player Missile Data (1K)
+pmg_missiles		= $7580 ; Missile data (128 bytes, double-line res)
 cur_charset_a		= $7800 ; Current character set A (1K)
 cur_charset_b		= $7c00 ; Current character set B (1K)
 ; free
@@ -144,6 +144,7 @@ arrow_map_x          = $f1  ; Arrow map X coordinate
 arrow_map_y          = $f2  ; Arrow map Y coordinate
 player_dir           = $f3  ; Last direction player moved (for aiming)
 arrow_subtile        = $f4  ; Sub-tile counter (0-7, update map coord when wraps)
+arrow_ptr            = $f5  ; Arrow map pointer (16-bit)
 
 ; Colors
 white 				= $0a
@@ -647,7 +648,7 @@ loop
 	mva #46 SDMCTL ; Single Line resolution
 	mva #3 GRACTL  ; Enable PMG
 	mva #1 GRPRIOR ; Give players priority
-	mva #%00000011 SIZEM ; Make missile 0 double-width (4 color clocks)
+	mva #%00000001 SIZEM ; M0 double-width for a squarer projectile
 	lda #92
 	sta HPOSP0
 	sta HPOSP1
@@ -1136,14 +1137,16 @@ monster_xp_table
 ; ============================================
 
 ; Constants for arrow
-ARROW_SPEED      = 2           ; Pixels per frame (slower for visibility)
-ARROW_TILE_SIZE  = 8           ; Pixels per map tile
+ARROW_SPEED      = 1           ; Pixels per update (very slow for visibility)
+ARROW_TILE_SIZE  = 8           ; Advance map tile less often so shot can travel
 ARROW_START_Y    = 64          ; Starting scanline (center of player area)
 ARROW_START_X    = 92          ; Starting X (same as player HPOS)
-ARROW_MIN_Y      = 32          ; Top boundary
-ARROW_MAX_Y      = 200         ; Bottom boundary (extended for full playfield)
-ARROW_MIN_X      = 48          ; Left boundary
-ARROW_MAX_X      = 200         ; Right boundary
+ARROW_MIN_Y      = 8           ; Top boundary of dungeon viewport
+ARROW_MAX_Y      = 216         ; Bottom boundary of dungeon viewport
+ARROW_MIN_X      = 16          ; Left boundary
+ARROW_MAX_X      = 176         ; Right boundary (stop before HUD panel)
+arrow_tick       .byte 0       ; Last RTCLK2 tick that advanced arrow
+arrow_tick_div   .byte 0       ; Additional slowdown divider
 
 ; Fire an arrow in the direction the player is facing
 .proc fire_arrow
@@ -1159,8 +1162,10 @@ ARROW_MAX_X      = 200         ; Right boundary
     sta arrow_map_x
     lda player_y
     sta arrow_map_y
+    mwa player_ptr arrow_ptr
     lda #0
     sta arrow_subtile
+    sta arrow_tick_div
     lda #1
     sta arrow_active
     inc stick_action
@@ -1171,8 +1176,21 @@ already_active
 
 ; Update arrow position and check for collisions
 .proc update_arrow
+    ; Throttle to clock ticks so the missile remains visible.
+    lda RTCLK2
+    cmp arrow_tick
+    beq no_tick_advance
+    sta arrow_tick
+    inc arrow_tick_div
+    lda arrow_tick_div
+    cmp #3                  ; Move every 3 ticks (~20 updates/sec)
+    bcc no_tick_advance
+    lda #0
+    sta arrow_tick_div
+
     lda arrow_active
     bne arrow_is_active
+no_tick_advance
     rts
 arrow_is_active
     jsr clear_arrow_missile
@@ -1187,19 +1205,23 @@ arrow_is_active
     lda arrow_dir
     cmp #NORTH
     bne not_north_map
+    sbw arrow_ptr #map_width
     dec arrow_map_y
     jmp check_map_collision
 not_north_map
     cmp #SOUTH
     bne not_south_map
+    adw arrow_ptr #map_width
     inc arrow_map_y
     jmp check_map_collision
 not_south_map
     cmp #WEST
     bne not_west_map
+    dec arrow_ptr
     dec arrow_map_x
     jmp check_map_collision
 not_west_map
+    inc arrow_ptr
     inc arrow_map_x
 check_map_collision
     jsr check_arrow_collision
@@ -1256,16 +1278,7 @@ deactivate
 
 ; Check if arrow hit something
 .proc check_arrow_collision
-    mwa #map map_ptr
-    ldy arrow_map_y
-add_rows
-    cpy #0
-    beq add_cols
-    adw map_ptr #map_width
-    dey
-    jmp add_rows
-add_cols
-    adbw map_ptr arrow_map_x
+    mwa arrow_ptr map_ptr
     ldy #0
     lda (map_ptr),y
     cmp #44
@@ -1288,21 +1301,9 @@ passable
     ldy #0
     lda (map_ptr),y
     sta tmp1
-    sec
-    sbc #44
-    tax
-    lda monster_hp_table,x
-    sta monster_hp
-    lda monster_dmg_table,x
-    sta monster_dmg
-    lda monster_hp
-    sec
-    sbc player_ranged_dmg
-    sta monster_hp
-    bmi monster_killed
-    beq monster_killed
-    rts
-monster_killed
+
+    ; Monsters on the map do not keep persistent per-tile HP state.
+    ; Resolve ranged hit immediately by removing the monster tile.
     lda tmp1
     sec
     sbc #44
@@ -1335,12 +1336,8 @@ monster_killed
     sta HPOSM0
     lda arrow_y
     tax
-    ; Missile bytes are packed (M0 uses the high bit pair).
-    lda #%11000000
-    sta pmg_missiles,x
-    inx
-    sta pmg_missiles,x
-    inx
+    ; M0 bit pair only.
+    lda #%00000011
     sta pmg_missiles,x
     inx
     sta pmg_missiles,x
@@ -1352,10 +1349,6 @@ monster_killed
     lda arrow_y
     tax
     lda #0
-    sta pmg_missiles,x
-    inx
-    sta pmg_missiles,x
-    inx
     sta pmg_missiles,x
     inx
     sta pmg_missiles,x
