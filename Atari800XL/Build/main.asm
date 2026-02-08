@@ -1370,7 +1370,8 @@ monster_killed
     sta HPOSM2              ; Use M2 instead of M0
     lda arrow_y
     tax
-    lda #%00110000          ; M2 bits (bits 4-5) instead of M0
+    ; Missile bytes are packed (M0 uses the high bit pair).
+    lda #%11000000
     sta pmg_missiles,x
     inx
     sta pmg_missiles,x
