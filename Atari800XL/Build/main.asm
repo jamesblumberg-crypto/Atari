@@ -647,7 +647,7 @@ loop
 	mva #46 SDMCTL ; Single Line resolution
 	mva #3 GRACTL  ; Enable PMG
 	mva #1 GRPRIOR ; Give players priority
-	mva #%00000011 SIZEM ; Make missile 0 double-width (4 color clocks)
+	mva #%00110000 SIZEM ; Make missile 2 double-width (4 color clocks)
 	lda #92
 	sta HPOSP0
 	sta HPOSP1
@@ -1149,6 +1149,8 @@ ARROW_MAX_X      = 200         ; Right boundary
 .proc fire_arrow
     lda arrow_active
     bne already_active
+
+    ; Set base position
     lda #ARROW_START_X
     sta arrow_x
     lda #ARROW_START_Y
@@ -1159,6 +1161,39 @@ ARROW_MAX_X      = 200         ; Right boundary
     sta arrow_map_x
     lda player_y
     sta arrow_map_y
+
+    ; Offset starting position based on direction so arrow doesn't overlap player
+    lda player_dir
+    cmp #NORTH
+    bne not_north_start
+    lda arrow_y
+    sec
+    sbc #12                     ; Start above player
+    sta arrow_y
+    jmp start_done
+not_north_start
+    cmp #SOUTH
+    bne not_south_start
+    lda arrow_y
+    clc
+    adc #12                     ; Start below player
+    sta arrow_y
+    jmp start_done
+not_south_start
+    cmp #WEST
+    bne not_west_start
+    lda arrow_x
+    sec
+    sbc #12                     ; Start left of player
+    sta arrow_x
+    jmp start_done
+not_west_start
+    ; Must be EAST
+    lda arrow_x
+    clc
+    adc #12                     ; Start right of player
+    sta arrow_x
+start_done
     lda #0
     sta arrow_subtile
     lda #1
@@ -1325,14 +1360,14 @@ monster_killed
     sta arrow_active
     jsr clear_arrow_missile
     lda #0
-    sta HPOSM0
+    sta HPOSM2              ; Use M2 instead of M0
     rts
     .endp
 
-; Draw arrow missile at current position
+; Draw arrow missile at current position (using M2 for blue color)
 .proc draw_arrow_missile
     lda arrow_x
-    sta HPOSM0
+    sta HPOSM2              ; Use M2 instead of M0
     lda arrow_y
     tax
     ; Missile bytes are packed (M0 uses the high bit pair).
