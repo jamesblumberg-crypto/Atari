@@ -7,12 +7,7 @@
 
 down                        ; The button is currently down
     lda stick_btn           ; Get the previous button state
-    beq held                ; Already down from previous poll
-
-pressed                     ; Just pressed this poll
-    read_direction()        ; Update direction before action
-    player_action()         ; Fire/use action immediately
-    jmp done
+    bne done                ; If previous button state is non-zero and current button state is zero, it was just pushed
 
 held                        ; The button is held down
     lda stick_action        ; Get the action state
@@ -157,39 +152,14 @@ close_doorway
     ; Standing on doorway - save old position, move, then close the door
     mwa player_ptr tmp_addr1    ; Save old position in tmp_addr1
     mwa dir_ptr player_ptr      ; Move the player to the correct location
-    jsr update_player_coords    ; Keep tile coordinates synced for arrow logic
     lda #MAP_DOOR               ; Load door tile
     sta (tmp_addr1),y           ; Close the door at the old position
     rts
 
 move_player
     mwa dir_ptr player_ptr      ; Move the player to the correct location
-    jsr update_player_coords    ; Keep tile coordinates synced for arrow logic
 
 blocked                         ; We are blocked
-    rts
-
-update_player_coords
-    lda player_dir
-    cmp #NORTH
-    bne upc_check_south
-    dec player_y
-    rts
-upc_check_south
-    cmp #SOUTH
-    bne upc_check_west
-    inc player_y
-    rts
-upc_check_west
-    cmp #WEST
-    bne upc_check_east
-    dec player_x
-    rts
-upc_check_east
-    cmp #EAST
-    bne upc_done
-    inc player_x
-upc_done
     rts
     .endp
 
@@ -388,4 +358,7 @@ check_melee_key
 done
     rts
     .endp
+
+
+
 
