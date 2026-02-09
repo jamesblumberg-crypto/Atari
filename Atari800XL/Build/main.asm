@@ -588,7 +588,7 @@ wait
 	; Player-Missile Colors
 	mva #red PCOLR0
 	mva #peach PCOLR1
-	mva #blue PCOLR2
+	mva #white PCOLR2       ; Bright white for arrow missile
 	mva #black PCOLR3
 
 	rts
@@ -1331,10 +1331,11 @@ passable
     rts
     .endp
 
-; Draw arrow missile at current position (using M2 for blue color)
+; Draw arrow missile at current position (using M2 for white color)
+; Makes an 8-scanline tall missile for better visibility
 .proc draw_arrow_missile
     lda arrow_x
-    sta HPOSM2              ; Use M2 instead of M0
+    sta HPOSM2              ; Set horizontal position for M2
     lda arrow_y
     tax
     ; M0 bit pair only.
@@ -1345,7 +1346,7 @@ passable
     rts
     .endp
 
-; Clear arrow missile
+; Clear arrow missile (8 scanlines)
 .proc clear_arrow_missile
     lda arrow_y
     tax
