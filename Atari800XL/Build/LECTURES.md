@@ -1,750 +1,731 @@
-# 6502 Assembly for Atari 800XL - Lecture Series
+# 6502 Assembly for Atari 800XL
+## A Guide for BASIC Programmers
 
-Based on your dungeon crawler game code. Each lecture uses examples from YOUR codebase.
+*Written for someone who grew up with an Atari 800, programmed in BASIC, but never understood what was happening "under the hood."*
 
 ---
 
-## Lecture 1: The 6502 CPU Basics
+# Part 1: The Big Picture
 
-### The Three Registers
+## What Assembly Really Is
 
-The 6502 has only THREE main registers you work with:
+Remember in BASIC when you typed:
 
-| Register | Name | Size | Purpose |
-|----------|------|------|---------|
-| **A** | Accumulator | 8-bit | Main math/logic register |
-| **X** | X Index | 8-bit | Counter, array index |
-| **Y** | Y Index | 8-bit | Counter, array index |
-
-**From your code** (`input.asm:31-37`):
-```asm
-.proc read_direction
-    mwa player_ptr dir_ptr      ; Copy player pointer to direction ptr
-    mva STICK0 stick_dir        ; Load stick bitmap into A, then store
+```basic
+10 A = 5
+20 B = 10
+30 C = A + B
+40 PRINT C
 ```
 
-The `mva` macro does: `lda STICK0` then `sta stick_dir` - load into A, store from A.
+When you hit RUN, BASIC had to figure out what you meant. It read "A = 5", looked up where variable A was stored, converted "5" to a number, and put it there. This translation takes time.
 
-### The Status Register (Flags)
+**Assembly is different.** Instead of telling the computer WHAT you want, you tell it exactly HOW to do it, step by step. You're speaking directly to the CPU chip.
 
-The CPU automatically sets FLAGS after most operations:
+```asm
+    lda #5          ; Put the number 5 into the A register
+    sta $96         ; Store that 5 at memory location $96
+    lda #10         ; Put 10 into A
+    clc             ; Clear the carry flag (prepare for addition)
+    adc $96         ; Add whatever is at $96 (the 5) to A
+                    ; A now contains 15
+```
 
-| Flag | Name | Set When... |
-|------|------|-------------|
-| **Z** | Zero | Result is 0 |
-| **N** | Negative | Bit 7 of result is 1 |
-| **C** | Carry | Addition overflowed, or subtraction didn't borrow |
-| **V** | Overflow | Signed math overflowed |
+This code does the same thing as `C = 5 + 10`, but:
+- You control exactly WHERE the numbers go
+- You control exactly WHICH operations happen
+- There's no translation - this IS what the CPU does
 
-**From your code** (`main.asm:281-287`):
+## Why Did People Use Assembly?
+
+The Atari 800 had a 1.79 MHz CPU. That sounds fast, but BASIC was SLOW:
+
+| Task | BASIC | Assembly |
+|------|-------|----------|
+| Fill screen with a character | ~2 seconds | ~1/60 second |
+| Move a sprite smoothly | Jerky | Butter smooth |
+| Read joystick + update screen | Laggy | Instant |
+
+Your game needs to update 60 times per second to feel smooth. BASIC simply couldn't keep up.
+
+## The Memory Map: Your Computer's Address Book
+
+Think of memory like a giant apartment building with 65,536 units (numbered $0000 to $FFFF in hex).
+
+```
+$0000-$00FF : "Zero Page" - The penthouse! Super fast access.
+$0100-$01FF : The Stack - Where the CPU takes notes
+$2000-$7FFF : RAM - Your stuff goes here
+$8000-$BFFF : Cartridge ROM - Your game code
+$C000-$CFFF : OS ROM or RAM
+$D000-$D7FF : Hardware registers - The MAGIC addresses!
+$D800-$FFFF : OS ROM
+```
+
+**The hardware registers ($D000-$D7FF) are special.** These aren't storage - they're control panels!
+
+In BASIC, you used PEEK and POKE:
+```basic
+POKE 712, 148    ' Change background color
+X = PEEK(632)    ' Read joystick
+```
+
+Those numbers (712, 632) are memory addresses. POKE 712 doesn't store 148 somewhere - it TELLS THE ANTIC CHIP to change the background color!
+
+In assembly:
+```asm
+    mva #148 $02C8      ; Same as POKE 712, 148
+    lda $0278           ; Same as X = PEEK(632)
+```
+
+---
+
+# Part 2: The CPU - Your New Best Friend
+
+## The Three Registers
+
+The 6502 CPU has three "hands" called registers:
+
+| Register | Name | What It's For |
+|----------|------|---------------|
+| **A** | Accumulator | Math, loading, storing - the main workhorse |
+| **X** | X Index | Counting loops, accessing arrays |
+| **Y** | Y Index | Same as X, but independent |
+
+**They're only 8 bits!** That means 0-255, just like BASIC variables after you POKE'd them.
+
+**From your game** (`main.asm`):
+```asm
+    lda #100            ; A = 100
+    sta player_hp       ; player_hp = A (which is 100)
+    lda #15
+    sta player_melee_dmg
+```
+
+This is like:
+```basic
+100 HP = 100
+110 DMG = 15
+```
+
+## The Status Register: How the CPU "Feels"
+
+After most operations, the CPU sets FLAGS that tell you what happened:
+
+| Flag | Name | When It's Set |
+|------|------|---------------|
+| **Z** | Zero | The result was zero |
+| **N** | Negative | Bit 7 of result is 1 (it's "negative" in signed math) |
+| **C** | Carry | Addition overflowed past 255, OR subtraction didn't need to borrow |
+
+**Why does this matter?** Because this is how decisions work!
+
+In BASIC:
+```basic
+100 IF HP = 0 THEN GOTO 500
+```
+
+In assembly:
+```asm
+    lda player_hp       ; Load HP into A
+    beq player_dead     ; "Branch if Equal to zero" - if Z flag is set
+```
+
+The `lda` instruction automatically sets the Z flag if the value was 0!
+
+**From your game** (`input.asm:126-132`):
+```asm
+check_monster
+    cmp #44             ; Compare A with 44
+    bcc check_item      ; Branch if A < 44 (Carry Clear)
+    cmp #52             ; Compare A with 52
+    bcs check_item      ; Branch if A >= 52 (Carry Set)
+    jsr attack_monster  ; If we got here, 44 <= A < 52 (it's a monster!)
+```
+
+This is like:
+```basic
+100 IF TILE < 44 THEN GOTO check_item
+110 IF TILE >= 52 THEN GOTO check_item
+120 GOSUB attack_monster
+```
+
+---
+
+# Part 3: Instructions You'll Use Constantly
+
+## Loading and Storing
+
+| Instruction | BASIC Equivalent | Example |
+|-------------|------------------|---------|
+| `lda #5` | A = 5 | Load immediate value |
+| `lda player_x` | A = PEEK(player_x) | Load from memory |
+| `sta player_x` | POKE player_x, A | Store to memory |
+| `ldx #10` | X = 10 | Load X register |
+| `ldy #0` | Y = 0 | Load Y register |
+
+The `#` symbol means "use this NUMBER." Without it, it means "use the ADDRESS."
+
+```asm
+    lda #$50        ; A = $50 (the number 80)
+    lda $50         ; A = whatever is stored at address $0050
+```
+
+## Math
+
+The 6502 can only ADD and SUBTRACT. No multiply, no divide!
+
+```asm
+    clc             ; ALWAYS clear carry before adding!
+    lda player_x
+    adc #5          ; A = A + 5 + Carry
+    sta player_x   ; player_x = player_x + 5
+```
+
+**CRITICAL: Always CLC before ADC, always SEC before SBC!**
+
+```asm
+    sec             ; ALWAYS set carry before subtracting!
+    lda player_hp
+    sbc #10         ; A = A - 10 - (1-Carry)
+    sta player_hp   ; player_hp = player_hp - 10
+```
+
+Why? The carry flag is used for multi-byte math. If you forget, you'll get wrong answers!
+
+**Shortcuts:**
+```asm
+    inc player_x    ; player_x = player_x + 1 (no need for clc/adc)
+    dec player_hp   ; player_hp = player_hp - 1
+    inx             ; X = X + 1
+    dey             ; Y = Y - 1
+```
+
+## Comparison and Branching
+
+| Instruction | What It Does |
+|-------------|--------------|
+| `cmp #10` | Compare A with 10, set flags |
+| `cpx #5` | Compare X with 5, set flags |
+| `cpy #0` | Compare Y with 0, set flags |
+
+| Branch | Meaning | Use After CMP When... |
+|--------|---------|----------------------|
+| `beq` | Branch if Equal | A was equal to the value |
+| `bne` | Branch if Not Equal | A was not equal |
+| `bcc` | Branch if Carry Clear | A was LESS than the value |
+| `bcs` | Branch if Carry Set | A was GREATER OR EQUAL |
+| `bmi` | Branch if Minus | Result had bit 7 set |
+| `bpl` | Branch if Plus | Result had bit 7 clear |
+
+**From your game** (`main.asm:281-287`) - HP bar calculation:
 ```asm
 calc_segments
-    cmp #17                     ; Compare A with 17
-    bcc draw_bars               ; Branch if Carry Clear (A < 17)
+    cmp #17             ; Is A >= 17?
+    bcc draw_bars       ; If A < 17, we're done counting
     sec
-    sbc #17                     ; Subtract 17
-    inx                         ; Increment X
-    cpx #6                      ; Compare X with 6
-    bcc calc_segments           ; Loop if X < 6
+    sbc #17             ; A = A - 17
+    inx                 ; X counts how many 17s fit in the HP
+    cpx #6              ; Did we count 6 segments?
+    bcc calc_segments   ; No? Keep going
 ```
 
-- `cmp #17` sets Carry if A >= 17, clears if A < 17
-- `bcc` branches if Carry is Clear (meaning A was less than 17)
+This calculates how many full HP segments to draw!
 
 ---
 
-## Lecture 2: Memory and Addressing Modes
+# Part 4: Memory - Going Beyond 255
 
-### The 6502 Memory Map
+## The Problem
 
-The 6502 can address 64KB of memory ($0000-$FFFF). Your game uses:
+Registers are 8-bit. Memory addresses are 16-bit (0-65535). How do we work with big numbers?
 
-**From your code** (`main.asm:3-49`):
+**Answer: Use TWO bytes!**
+
+```
+Address $92 = low byte
+Address $93 = high byte
+
+If we want to store $2000:
+    $92 = $00 (low byte)
+    $93 = $20 (high byte)
+
+The number is stored "backwards" - low byte first!
+This is called "little endian."
+```
+
+**From your game** (`main.asm:55-56`):
 ```asm
-    org $b000                   ; Code starts at $B000 (ROM area)
-
-map                 = $2000     ; Map data (RAM)
-screen              = $7000     ; Screen buffer (RAM)
-pmg                 = $7400     ; Player-Missile Graphics (RAM)
-cur_charset_a       = $7800     ; Character set A (RAM)
-dlist               = $9800     ; Display list
-charset_dungeon_a   = $8000     ; Character graphics (ROM)
+map_ptr         = $92       ; This is actually TWO bytes: $92 and $93
+screen_ptr      = $94       ; Two bytes: $94 and $95
 ```
 
-### Zero Page ($00-$FF) - The Fast Memory
+## 16-Bit Addition
 
-Zero Page is special - instructions using it are 1 byte shorter and 1 cycle faster!
+To add to a 16-bit number, add the low byte first, then the high byte (carrying if needed):
 
-**From your code** (`main.asm:55-67`):
-```asm
-map_ptr             = $92       ; 16-bit pointer (2 bytes: $92-$93)
-screen_ptr          = $94       ; 16-bit pointer
-player_x            = $96       ; 8-bit value
-player_y            = $97       ; 8-bit value
-tmp                 = $98       ; Temporary storage
-```
-
-### Addressing Modes
-
-**Immediate** - The value IS the operand:
-```asm
-lda #100            ; Load the NUMBER 100 into A
-```
-
-**Absolute** - The value is AT that address:
-```asm
-lda player_hp       ; Load whatever is stored at address player_hp
-```
-
-**Zero Page** - Same as absolute but for $00-$FF (faster):
-```asm
-lda player_x        ; player_x = $96, so load from $0096
-```
-
-**Indexed** - Add X or Y to the address:
-```asm
-lda monster_hp_table,x   ; Load from monster_hp_table + X
-```
-
-**Indirect Indexed** - For 16-bit pointers (VERY common in your code):
-```asm
-lda (map_ptr),y     ; Load from address stored in map_ptr, plus Y offset
-```
-
-**From your code** (`main.asm:700-703`):
-```asm
-.macro blit_tile
-    lda (map_ptr),y         ; Load tile from address in map_ptr + Y
-    asl                     ; Multiply by 2
-    jsr fix_color           ; Call subroutine
-    sta (screen_ptr),y      ; Store to address in screen_ptr + Y
-```
-
----
-
-## Lecture 3: Essential Instructions
-
-### Loading and Storing
-
-| Instruction | Meaning | Example |
-|-------------|---------|---------|
-| `lda` | Load A | `lda #5` or `lda player_hp` |
-| `ldx` | Load X | `ldx #0` |
-| `ldy` | Load Y | `ldy #10` |
-| `sta` | Store A | `sta player_hp` |
-| `stx` | Store X | `stx counter` |
-| `sty` | Store Y | `sty index` |
-
-### Math Operations
-
-| Instruction | Meaning | Notes |
-|-------------|---------|-------|
-| `adc` | Add with Carry | Must `clc` first for simple add |
-| `sbc` | Subtract with Carry | Must `sec` first for simple subtract |
-| `inc` | Increment memory | `inc player_x` adds 1 |
-| `dec` | Decrement memory | `dec player_hp` subtracts 1 |
-| `inx/iny` | Increment X/Y | |
-| `dex/dey` | Decrement X/Y | |
-
-**From your code** (`main.asm:1169-1172`):
-```asm
-    lda arrow_y
-    sec                     ; Set Carry (required before subtraction!)
-    sbc #12                 ; Subtract 12 from A
-    sta arrow_y             ; Store result
-```
-
-**CRITICAL**: Always `sec` before `sbc`, always `clc` before `adc`!
-
-### Comparison and Branching
-
-| Instruction | Meaning |
-|-------------|---------|
-| `cmp` | Compare A with value (sets flags) |
-| `cpx` | Compare X with value |
-| `cpy` | Compare Y with value |
-
-| Branch | Meaning | Use After |
-|--------|---------|-----------|
-| `beq` | Branch if Equal (Z=1) | `cmp`, `lda`, etc. when result is 0 |
-| `bne` | Branch if Not Equal (Z=0) | When result is not 0 |
-| `bcc` | Branch if Carry Clear | `cmp` when A < value |
-| `bcs` | Branch if Carry Set | `cmp` when A >= value |
-| `bmi` | Branch if Minus (N=1) | When result is negative |
-| `bpl` | Branch if Plus (N=0) | When result is positive |
-
-**From your code** (`input.asm:39-45`):
-```asm
-check_up
-    and #STICK_UP           ; AND with joystick UP bit
-    bne check_down          ; If result != 0, joystick NOT pushed up
-    sbw dir_ptr #map_width  ; It IS pushed up, so adjust pointer
-    lda #NORTH
-    sta player_dir
-    rts                     ; Return - we're done
-```
-
----
-
-## Lecture 4: Subroutines and the Stack
-
-### The Stack
-
-The 6502 stack lives at $0100-$01FF and grows DOWNWARD. It's used for:
-1. Return addresses (from `jsr`)
-2. Saving register values (`pha`, `php`)
-
-### JSR and RTS
-
-**From your code** (`main.asm:255-257`):
-```asm
-game
-    mva RTCLK2 clock
-    animate                 ; This is a macro (expands inline)
-    get_input               ; This is a macro
-    jsr read_keyboard       ; This CALLS a subroutine
-    jsr update_arrow        ; Another subroutine call
-    jmp game                ; Jump back (infinite loop)
-```
-
-When `jsr read_keyboard` executes:
-1. Push return address onto stack (2 bytes)
-2. Jump to `read_keyboard`
-3. When `rts` is hit, pop address and return
-
-### Saving Registers
-
-**From your code** (`main.asm:663-667`):
-```asm
-.proc fix_color
-    sta tmp         ; Save A to memory
-    tya             ; Transfer Y to A
-    pha             ; Push A (which is Y) onto stack
-    lda tmp         ; Restore original A value
-```
-
-And at the end (`main.asm:694-697`):
-```asm
-done
-    pla             ; Pull saved Y value from stack
-    tay             ; Transfer A back to Y
-    lda tmp         ; Restore original A value
-    rts
-```
-
-This pattern **preserves the Y register** across the subroutine call.
-
----
-
-## Lecture 5: 16-bit Operations
-
-The 6502 is an 8-bit CPU, but addresses are 16-bit. You need special techniques.
-
-### 16-bit Pointers
-
-A 16-bit pointer uses 2 consecutive bytes (low byte first!):
-
-```
-map_ptr     = $92       ; Low byte at $92
-map_ptr+1   = $93       ; High byte at $93
-
-If map_ptr contains $2000:
-    $92 contains $00 (low byte)
-    $93 contains $20 (high byte)
-```
-
-### 16-bit Increment
-
-**From your code** (`macros.asm:1-6`):
+**From your game** (`macros.asm:1-6`):
 ```asm
 .macro inc16 addr
-    inc :addr           ; Increment low byte
+    inc :addr           ; Add 1 to low byte
     bne skip_carry      ; If it didn't wrap to 0, we're done
-    inc :addr + 1       ; It wrapped! Increment high byte
+    inc :addr + 1       ; It wrapped! Add 1 to high byte too
 skip_carry
 .endm
 ```
 
-Example: If `map_ptr` = $20FF
-1. `inc map_ptr` makes low byte $00 (wrapped from $FF)
-2. `bne skip_carry` - Z flag IS set (result was 0), so we DON'T branch
-3. `inc map_ptr+1` makes high byte $21
-4. Result: $2100
+Example: If map_ptr = $20FF
+1. `inc map_ptr` → $00 (wrapped from $FF, Z flag set!)
+2. `bne skip_carry` → Z is set, so we DON'T branch
+3. `inc map_ptr+1` → $21
 
-### 16-bit Addition
+Result: $2100
 
-**From your code** (`macros.asm:16-23`):
+## Indirect Addressing - The Power Move
+
+This is how your game navigates the map. Watch carefully:
+
 ```asm
-.macro adbw src val
-    lda :src            ; Load low byte
-    add :val            ; Add value (MADS 'add' = clc + adc)
-    sta :src            ; Store low byte
-    bcc skip_carry      ; If no carry, we're done
-    inc :src + 1        ; Carry occurred! Increment high byte
-skip_carry
+    ldy #0
+    lda (map_ptr),y     ; Load from THE ADDRESS STORED IN map_ptr
+```
+
+If `map_ptr` contains $2800, this loads the byte at address $2800.
+
+It's like pointers in C, or like PEEK(PEEK(low) + 256*PEEK(high)) in BASIC!
+
+**From your game** (`macros.asm:127-130`):
+```asm
+.macro ldi addr         ; "Load Indirect"
+    ldy #0
+    lda (:addr),y       ; Load the byte that addr POINTS TO
 .endm
 ```
 
-### The MWA Macro (Move Word to Address)
-
-MADS provides `mwa` for 16-bit moves:
-
+Your game uses this to read map tiles:
 ```asm
-mwa #map map_ptr        ; Store $2000 into map_ptr
-                        ; Expands to:
-                        ;   lda #<map    ; Low byte
-                        ;   sta map_ptr
-                        ;   lda #>map    ; High byte
-                        ;   sta map_ptr+1
+    ldi player_ptr      ; What tile is the player standing on?
 ```
 
 ---
 
-## Lecture 6: Bit Manipulation
+# Part 5: The Atari's Custom Chips
 
-### Logical Operations
+## The Atari Advantage
 
-| Instruction | Operation | Use Case |
-|-------------|-----------|----------|
-| `and` | Bitwise AND | Mask off bits, check specific bits |
-| `ora` | Bitwise OR | Set specific bits |
-| `eor` | Bitwise XOR | Toggle bits, flip values |
+The Atari 800 wasn't just a CPU. It had THREE custom chips:
 
-**From your code** (`main.asm:547-549`):
-```asm
-    lda charset_a
-    eor #$ff            ; XOR with $FF flips ALL bits
-    sta charset_a       ; 0 becomes $FF, $FF becomes 0
+| Chip | Job | What It Does |
+|------|-----|--------------|
+| **ANTIC** | Display | Reads memory and creates the TV signal |
+| **GTIA** | Graphics | Colors and player-missile graphics |
+| **POKEY** | I/O + Sound | Keyboard, joystick, sound, serial I/O |
+
+These chips work INDEPENDENTLY of the CPU! While your code runs, ANTIC is reading screen memory and drawing. You just update memory, and the display changes automatically.
+
+## Memory-Mapped I/O
+
+In BASIC, you used:
+```basic
+POKE 712, 148   ' Change background color
 ```
 
-This toggles between two character sets for animation!
+Address 712 (=$02C8) isn't RAM - it's connected to GTIA! When you write there, GTIA sees the value and changes the color.
 
-### Shift Operations
-
-| Instruction | Operation | Effect |
-|-------------|-----------|--------|
-| `asl` | Arithmetic Shift Left | Multiply by 2 |
-| `lsr` | Logical Shift Right | Divide by 2 |
-| `rol` | Rotate Left through Carry | |
-| `ror` | Rotate Right through Carry | |
-
-**From your code** (`main.asm:701-702`):
+**From your game** (`hardware.asm`):
 ```asm
-    lda (map_ptr),y     ; Load tile number (0-127)
-    asl                 ; Multiply by 2 to get character index
+COLOR0 = $02C4  ; These are "shadow registers"
+COLOR1 = $02C5  ; The OS copies them to GTIA
+COLOR2 = $02C6  ; during vertical blank
+COLOR3 = $02C7
+COLOR4 = $02C8  ; Background color
+
+STICK0 = $0278  ; Read joystick direction
+STRIG0 = $0284  ; Read fire button
 ```
 
-Tiles are 2 characters wide, so tile 5 uses characters 10 and 11.
-
-### Testing Bits
-
-**From your code** (`input.asm:39-41`):
+**From your game** (`main.asm:579-591`):
 ```asm
-check_up
-    and #STICK_UP       ; STICK_UP = %0001
-    bne check_down      ; If result != 0, bit was set
+.proc setup_colors
+    mva #white COLOR0   ; Set color for %01 bit pattern
+    mva #red COLOR1     ; Set color for %10 bit pattern
+    mva #blue COLOR2    ; Set color for %11 bit pattern
+    mva #gold COLOR3    ; Set color for inverse %11
+    mva #black COLOR4   ; Set background color
+
+    mva #red PCOLR0     ; Player 0 color
+    mva #peach PCOLR1   ; Player 1 color
+    mva #white PCOLR2   ; Player 2 / Missile 2 color (arrow!)
+    mva #black PCOLR3   ; Player 3 color
+    rts
+.endp
 ```
 
-The joystick returns inverted bits (0 = pressed). This code:
-1. ANDs with %0001 to isolate the UP bit
-2. If result is NOT zero, the bit was 1 (not pressed)
-3. If result IS zero, the bit was 0 (pressed!)
+## The Display List - ANTIC's Program
 
----
+Remember GRAPHICS 0, GRAPHICS 7, etc.? Those set up a "display list" that tells ANTIC what to draw.
 
-## Lecture 7: The Atari Display System
+In assembly, YOU create the display list!
 
-### Display List (ANTIC)
-
-The ANTIC chip reads a "display list" that tells it how to draw the screen.
-
-**From your code** (`dlist.asm:30-36`):
+**From your game** (`dlist.asm:30-36`):
 ```asm
 dlist
-    .byte blank8, blank8, blank8                    ; 24 blank scanlines
+    .byte blank8, blank8, blank8    ; 24 blank scanlines
     .byte antic4 + lms + NMIEN_DLI, <status_line, >status_line
-    .byte antic5 + lms, <screen, >screen            ; Mode 5 + load address
-    .byte antic5, antic5, antic5, antic5, antic5    ; 5 more mode 5 lines
+    .byte antic5 + lms, <screen, >screen
+    .byte antic5, antic5, antic5, antic5, antic5
     .byte antic5, antic5, antic5, antic5, antic5 + NMIEN_DLI, antic4
-    .byte jvb, <dlist, >dlist                       ; Jump and wait for VBlank
+    .byte jvb, <dlist, >dlist
 ```
 
-- `blank8` = 8 blank scanlines
-- `antic4` = Text mode (40 chars, 8 scanlines tall)
-- `antic5` = High-res graphics mode (40 chars, 16 scanlines)
-- `lms` = Load Memory Scan (next 2 bytes are the screen address)
-- `NMIEN_DLI` = Trigger Display List Interrupt on this line
-- `jvb` = Jump and wait for Vertical Blank
+Each byte is an instruction to ANTIC:
+- `blank8` = "draw 8 blank lines"
+- `antic4` = "draw one line of 40-column text"
+- `antic5` = "draw one line of hi-res graphics"
+- `lms` = "load memory scan - next 2 bytes are the address to read from"
+- `jvb` = "jump to start and wait for vertical blank"
 
-### Display List Interrupts (DLI)
+This is why Atari games had such creative displays - you could mix modes, scroll parts of the screen, and do things BASIC never allowed!
 
-DLIs let you change graphics settings MID-SCREEN!
+## Display List Interrupts - Changing Mid-Screen!
 
-**From your code** (`dlist.asm:39-55`):
+See that `NMIEN_DLI` in the display list? That tells ANTIC to interrupt the CPU when it reaches that line!
+
+**From your game** (`dlist.asm:39-55`):
 ```asm
 dli1
-    pha                     ; Save A on stack
+    pha                         ; Save A on stack
     lda #1
-    sta WSYNC               ; Wait for horizontal sync
-    lda charset_a
+    sta WSYNC                   ; Wait for horizontal sync
+    lda charset_a               ; Which charset are we using?
     bne use_charset_b
     mva #>cur_charset_a CHBASE  ; Use charset A
     jmp done
 use_charset_b
     mva #>cur_charset_b CHBASE  ; Use charset B
 done
-    mwa #dli2 VDSLST        ; Set up next DLI
+    mwa #dli2 VDSLST            ; Set up next DLI handler
     set_colors
-    pla                     ; Restore A
-    rti                     ; Return from Interrupt
+    pla                         ; Restore A
+    rti                         ; Return from Interrupt
 ```
 
-This changes the character set partway down the screen!
-
-### Character Sets
-
-Characters are 8x8 pixel bitmaps. The Atari can point to any 1KB-aligned address.
-
-**From your code** (`main.asm:166`):
-```asm
-mva #>charset_outdoor_a CHBAS   ; Set character base to high byte of address
-```
-
-`>charset_outdoor_a` gets the HIGH byte ($88 for $8800), which tells ANTIC where to find character graphics.
+This changes the character set PARTWAY DOWN THE SCREEN! The status bar uses one charset, the dungeon uses another. This was impossible in BASIC!
 
 ---
 
-## Lecture 8: Player-Missile Graphics (Sprites)
+# Part 6: Player-Missile Graphics
 
-### PMG Memory Layout
+## What Are Player-Missile Graphics?
 
-**From your code** (`main.asm:600-604`):
-```asm
-.proc clear_pmg
-pmg_p0 = pmg + $200     ; Player 0 at PMBASE + $200
-pmg_p1 = pmg + $280     ; Player 1 at PMBASE + $280
-pmg_p2 = pmg + $300     ; Player 2 at PMBASE + $300
-pmg_p3 = pmg + $380     ; Player 3 at PMBASE + $380
-```
+Remember the PLAYER() and MISSILE() commands in BASIC? Those were hardware sprites!
 
-Each player is 128 bytes (one byte per scanline in double-line mode).
+Unlike characters (which are locked to an 8x8 grid), players can be at ANY horizontal position and move smoothly.
 
-### Setting Up PMG
+**How it works:**
+1. Set PMBASE to tell hardware where sprite data lives
+2. Write the sprite shape into that memory (one byte = one scanline)
+3. Set HPOSP0-3 to position the sprite horizontally
+4. The hardware draws it automatically!
 
-**From your code** (`main.asm:645-656`):
+**From your game** (`main.asm:645-656`):
 ```asm
 .proc setup_pmg
-    mva #>pmg PMBASE        ; Tell ANTIC where PMG memory is
-    mva #46 SDMCTL          ; Enable DMA, players, missiles
-    mva #3 GRACTL           ; Enable player and missile graphics
-    mva #1 GRPRIOR          ; Players have priority over playfield
+    mva #>pmg PMBASE        ; Sprite data is at $7400
+    mva #46 SDMCTL          ; Enable player/missile DMA
+    mva #3 GRACTL           ; Turn on players and missiles
+    mva #1 GRPRIOR          ; Players appear in front of playfield
     mva #%00110000 SIZEM    ; Missile 2 is double-width
     lda #92
-    sta HPOSP0              ; Horizontal position of player 0
-    sta HPOSP1              ; (all players at same X for now)
+    sta HPOSP0              ; Horizontal position
+    sta HPOSP1
     sta HPOSP2
     sta HPOSP3
     rts
 .endp
 ```
 
-### Drawing Missiles
+## Drawing a Missile
 
-**From your code** (`main.asm:1327-1340`):
+Missiles share one memory area. Each scanline has one byte with 2 bits per missile:
+
+```
+Bit 7-6: Missile 3
+Bit 5-4: Missile 2 (the arrow!)
+Bit 3-2: Missile 1
+Bit 1-0: Missile 0
+```
+
+**From your game** (`main.asm:1367-1390`):
 ```asm
 .proc draw_arrow_missile
     lda arrow_x
     sta HPOSM2              ; Set horizontal position
     lda arrow_y
-    tax                     ; Use Y coordinate as index
-    lda #%00110000          ; Bits 4-5 = Missile 2
-    sta pmg_missiles,x      ; Draw 4 scanlines
+    tax                     ; X = Y coordinate (index into memory)
+    lda #%00110000          ; Bits 5-4 set = Missile 2 visible
+    sta pmg_missiles,x      ; Draw 8 scanlines
     inx
     sta pmg_missiles,x
-    inx
-    sta pmg_missiles,x
-    inx
-    sta pmg_missiles,x
+    ; ... (repeats 8 times total)
     rts
 .endp
 ```
 
-The missile byte format:
-- Bits 0-1: Missile 0
-- Bits 2-3: Missile 1
-- Bits 4-5: Missile 2 (used for arrow)
-- Bits 6-7: Missile 3
-
 ---
 
-## Lecture 9: Macros vs Procedures
+# Part 7: The Game Loop
 
-### Macros (Inline Expansion)
+## How Games Work
 
-Macros copy their code EVERYWHERE they're used.
+Every game does the same thing, 60 times per second:
 
-**From your code** (`main.asm:531-541`):
+1. **Read input** (joystick, keyboard)
+2. **Update game state** (move player, check collisions)
+3. **Draw** (update screen memory)
+4. **Wait for next frame**
+
+**From your game** (`main.asm:251-257`):
+```asm
+game
+    mva RTCLK2 clock        ; Read the 60Hz clock
+    animate                 ; Toggle charset for animation
+    get_input               ; Read joystick, move player
+    jsr read_keyboard       ; Check for key presses
+    jsr update_arrow        ; Update arrow position
+    jmp game                ; Loop forever!
+```
+
+## Timing with the Real-Time Clock
+
+The OS increments RTCLK2 sixty times per second. Your game uses this for timing:
+
+**From your game** (`main.asm:531-540`):
 ```asm
 .macro get_input
     lda clock
-    cmp input_timer
-    bne input_done
-    read_joystick()
-    blit_screen()
+    cmp input_timer         ; Time for input?
+    bne input_done          ; Not yet
+    read_joystick()         ; Yes! Read input
+    blit_screen()           ; Update display
     lda clock
-    add #input_speed
-    sta input_timer
+    add #input_speed        ; input_speed = 5
+    sta input_timer         ; Next input in 5 ticks (1/12 second)
 input_done
 .endm
 ```
 
-Every time you write `get_input`, ALL this code is inserted. Good for:
-- Small, frequently-used code
-- Speed-critical code (no JSR/RTS overhead)
+This reads input every 5/60 = 0.083 seconds, giving smooth but not too twitchy control.
 
-Bad for:
-- Large code (wastes memory)
-- Code with labels (can cause duplicates!)
+---
 
-### Procedures (Subroutines)
+# Part 8: Macros vs Procedures
 
-Procedures exist ONCE in memory and are CALLED.
+## Macros: Copy-Paste at Assembly Time
 
-**From your code** (`main.asm:662-698`):
+A macro is like a text replacement. Every time you use it, the assembler COPIES the entire code:
+
 ```asm
-.proc fix_color
-    ; ... 35 lines of code ...
-    rts
-.endp
+.macro clr addr
+    mva #0 :addr            ; Store 0 at the address
+.endm
+
+; When you write:
+    clr player_hp
+
+; The assembler sees:
+    mva #0 player_hp
 ```
 
-Called with `jsr fix_color`. Good for:
-- Large code
-- Code called from many places
-- Code with internal labels (properly scoped)
+**Pros:** Fast (no JSR/RTS overhead)
+**Cons:** Uses more memory if used many times
 
-### The Bug We Fixed
+## Procedures: One Copy, Many Calls
 
-The `fix_color` was a MACRO, called twice inside `blit_tile`:
+A procedure exists once in memory. You CALL it with JSR:
+
+```asm
+.proc clear_arrow_missile
+    lda arrow_y
+    tax
+    lda #0
+    sta pmg_missiles,x
+    ; ... more code ...
+    rts                     ; Return to caller
+.endp
+
+; Every call just does:
+    jsr clear_arrow_missile ; 3 bytes, jumps to the one copy
+```
+
+**Pros:** Saves memory
+**Cons:** Slightly slower (6 cycles for JSR + 6 for RTS)
+
+## The Bug We Fixed!
+
+The original `fix_color` was a MACRO that was used TWICE inside `blit_tile`:
+
 ```asm
 .macro blit_tile
     ...
-    fix_color       ; First copy of all fix_color code
+    fix_color       ; First copy - has labels: shift_bits, done
     ...
-    fix_color       ; Second copy - DUPLICATE LABELS!
+    fix_color       ; Second copy - SAME labels!
     ...
 .endm
 ```
 
-The `done` label existed TWICE, causing `bcc done` to jump to the WRONG one, skipping a `pla` and corrupting the stack!
+Both copies had a label called `done`. When the first copy said `bcc done`, it sometimes jumped to the SECOND copy's `done`!
 
-**Fix**: Convert to `.proc` so labels are scoped and code exists only once.
+This skipped a `pla` instruction, leaving garbage on the stack. After drawing many tiles, the stack got corrupted and the game crashed.
+
+**Fix:** Convert to `.proc` so labels are properly contained:
+
+```asm
+.proc fix_color
+    ; Labels here are PRIVATE to this procedure
+    ...
+done
+    pla
+    tay
+    lda tmp
+    rts             ; Now there's only ONE copy of this code
+.endp
+```
 
 ---
 
-## Lecture 10: Game Loop Structure
+# Part 9: Reading the Joystick
 
-### The Main Loop
+## How Joystick Input Works
 
-**From your code** (`main.asm:251-257`):
+STICK0 ($0278) returns a 4-bit value with ACTIVE-LOW bits:
+
+| Bit | Direction | Pressed = 0, Released = 1 |
+|-----|-----------|---------------------------|
+| 0 | Up | |
+| 1 | Down | |
+| 2 | Left | |
+| 3 | Right | |
+
+If nothing is pressed: STICK0 = %1111 = 15
+If Up is pressed: STICK0 = %1110 = 14
+If Up+Left: STICK0 = %1010 = 10
+
+**From your game** (`input.asm:39-45`):
 ```asm
-game
-    mva RTCLK2 clock        ; Read real-time clock
-    animate                 ; Toggle character set (if timer expired)
-    get_input               ; Read joystick, move player (if timer expired)
-    jsr read_keyboard       ; Check for key presses
-    jsr update_arrow        ; Move arrow, check collisions
-    jmp game                ; Loop forever
-```
-
-### Timer-Based Updates
-
-**From your code** (`main.asm:531-540`):
-```asm
-.macro get_input
-    lda clock
-    cmp input_timer         ; Has enough time passed?
-    bne input_done          ; No - skip input processing
-    read_joystick()         ; Yes - read input
-    blit_screen()           ; Redraw screen
-    lda clock
-    add #input_speed        ; input_speed = 5
-    sta input_timer         ; Set next trigger time
-input_done
-.endm
-```
-
-The Atari's RTCLK2 increments 60 times per second. By comparing with a timer value, you control update speed:
-- `input_speed = 5` means input is processed every 5/60 = 0.083 seconds
-- `anim_speed = 20` means animation every 20/60 = 0.33 seconds
-
----
-
-## Lecture 11: Indirect Addressing Deep Dive
-
-### The Power of Pointers
-
-Your game uses pointers extensively for map navigation:
-
-**From your code** (`input.asm:121-164`):
-```asm
-.proc player_move
-    ldi dir_ptr             ; Load tile from where we want to move
-    beq blocked             ; If 0, we're not moving
-
-check_monster
-    cmp #44                 ; Monster tiles are 44-51
-    bcc check_item          ; Less than 44? Not a monster
-    cmp #52
-    bcs check_item          ; Greater than 51? Not a monster
-    jsr attack_monster      ; It's a monster! Attack!
+check_up
+    and #STICK_UP           ; STICK_UP = %0001
+    bne check_down          ; If result != 0, NOT pushed up
+    ; (If result = 0, the bit was 0, meaning PRESSED!)
+    sbw dir_ptr #map_width  ; Move direction pointer up
+    lda #NORTH
+    sta player_dir
     rts
+```
 
-check_passable
-    is_passable()           ; Check if we can walk there
-    bcc blocked             ; Carry clear = blocked
+The logic is tricky because the bits are INVERTED!
 
-move_player
-    mwa dir_ptr player_ptr  ; Update player position
-blocked
+## Button Debouncing
+
+Buttons bounce - they flicker on/off rapidly when pressed. The code handles this:
+
+**From your game** (`input.asm:1-27`):
+```asm
+.proc read_joystick
+    mva STRIG0 cur_btn      ; Read current button (0=pressed, 1=released)
+    bne up                  ; If not 0, button is up
+
+down                        ; Button is currently pressed
+    lda stick_btn           ; What was it LAST frame?
+    bne done                ; If it was UP, button was JUST pressed - wait
+
+held                        ; Button was already down - it's being held
+    lda stick_action        ; Did we already do the action?
+    bne done                ; Yes, don't repeat
+    read_direction()
+    player_action()         ; Do the action!
+    jmp done
+
+up                          ; Button is released
+    read_direction()
+    player_move()
+    clr stick_action        ; Reset action flag
+
+done
+    mva cur_btn stick_btn   ; Remember for next frame
     rts
 .endp
 ```
 
-### How Pointers Work
-
-```asm
-player_ptr = $DE            ; 2-byte pointer at $DE-$DF
-
-; If player is at map position (16, 16):
-; player_ptr contains $2000 + (16 * 139) + 16 = $28C0
-; $DE = $C0 (low byte)
-; $DF = $28 (high byte)
-
-ldy #0
-lda (player_ptr),y          ; Load tile at player's position
-```
-
-### The LDI and STI Macros
-
-**From your code** (`macros.asm:127-135`):
-```asm
-.macro ldi addr             ; Load Indirect
-    ldy #0
-    lda (:addr),y           ; Load from address stored in 'addr'
-.endm
-
-.macro sti addr             ; Store Indirect
-    ldy #0
-    sta (:addr),y           ; Store to address stored in 'addr'
-.endm
-```
-
-These simplify common pointer operations.
-
 ---
 
-## Lecture 12: Putting It All Together
+# Quick Reference
 
-### A Complete Feature: The Arrow System
+## Common Patterns
 
-1. **Fire the arrow** (`main.asm:1143-1204`):
-   - Check if arrow already active
-   - Set starting position (offset from player)
-   - Set direction from player_dir
-   - Draw initial missile graphics
-
-2. **Update each frame** (`main.asm:1207-1248`):
-   - Clear old missile position
-   - Move arrow (screen coordinates)
-   - Every 8 pixels, move map coordinates
-   - Check for collisions
-   - Check bounds
-   - Draw new position
-
-3. **Handle collisions** (`main.asm:1251-1314`):
-   - Calculate map address from arrow_map_x/y
-   - Check if tile is a monster (44-51)
-   - Check if tile is passable
-   - Deactivate arrow if it hits something
-
-### Key Concepts Used
-
-- **Zero page pointers** for map navigation
-- **Indexed addressing** for PMG graphics
-- **Bit manipulation** for missile data
-- **Comparison and branching** for game logic
-- **Subroutines** for organized code
-- **Hardware registers** for display
-
----
-
-## Quick Reference Card
-
-### Common Patterns
-
-**Check if A equals a value:**
+**Is A equal to a value?**
 ```asm
     cmp #value
-    beq is_equal
+    beq yes_equal
     ; not equal
-is_equal:
+yes_equal:
 ```
 
-**Check if A is less than a value:**
+**Is A less than a value?**
 ```asm
     cmp #value
-    bcc is_less
+    bcc yes_less        ; Carry Clear = Less than
     ; A >= value
-is_less:
+yes_less:
 ```
 
-**Loop X times:**
+**Loop 10 times:**
 ```asm
-    ldx #count
-loop:
+    ldx #10
+loop
     ; do something
     dex
-    bne loop
+    bne loop            ; Loop until X = 0
 ```
 
-**16-bit pointer access:**
+**Save and restore A:**
 ```asm
-    ldy #0
-    lda (pointer),y     ; Load from pointer + 0
-    ldy #5
-    lda (pointer),y     ; Load from pointer + 5
+    pha                 ; Push A onto stack
+    ; ... do stuff that changes A ...
+    pla                 ; Pull A back from stack
 ```
 
-**Save and restore registers:**
+**Add two 8-bit numbers:**
 ```asm
-    pha             ; Save A
-    txa
-    pha             ; Save X
-    tya
-    pha             ; Save Y
-    ; ... do work ...
-    pla
-    tay             ; Restore Y
-    pla
-    tax             ; Restore X
-    pla             ; Restore A
+    clc                 ; ALWAYS clear carry first!
+    lda first_num
+    adc second_num
+    sta result
+```
+
+**Subtract:**
+```asm
+    sec                 ; ALWAYS set carry first!
+    lda first_num
+    sbc second_num
+    sta result
 ```
 
 ---
 
-## Exercises
+# Exercises
 
-1. **Trace through `read_direction`** - Draw out what happens when joystick is pushed UP
+1. **Trace `read_direction`** - What happens when you push UP+LEFT?
 
-2. **Understand `blit_tile`** - Why does it multiply by 2? Why two stores?
+2. **Find the HP calculation** - How does `update_hp_bar` know how many segments to draw?
 
-3. **Modify arrow speed** - Change ARROW_SPEED and see the effect
+3. **Modify a color** - Change `gold` to another value and see what happens
 
-4. **Add a new item** - Create a health potion pickup like MAP_BOW
+4. **Slow down the game** - Change `input_speed` from 5 to 20
 
-5. **Debug with Altirra** - Set breakpoints, watch memory, single-step
+5. **Use Altirra's debugger** - Set a breakpoint at `attack_monster` and watch the registers
 
 ---
 
-*Created from your Atari 800XL dungeon crawler codebase*
+*You learned BASIC. Now you understand the machine.*
