@@ -587,7 +587,7 @@ wait
 	; Player-Missile Colors
 	mva #red PCOLR0
 	mva #peach PCOLR1
-	mva #blue PCOLR2
+	mva #white PCOLR2       ; Bright white for arrow missile
 	mva #black PCOLR3
 
 	rts
@@ -1136,8 +1136,8 @@ monster_xp_table
 ; ============================================
 
 ; Constants for arrow
-ARROW_SPEED      = 2           ; Pixels per frame (slower for visibility)
-ARROW_TILE_SIZE  = 8           ; Pixels per map tile
+ARROW_SPEED      = 1           ; Pixels per frame (very slow for debugging)
+ARROW_TILE_SIZE  = 16          ; More pixels before collision check (2 tiles)
 ARROW_START_Y    = 64          ; Starting scanline (center of player area)
 ARROW_START_X    = 92          ; Starting X (same as player HPOS)
 ARROW_MIN_Y      = 32          ; Top boundary
@@ -1364,14 +1364,22 @@ monster_killed
     rts
     .endp
 
-; Draw arrow missile at current position (using M2 for blue color)
+; Draw arrow missile at current position (using M2 for white color)
+; Makes an 8-scanline tall missile for better visibility
 .proc draw_arrow_missile
     lda arrow_x
-    sta HPOSM2              ; Use M2 instead of M0
+    sta HPOSM2              ; Set horizontal position for M2
     lda arrow_y
     tax
-    ; Missile bytes are packed (M0 uses the high bit pair).
-    lda #%11000000
+    lda #%00110000          ; M2 bits (bits 4-5) - matches HPOSM2/PCOLR2
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
     sta pmg_missiles,x
     inx
     sta pmg_missiles,x
@@ -1382,11 +1390,19 @@ monster_killed
     rts
     .endp
 
-; Clear arrow missile
+; Clear arrow missile (8 scanlines)
 .proc clear_arrow_missile
     lda arrow_y
     tax
     lda #0
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
     sta pmg_missiles,x
     inx
     sta pmg_missiles,x
