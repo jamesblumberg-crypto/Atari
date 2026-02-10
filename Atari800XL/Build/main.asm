@@ -170,15 +170,16 @@ gold 			= $2a
 	setup_pmg()
 
 	; TEST: Draw a permanent test missile to verify hardware works
-	; This should show a white vertical line on the left side of screen
-	lda #50                     ; X position (left side)
-	sta HPOSM2
-	ldx #48                     ; Start at scanline 48
+	; This should show a BRIGHT WHITE vertical line in center of screen
+	; Using M0 (bits 0-1, HPOSM0, PCOLR0=bright white)
+	lda #128                    ; X position (center of screen)
+	sta HPOSM0
+	ldx #32                     ; Start earlier (maps to display line ~64)
 test_missile_loop
-	lda #%00110000              ; M2 bits
+	lda #%00000011              ; M0 bits (0-1)
 	sta pmg_missiles,x
 	inx
-	cpx #80                     ; Draw 32 scanlines tall
+	cpx #96                     ; Draw 64 bytes = very tall missile
 	bne test_missile_loop
 
 	mva #16 starting_monster
@@ -596,9 +597,10 @@ wait
 	mva #black COLOR4   ; %00
 
 	; Player-Missile Colors
-	mva #red PCOLR0
+	; M0 uses PCOLR0 - using bright white ($0F) for maximum visibility
+	mva #$0F PCOLR0         ; Bright white for M0 (arrow missile)
 	mva #peach PCOLR1
-	mva #white PCOLR2       ; Bright white for arrow missile
+	mva #red PCOLR2         ; Red for player sprite
 	mva #black PCOLR3
 
 	rts
@@ -1337,30 +1339,38 @@ passable
     sta arrow_active
     jsr clear_arrow_missile
     lda #0
-    sta HPOSM2              ; Use M2 instead of M0
+    sta HPOSM0              ; M0 position
     rts
     .endp
 
-; Draw arrow missile at current position (using M2 for white color)
-; Makes an 8-scanline tall missile for better visibility
+; Draw arrow missile at current position (using M0)
+; M0 uses PCOLR0 color (red), matches SIZEM bits 0-1
 .proc draw_arrow_missile
     lda arrow_x
-    sta HPOSM2              ; Set horizontal position for M2
+    sta HPOSM0              ; Set horizontal position for M0
     lda arrow_y
     tax
-    ; M0 bit pair only.
+    ; M0 = bits 0-1, value %11 = visible
     lda #%00000011
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
     sta pmg_missiles,x
     inx
     sta pmg_missiles,x
     rts
     .endp
 
-; Clear arrow missile (8 scanlines)
+; Clear arrow missile (4 scanlines to match draw)
 .proc clear_arrow_missile
     lda arrow_y
     tax
     lda #0
+    sta pmg_missiles,x
+    inx
+    sta pmg_missiles,x
+    inx
     sta pmg_missiles,x
     inx
     sta pmg_missiles,x
