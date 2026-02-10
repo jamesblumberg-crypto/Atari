@@ -169,7 +169,17 @@ gold 			= $2a
 	load_pmg()
 	setup_pmg()
 
-
+	; TEST: Draw a permanent test missile to verify hardware works
+	; This should show a white vertical line on the left side of screen
+	lda #50                     ; X position (left side)
+	sta HPOSM2
+	ldx #48                     ; Start at scanline 48
+test_missile_loop
+	lda #%00110000              ; M2 bits
+	sta pmg_missiles,x
+	inx
+	cpx #80                     ; Draw 32 scanlines tall
+	bne test_missile_loop
 
 	mva #16 starting_monster
 	mva #4 num_monsters
