@@ -169,10 +169,20 @@ gold 			= $2a
 	load_pmg()
 	setup_pmg()
 
-	; Initialize missile position off-screen
+	; Initialize ALL missiles off-screen and clear graphics
 	lda #0
 	sta HPOSM0
+	sta HPOSM1
+	sta HPOSM2
+	sta HPOSM3
 	sta arrow_active
+
+	; Explicitly clear all missile graphics data
+	ldx #127
+clear_all_missiles
+	sta pmg_missiles,x
+	dex
+	bpl clear_all_missiles
 
 	mva #16 starting_monster
 	mva #4 num_monsters
