@@ -599,12 +599,12 @@ wait
 	mva #black COLOR4   ; %00
 
 	; Player-Missile Colors
-	; P0=body(red), P1=face(peach), P3=hair(black)
-	; Arrow uses M2 which shares PCOLR2 with P2 (no visible P2 sprite)
-	mva #red PCOLR0         ; Body color (Player 0)
+	; P0=hair, P1=face, P2=body
+	; Arrow uses M2 which shares PCOLR2 with P2 (both will be red)
+	mva #black PCOLR0       ; Hair color (Player 0)
 	mva #peach PCOLR1       ; Face color (Player 1)
-	mva #white PCOLR2       ; Arrow missile (M2)
-	mva #black PCOLR3       ; Hair color (Player 3)
+	mva #red PCOLR2         ; Body (P2) AND Arrow (M2) - both red
+	mva #black PCOLR3
 
 	rts
 	.endp
