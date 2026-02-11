@@ -599,10 +599,11 @@ wait
 	mva #black COLOR4   ; %00
 
 	; Player-Missile Colors
-	; M0 uses PCOLR0 - using bright white ($0F) for maximum visibility
-	mva #$0F PCOLR0         ; Bright white for M0 (arrow missile)
-	mva #peach PCOLR1
-	mva #red PCOLR2         ; Red for player sprite
+	; Player sprites: P0=hair, P1=face, P2=body, P3=?
+	; Arrow uses M2 (bits 4-5) with PCOLR2
+	mva #black PCOLR0       ; Hair color (Player 0)
+	mva #peach PCOLR1       ; Face color (Player 1)
+	mva #white PCOLR2       ; Arrow missile (M2) - bright white
 	mva #black PCOLR3
 
 	rts
@@ -662,7 +663,7 @@ loop
 	mva #46 SDMCTL ; Single Line resolution
 	mva #3 GRACTL  ; Enable PMG
 	mva #1 GRPRIOR ; Give players priority
-	mva #%00000011 SIZEM ; Make missile 0 double-width (4 color clocks)
+	mva #0 SIZEM         ; Normal width for all missiles (2 color clocks)
 	lda #92
 	sta HPOSP0
 	sta HPOSP1
@@ -1341,38 +1342,30 @@ passable
     sta arrow_active
     jsr clear_arrow_missile
     lda #0
-    sta HPOSM0              ; M0 position
+    sta HPOSM2              ; M2 position off-screen
     rts
     .endp
 
-; Draw arrow missile at current position (using M0)
-; M0 uses PCOLR0 color (red), matches SIZEM bits 0-1
+; Draw arrow missile at current position (using M2)
+; M2 uses PCOLR2 color (white), bits 4-5 in missile byte
 .proc draw_arrow_missile
     lda arrow_x
-    sta HPOSM0              ; Set horizontal position for M0
+    sta HPOSM2              ; Set horizontal position for M2
     lda arrow_y
     tax
-    ; M0 = bits 0-1, value %11 = visible
-    lda #%00000011
+    ; M2 = bits 4-5, value %00110000 = visible
+    lda #%00110000
     sta pmg_missiles,x
     inx
-    sta pmg_missiles,x
-    inx
-    sta pmg_missiles,x
-    inx
-    sta pmg_missiles,x
+    sta pmg_missiles,x      ; 2 scanlines total (small arrow)
     rts
     .endp
 
-; Clear arrow missile (4 scanlines to match draw)
+; Clear arrow missile (2 scanlines to match draw)
 .proc clear_arrow_missile
     lda arrow_y
     tax
     lda #0
-    sta pmg_missiles,x
-    inx
-    sta pmg_missiles,x
-    inx
     sta pmg_missiles,x
     inx
     sta pmg_missiles,x
