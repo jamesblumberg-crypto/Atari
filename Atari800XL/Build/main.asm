@@ -169,18 +169,20 @@ gold 			= $2a
 	load_pmg()
 	setup_pmg()
 
-	; TEST: Draw a permanent test missile to verify hardware works
-	; This should show a BRIGHT WHITE vertical line in center of screen
-	; Using M0 (bits 0-1, HPOSM0, PCOLR0=bright white)
-	lda #128                    ; X position (center of screen)
+	; Initialize ALL missiles off-screen and clear graphics
+	lda #0
 	sta HPOSM0
-	ldx #32                     ; Start earlier (maps to display line ~64)
-test_missile_loop
-	lda #%00000011              ; M0 bits (0-1)
+	sta HPOSM1
+	sta HPOSM2
+	sta HPOSM3
+	sta arrow_active
+
+	; Explicitly clear all missile graphics data
+	ldx #127
+clear_all_missiles
 	sta pmg_missiles,x
-	inx
-	cpx #96                     ; Draw 64 bytes = very tall missile
-	bne test_missile_loop
+	dex
+	bpl clear_all_missiles
 
 	mva #16 starting_monster
 	mva #4 num_monsters
