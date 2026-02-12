@@ -184,8 +184,8 @@ clear_all_missiles
 	dex
 	bpl clear_all_missiles
 
-	;mva #16 starting_monster
-	mva #24 starting_monster
+	mva #16 starting_monster
+	;mva #24 starting_monster
 	mva #4 num_monsters
 
 	lda #16
