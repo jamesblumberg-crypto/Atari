@@ -1179,6 +1179,10 @@ arrow_tick_div   .byte 0       ; Additional slowdown divider
     sta arrow_map_x
     lda player_y
     sta arrow_map_y
+
+    ; Initialize arrow_ptr to player's map position
+    mwa player_ptr arrow_ptr
+
     lda #0
     sta arrow_subtile
     sta arrow_tick_div
