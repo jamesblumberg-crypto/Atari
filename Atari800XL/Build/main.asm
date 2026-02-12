@@ -562,7 +562,7 @@ input_done
 	lda charset_a
 	eor #$ff
 	sta charset_a
-	;set_colors
+	set_colors
 	blit_screen()
 	lda clock
 	add #anim_speed
