@@ -184,9 +184,10 @@ clear_all_missiles
 	dex
 	bpl clear_all_missiles
 
-	mva #16 starting_monster
-	;mva #24 starting_monster
-	mva #4 num_monsters
+	;mva #16 starting_monster
+	mva #16 starting_monster  ; start with the monster set starting at character 8 (first 8 characters are reserved for player and UI)
+	;mva #4 num_monsters
+	mva #20 num_monsters ; start with 6 monsters per room (can be 0-8, but 8 is really crowded)
 
 	lda #16
 	sta player_x
