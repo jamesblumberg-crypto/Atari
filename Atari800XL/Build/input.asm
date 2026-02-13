@@ -162,6 +162,14 @@ close_doorway
 move_player
     mwa dir_ptr player_ptr      ; Move the player to the correct location
 
+check_stairs
+    ; If player stepped on a down ladder, generate the next dungeon floor
+    ldy #0
+    lda (player_ptr),y
+    cmp #MAP_DOWN
+    bne blocked
+    jsr descend_to_next_level
+
 blocked                         ; We are blocked
     rts
     .endp
@@ -361,7 +369,6 @@ check_melee_key
 done
     rts
     .endp
-
 
 
 
