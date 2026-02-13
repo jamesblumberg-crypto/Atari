@@ -1131,6 +1131,22 @@ found_floor
 	rts
 	.endp
 
+; Advance to the next dungeon floor when stepping on a down ladder.
+; Re-generates the map, re-places monsters and bow, and redraws the view.
+.proc descend_to_next_level
+	lda #0
+	sta arrow_active
+	sta stick_action
+
+	new_map()
+	place_monsters num_monsters #8
+	init_player_ptr()
+	jsr place_bow
+	blit_screen()
+
+	rts
+	.endp
+
 ; Monster HP table - indexed by monster type (0-7)
 ; Monster tiles are 44-51, so subtract 44 to get index
 monster_hp_table
