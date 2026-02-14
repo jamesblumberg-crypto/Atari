@@ -184,10 +184,10 @@ clear_all_missiles
 	dex
 	bpl clear_all_missiles
 
-	mva #16 starting_monster
-	;mva #24 starting_monster
-	mva #4 num_monsters
-	mva #1 dungeon_floor
+	;mva #16 starting_monster
+	mva #16 starting_monster  ; start with the monster set starting at character 8 (first 8 characters are reserved for player and UI)
+	;mva #4 num_monsters
+	mva #20 num_monsters ; start with 6 monsters per room (can be 0-8, but 8 is really crowded)
 
 	lda #16
 	sta player_x
@@ -1236,19 +1236,6 @@ found_floor
 	lda #0
 	sta arrow_active
 	sta stick_action
-
-	inc dungeon_floor
-
-	; Increase population every 2 floors, capped at 12 monsters.
-	lda dungeon_floor
-	lsr
-	clc
-	adc #4
-	cmp #13
-	bcc store_monster_count
-	lda #12
-store_monster_count
-	sta num_monsters
 
 	new_map()
 	place_monsters num_monsters #8
