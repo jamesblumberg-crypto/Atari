@@ -112,7 +112,7 @@ no_clip				= $c4
 char_colors_ptr		= $c5 ; 16 bit
 
 	
-;stick_dir    = $d8
+dungeon_floor		= $d8
 stick_btn    		= $d9
 stick_action 		= $da
 
@@ -184,8 +184,10 @@ clear_all_missiles
 	dex
 	bpl clear_all_missiles
 
-	mva #8 starting_monster
-	mva #12 num_monsters
+	;mva #16 starting_monster
+	mva #16 starting_monster  ; start with the monster set starting at character 8 (first 8 characters are reserved for player and UI)
+	;mva #4 num_monsters
+	mva #20 num_monsters ; start with 6 monsters per room (can be 0-8, but 8 is really crowded)
 
 	lda #16
 	sta player_x
@@ -268,6 +270,7 @@ game
 	get_input                   ; Re-enabled to test
 	jsr read_keyboard           ; Check for weapon switching keys
 	jsr update_arrow            ; Update arrow position and check collisions
+	jsr update_monsters         ; Move monsters on a slow tick
 	jmp game
 
 .macro set_colors
@@ -1076,6 +1079,103 @@ place
 	rts
 	.endp
 
+; Move one random monster occasionally.
+.proc update_monsters
+	lda RTCLK2
+	cmp monster_tick
+	beq done
+	sta monster_tick
+
+	inc monster_tick_div
+	lda monster_tick_div
+	cmp #4
+	bcc done
+	lda #0
+	sta monster_tick_div
+
+	ldx #8
+find_monster
+	random16
+	cmp #map_width
+	bcs next_try
+	sta tmp_x
+
+	random16
+	cmp #map_height
+	bcs next_try
+	sta tmp_y
+
+	advance_ptr #map map_ptr #map_width tmp_y tmp_x
+	ldy #0
+	lda (map_ptr),y
+	cmp #44
+	bcc next_try
+	cmp #52
+	bcs next_try
+	sta tmp
+
+	; Pick a random direction and build the destination pointer.
+	mwa map_ptr tmp_addr1
+	random16
+	and #3
+	tax
+	cpx #0
+	bne check_south
+	lda tmp_y
+	beq done
+	sbw tmp_addr1 #map_width
+	jmp check_dest
+check_south
+	cpx #1
+	bne check_west
+	lda tmp_y
+	cmp #(map_height - 1)
+	beq done
+	adw tmp_addr1 #map_width
+	jmp check_dest
+check_west
+	cpx #2
+	bne move_east
+	lda tmp_x
+	beq done
+	dec16 tmp_addr1
+	jmp check_dest
+move_east
+	lda tmp_x
+	cmp #(map_width - 1)
+	beq done
+	inc16 tmp_addr1
+
+check_dest
+	; Never move onto the player tile.
+	lda tmp_addr1
+	cmp player_ptr
+	bne check_tile
+	lda tmp_addr1+1
+	cmp player_ptr+1
+	beq done
+
+check_tile
+	ldy #0
+	lda (tmp_addr1),y
+	cmp #MAP_FLOOR
+	bne done
+
+	lda tmp
+	sta (tmp_addr1),y
+	lda #MAP_FLOOR
+	ldy #0
+	sta (map_ptr),y
+	jmp done
+
+next_try
+	dex
+	bne find_monster
+
+done
+	rts
+	.endp
+
 ; Place a bow item on a floor tile adjacent to player
 .proc place_bow
 	; Use player_ptr as our base - it's already set up by init_player_ptr
@@ -1130,6 +1230,22 @@ found_floor
 	rts
 	.endp
 
+; Advance to the next dungeon floor when stepping on a down ladder.
+; Re-generates the map, re-places monsters and bow, and redraws the view.
+.proc descend_to_next_level
+	lda #0
+	sta arrow_active
+	sta stick_action
+
+	new_map()
+	place_monsters num_monsters #8
+	init_player_ptr()
+	jsr place_bow
+	blit_screen()
+
+	rts
+	.endp
+
 ; Monster HP table - indexed by monster type (0-7)
 ; Monster tiles are 44-51, so subtract 44 to get index
 monster_hp_table
@@ -1162,6 +1278,8 @@ ARROW_MIN_X      = 16          ; Left boundary
 ARROW_MAX_X      = 176         ; Right boundary (stop before HUD panel)
 arrow_tick       .byte 0       ; Last RTCLK2 tick that advanced arrow
 arrow_tick_div   .byte 0       ; Additional slowdown divider
+monster_tick     .byte 0       ; Last RTCLK2 tick that advanced monsters
+monster_tick_div .byte 0       ; Monster movement slowdown divider
 
 ; Fire an arrow in the direction the player is facing
 .proc fire_arrow
@@ -1322,12 +1440,27 @@ passable
     lda (map_ptr),y
     sta tmp1
 
-    ; Monsters on the map do not keep persistent per-tile HP state.
-    ; Resolve ranged hit immediately by removing the monster tile.
     lda tmp1
     sec
     sbc #44
     tax
+
+    ; Compute scaled HP for this floor (harder to kill deeper down).
+    lda monster_hp_table,x
+    sta monster_hp
+    lda dungeon_floor
+    lsr
+    asl
+    asl
+    clc
+    adc monster_hp
+    sta monster_hp
+
+    ; Bow hit only kills when ranged damage meets scaled HP.
+    lda player_ranged_dmg
+    cmp monster_hp
+    bcc survived
+
     lda monster_xp_table,x
     clc
     adc player_xp
@@ -1337,6 +1470,8 @@ passable
     ldy #0
     lda #MAP_FLOOR
     sta (map_ptr),y
+
+survived
     rts
     .endp
 
