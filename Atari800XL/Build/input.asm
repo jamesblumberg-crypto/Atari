@@ -162,6 +162,14 @@ close_doorway
 move_player
     mwa dir_ptr player_ptr      ; Move the player to the correct location
 
+check_stairs
+    ; If player stepped on a down ladder, generate the next dungeon floor
+    ldy #0
+    lda (player_ptr),y
+    cmp #MAP_DOWN
+    bne blocked
+    jsr descend_to_next_level
+
 blocked                         ; We are blocked
     rts
     .endp
@@ -193,10 +201,30 @@ blocked
     sec
     sbc #44                     ; Convert tile 44-51 to index 0-7
     tax                         ; Use as index
-    lda monster_hp_table,x      ; Load monster's max HP
+    lda monster_hp_table,x      ; Load monster's base HP
     sta monster_hp              ; Store in monster_hp variable
-    lda monster_dmg_table,x     ; Load monster's damage
+    lda monster_dmg_table,x     ; Load monster's base damage
     sta monster_dmg             ; Store in monster_dmg variable
+
+    ; Scale monster stats by floor depth.
+    ; bonus = dungeon_floor / 2
+    lda dungeon_floor
+    lsr
+    sta tmp
+
+    ; HP bonus = bonus * 4
+    lda tmp
+    asl
+    asl
+    clc
+    adc monster_hp
+    sta monster_hp
+
+    ; Damage bonus = bonus
+    lda monster_dmg
+    clc
+    adc tmp
+    sta monster_dmg
 
 combat_loop
     ; Player attacks monster - use equipped weapon's damage
@@ -361,7 +389,6 @@ check_melee_key
 done
     rts
     .endp
-
 
 
 
