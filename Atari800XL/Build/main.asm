@@ -184,10 +184,10 @@ clear_all_missiles
 	dex
 	bpl clear_all_missiles
 
-	mva #16 starting_monster
-	;mva #24 starting_monster
-	mva #4 num_monsters
-	mva #1 dungeon_floor
+	;mva #16 starting_monster
+	mva #16 starting_monster  ; start with the monster set starting at character 8 (first 8 characters are reserved for player and UI)
+	;mva #4 num_monsters
+	mva #20 num_monsters ; start with 6 monsters per room (can be 0-8, but 8 is really crowded)
 
 	lda #16
 	sta player_x
@@ -1083,17 +1083,13 @@ place
 .proc update_monsters
 	lda RTCLK2
 	cmp monster_tick
-	bne tick_changed
-	jmp done
-tick_changed
+	beq done
 	sta monster_tick
 
 	inc monster_tick_div
 	lda monster_tick_div
 	cmp #4
-	bcs move_tick_ready
-	jmp done
-move_tick_ready
+	bcc done
 	lda #0
 	sta monster_tick_div
 
@@ -1101,29 +1097,21 @@ move_tick_ready
 find_monster
 	random16
 	cmp #map_width
-	bcc got_x
-	jmp next_try
-got_x
+	bcs next_try
 	sta tmp_x
 
 	random16
 	cmp #map_height
-	bcc got_y
-	jmp next_try
-got_y
+	bcs next_try
 	sta tmp_y
 
 	advance_ptr #map map_ptr #map_width tmp_y tmp_x
 	ldy #0
 	lda (map_ptr),y
 	cmp #44
-	bcs maybe_monster
-	jmp next_try
-maybe_monster
+	bcc next_try
 	cmp #52
-	bcc in_monster_range
-	jmp next_try
-in_monster_range
+	bcs next_try
 	sta tmp
 
 	; Pick a random direction and build the destination pointer.
@@ -1182,8 +1170,7 @@ check_tile
 
 next_try
 	dex
-	beq done
-	jmp find_monster
+	bne find_monster
 
 done
 	rts
@@ -1250,19 +1237,6 @@ found_floor
 	sta arrow_active
 	sta stick_action
 
-	inc dungeon_floor
-
-	; Increase population every 2 floors, capped at 12 monsters.
-	lda dungeon_floor
-	lsr
-	clc
-	adc #4
-	cmp #13
-	bcc store_monster_count
-	lda #12
-store_monster_count
-	sta num_monsters
-
 	new_map()
 	place_monsters num_monsters #8
 	init_player_ptr()
@@ -1275,19 +1249,19 @@ store_monster_count
 ; Monster HP table - indexed by monster type (0-7)
 ; Monster tiles are 44-51, so subtract 44 to get index
 monster_hp_table
-	.byte 10, 20, 20, 30, 30, 40, 40, 50
+	.byte 30, 45, 50, 60, 70, 80, 90, 100
 
 ; Monster damage table - indexed by monster type (0-7)
 monster_dmg_table
-	.byte 3, 5, 7, 9, 11, 13, 15, 17
+	.byte 5, 8, 12, 15, 18, 22, 25, 30
 
 ; Monster XP reward table - indexed by monster type (0-7)
 ; XP rewards scale with monster difficulty (HP and damage)
 ; Format: HP/Damage -> XP reward
 monster_xp_table
-	.byte 10, 15, 20, 25, 30, 35, 40, 50
-	; 10HP/3dmg->10XP, 20HP/5dmg->15XP, 20HP/7dmg->20XP, 30HP/9dmg->25XP,
-	; 30HP/11dmg->30XP, 40HP/13dmg->35XP, 40HP/15dmg->40XP, 50HP/17dmg->50XP
+	.byte 15, 20, 25, 30, 40, 45, 50, 60
+	; 30HP/5dmg->15XP, 45HP/8dmg->20XP, 50HP/12dmg->25XP, 60HP/15dmg->30XP,
+	; 70HP/18dmg->40XP, 80HP/22dmg->45XP, 90HP/25dmg->50XP, 100HP/30dmg->60XP
 
 ; ============================================
 ; Arrow missile procedures (in main code area)
