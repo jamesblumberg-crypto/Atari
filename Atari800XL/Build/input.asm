@@ -201,10 +201,30 @@ blocked
     sec
     sbc #44                     ; Convert tile 44-51 to index 0-7
     tax                         ; Use as index
-    lda monster_hp_table,x      ; Load monster's max HP
+    lda monster_hp_table,x      ; Load monster's base HP
     sta monster_hp              ; Store in monster_hp variable
-    lda monster_dmg_table,x     ; Load monster's damage
+    lda monster_dmg_table,x     ; Load monster's base damage
     sta monster_dmg             ; Store in monster_dmg variable
+
+    ; Scale monster stats by floor depth.
+    ; bonus = dungeon_floor / 2
+    lda dungeon_floor
+    lsr
+    sta tmp
+
+    ; HP bonus = bonus * 4
+    lda tmp
+    asl
+    asl
+    clc
+    adc monster_hp
+    sta monster_hp
+
+    ; Damage bonus = bonus
+    lda monster_dmg
+    clc
+    adc tmp
+    sta monster_dmg
 
 combat_loop
     ; Player attacks monster - use equipped weapon's damage
