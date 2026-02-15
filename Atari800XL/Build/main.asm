@@ -79,7 +79,7 @@ map_room_rows		= 8
 playfield_width 	= 11
 playfield_height 	= 11
 
-input_speed 		= 5
+input_speed 		= 1
 anim_speed 			= 20
 
 input_timer 		= $a4
@@ -131,20 +131,20 @@ player_xp            = $e8
 player_level         = $e9
 
 ; Weapon system variables
-player_ranged_dmg    = $ea  ; Ranged weapon damage (bow)
-has_bow              = $eb  ; 0 = no bow, 1 = has bow
-equipped_weapon      = $ec  ; 0 = melee, 1 = ranged (bow)
+player_ranged_dmg    = $7371  ; Ranged weapon damage (bow)
+has_bow              = $7372  ; 0 = no bow, 1 = has bow
+equipped_weapon      = $7373  ; 0 = melee, 1 = ranged (bow)
 
 ; Arrow missile variables
-arrow_active         = $ed  ; 0 = no arrow, 1 = arrow in flight
-arrow_x              = $ee  ; Arrow horizontal position (screen coords)
-arrow_y              = $ef  ; Arrow vertical position (scanline)
-arrow_dir            = $f0  ; Arrow direction (1=N, 2=S, 3=W, 4=E)
-arrow_map_x          = $f1  ; Arrow map X coordinate
-arrow_map_y          = $f2  ; Arrow map Y coordinate
-player_dir           = $f3  ; Last direction player moved (for aiming)
-arrow_subtile        = $f4  ; Sub-tile counter (0-7, update map coord when wraps)
-arrow_ptr            = $f5  ; Arrow map pointer (16-bit)
+arrow_active         = $7374  ; 0 = no arrow, 1 = arrow in flight
+arrow_x              = $7375  ; Arrow horizontal position (screen coords)
+arrow_y              = $7376  ; Arrow vertical position (scanline)
+arrow_dir            = $7377  ; Arrow direction (1=N, 2=S, 3=W, 4=E)
+arrow_map_x          = $7378  ; Arrow map X coordinate
+arrow_map_y          = $7379  ; Arrow map Y coordinate
+player_dir           = $737A  ; Last direction player moved (for aiming)
+arrow_subtile        = $737B  ; Sub-tile counter (0-7, update map coord when wraps)
+arrow_ptr            = $737C  ; Arrow map pointer (16-bit)
 
 ; Colors
 white 				= $0a
@@ -203,6 +203,7 @@ clear_all_missiles
 	sta player_xp
 	lda #1
 	sta player_level
+	sta dungeon_floor        ; Start on floor 1 (prevents over-scaling from garbage RAM)
 
 	; Initialize weapon system
 	lda #0
@@ -258,6 +259,7 @@ skip_monster_tables
 	lda #0
 	sta charset_a              ; Start with charset A
 	sta anim_timer             ; Initialize animation timer
+	lda RTCLK2
 	sta input_timer            ; Initialize input timer
 	mwa #cur_char_colors_a char_colors_ptr  ; Initialize color pointer
 
@@ -266,7 +268,7 @@ skip_monster_tables
 
 game
 	mva RTCLK2 clock
-	animate                     ; Re-enabled after fix_color fix
+	;animate                    ; Disabled to reduce frame hitches during movement
 	get_input                   ; Re-enabled to test
 	jsr read_keyboard           ; Check for weapon switching keys
 	jsr update_arrow            ; Update arrow position and check collisions
@@ -553,7 +555,8 @@ no_level_up
 	bcc input_done
 	read_joystick()
 	blit_screen()
-	mva clock input_timer
+	lda clock
+	sta input_timer
 input_done
 	.endm
 
@@ -1079,72 +1082,93 @@ place
 	rts
 	.endp
 
-; Move one random monster occasionally.
+; Move a small random subset of monsters each update tick (lightweight).
 .proc update_monsters
 	lda RTCLK2
 	cmp monster_tick
-	beq done
+	bne update_monsters_tick_changed
+	jmp done
+update_monsters_tick_changed
 	sta monster_tick
 
 	inc monster_tick_div
 	lda monster_tick_div
-	cmp #4
-	bcc done
+	cmp #32
+	bcs update_monsters_div_ready
+	jmp done
+update_monsters_div_ready
 	lda #0
 	sta monster_tick_div
 
-	ldx #8
+	; Try to move 1 monster per update.
+	ldx #1
+move_one
+	ldy #24
 find_monster
 	random16
 	cmp #map_width
-	bcs next_try
+	bcc x_ok
+	jmp retry_pick
+x_ok
 	sta tmp_x
 
 	random16
 	cmp #map_height
-	bcs next_try
+	bcc y_ok
+	jmp retry_pick
+y_ok
 	sta tmp_y
 
 	advance_ptr #map map_ptr #map_width tmp_y tmp_x
 	ldy #0
 	lda (map_ptr),y
 	cmp #44
-	bcc next_try
+	bcs monster_lo_ok
+	jmp retry_pick
+monster_lo_ok
 	cmp #52
-	bcs next_try
+	bcc monster_hi_ok
+	jmp retry_pick
+monster_hi_ok
 	sta tmp
 
-	; Pick a random direction and build the destination pointer.
+	; Pick destination direction.
 	mwa map_ptr tmp_addr1
 	random16
 	and #3
-	tax
-	cpx #0
-	bne check_south
-	lda tmp_y
-	beq done
-	sbw tmp_addr1 #map_width
-	jmp check_dest
-check_south
-	cpx #1
-	bne check_west
-	lda tmp_y
-	cmp #(map_height - 1)
-	beq done
-	adw tmp_addr1 #map_width
-	jmp check_dest
-check_west
-	cpx #2
-	bne move_east
-	lda tmp_x
-	beq done
-	dec16 tmp_addr1
-	jmp check_dest
-move_east
+	sta tmp2
+
+	lda tmp2
+	beq try_north
+	cmp #1
+	beq try_south
+	cmp #2
+	beq try_west
+
+try_east
 	lda tmp_x
 	cmp #(map_width - 1)
-	beq done
+	beq retry_pick
 	inc16 tmp_addr1
+	jmp check_dest
+
+try_north
+	lda tmp_y
+	beq retry_pick
+	sbw tmp_addr1 #map_width
+	jmp check_dest
+
+try_south
+	lda tmp_y
+	cmp #(map_height - 1)
+	beq retry_pick
+	adw tmp_addr1 #map_width
+	jmp check_dest
+
+try_west
+	lda tmp_x
+	beq retry_pick
+	dec16 tmp_addr1
 
 check_dest
 	; Never move onto the player tile.
@@ -1153,24 +1177,35 @@ check_dest
 	bne check_tile
 	lda tmp_addr1+1
 	cmp player_ptr+1
-	beq done
+	beq retry_pick
 
 check_tile
 	ldy #0
 	lda (tmp_addr1),y
 	cmp #MAP_FLOOR
-	bne done
+	bne retry_pick
 
+	; Execute move.
 	lda tmp
 	sta (tmp_addr1),y
 	lda #MAP_FLOOR
 	ldy #0
 	sta (map_ptr),y
+
+next_monster
+	dex
+	beq done
+	jmp move_one
 	jmp done
 
-next_try
+retry_pick
+	dey
+	beq retry_exhausted
+	jmp find_monster
+retry_exhausted
 	dex
-	bne find_monster
+	beq done
+	jmp move_one
 
 done
 	rts
@@ -1236,6 +1271,7 @@ found_floor
 	lda #0
 	sta arrow_active
 	sta stick_action
+	inc dungeon_floor
 
 	new_map()
 	place_monsters num_monsters #8
@@ -1263,19 +1299,52 @@ monster_xp_table
 	; 30HP/5dmg->15XP, 45HP/8dmg->20XP, 50HP/12dmg->25XP, 60HP/15dmg->30XP,
 	; 70HP/18dmg->40XP, 80HP/22dmg->45XP, 90HP/25dmg->50XP, 100HP/30dmg->60XP
 
+; Arrow routines moved to $6C00 to keep executable code below $C000.
+
+	icl 'macros.asm'
+	icl 'hardware.asm'
+	icl 'labels.asm'
+	icl 'dlist.asm'
+	icl 'pmgdata.asm'
+	icl 'map_gen.asm'
+	icl 'input.asm'
+	icl 'status_chars.asm'
+
+	icl 'charset_dungeon_a.asm'
+	icl 'charset_dungeon_b.asm'
+	icl 'charset_outdoor_a.asm'
+	icl 'charset_outdoor_b.asm'
+	icl 'monsters_a.asm'
+	icl 'monsters_b.asm'
+	icl 'room_types.asm'
+	icl 'room_positions.asm'
+	icl 'room_pos_doors'
+	icl 'room_type_doors'
+	;icl 'test_map.asm'
+	icl 'charset_dungeon_a_colors.asm'
+	icl 'charset_dungeon_b_colors.asm'
+	icl 'charset_outdoor_a_colors.asm'
+	icl 'charset_outdoor_b_colors.asm'
+	icl 'monsters_a_colors.asm'
+	icl 'monsters_b_colors.asm'
+powers_of_two
+	.byte 1,2,4,8,16,32,64,128
+
 ; ============================================
-; Arrow missile procedures (in main code area)
+; Arrow missile procedures (relocated to RAM)
 ; ============================================
+	org $6c00
 
 ; Constants for arrow
-ARROW_SPEED      = 1           ; Pixels per update (very slow for visibility)
-ARROW_TILE_SIZE  = 8           ; Advance map tile less often so shot can travel
-ARROW_START_Y    = 64          ; Starting scanline (center of player area)
+ARROW_SPEED      = 1           ; Pixels per update
+ARROW_TILE_SIZE_V = 16         ; Vertical: map tile advances every 16 subtile steps
+ARROW_TILE_SIZE_H = 8          ; Horizontal: map tile advances every 8 subtile steps
+ARROW_START_Y    = 124         ; Starting scanline near player center in double-line PMG
 ARROW_START_X    = 92          ; Starting X (same as player HPOS)
-ARROW_MIN_Y      = 8           ; Top boundary of dungeon viewport
-ARROW_MAX_Y      = 216         ; Bottom boundary of dungeon viewport
-ARROW_MIN_X      = 16          ; Left boundary
-ARROW_MAX_X      = 176         ; Right boundary (stop before HUD panel)
+ARROW_MIN_Y      = ARROW_START_Y - ((playfield_height * 8) / 2) ; Dungeon viewport top
+ARROW_MAX_Y      = ARROW_START_Y + ((playfield_height * 8) / 2) ; Dungeon viewport bottom
+ARROW_MIN_X      = ARROW_START_X - ((playfield_width  * 8) / 2) ; Dungeon viewport left
+ARROW_MAX_X      = ARROW_START_X + ((playfield_width  * 8) / 2) ; Dungeon viewport right
 arrow_tick       .byte 0       ; Last RTCLK2 tick that advanced arrow
 arrow_tick_div   .byte 0       ; Additional slowdown divider
 monster_tick     .byte 0       ; Last RTCLK2 tick that advanced monsters
@@ -1286,7 +1355,6 @@ monster_tick_div .byte 0       ; Monster movement slowdown divider
     lda arrow_active
     bne already_active
 
-    ; Set base position
     lda #ARROW_START_X
     sta arrow_x
     lda #ARROW_START_Y
@@ -1298,7 +1366,6 @@ monster_tick_div .byte 0       ; Monster movement slowdown divider
     lda player_y
     sta arrow_map_y
 
-    ; Initialize arrow_ptr to player's map position
     mwa player_ptr arrow_ptr
 
     lda #0
@@ -1306,7 +1373,6 @@ monster_tick_div .byte 0       ; Monster movement slowdown divider
     sta arrow_tick_div
     lda #1
     sta arrow_active
-    inc stick_action
     jsr draw_arrow_missile
 already_active
     rts
@@ -1314,14 +1380,13 @@ already_active
 
 ; Update arrow position and check for collisions
 .proc update_arrow
-    ; Throttle to clock ticks so the missile remains visible.
     lda RTCLK2
     cmp arrow_tick
     beq no_tick_advance
     sta arrow_tick
     inc arrow_tick_div
     lda arrow_tick_div
-    cmp #3                  ; Move every 3 ticks (~20 updates/sec)
+    cmp #3
     bcc no_tick_advance
     lda #0
     sta arrow_tick_div
@@ -1336,8 +1401,20 @@ arrow_is_active
     clc
     adc #ARROW_SPEED
     sta arrow_subtile
-    cmp #ARROW_TILE_SIZE
+    lda arrow_dir
+    cmp #WEST
+    beq check_horiz_step
+    cmp #EAST
+    beq check_horiz_step
+    lda arrow_subtile
+    cmp #ARROW_TILE_SIZE_V
     bcc move_screen_only
+    jmp step_map
+check_horiz_step
+    lda arrow_subtile
+    cmp #ARROW_TILE_SIZE_H
+    bcc move_screen_only
+step_map
     lda #0
     sta arrow_subtile
     lda arrow_dir
@@ -1355,11 +1432,11 @@ not_north_map
 not_south_map
     cmp #WEST
     bne not_west_map
-    dec arrow_ptr
+    dec16 arrow_ptr
     dec arrow_map_x
     jmp check_map_collision
 not_west_map
-    inc arrow_ptr
+    inc16 arrow_ptr
     inc arrow_map_x
 check_map_collision
     jsr check_arrow_collision
@@ -1420,13 +1497,50 @@ deactivate
     ldy #0
     lda (map_ptr),y
     cmp #44
-    bcc check_wall
+    bcc check_horizontal_neighbors
     cmp #52
-    bcs check_wall
+    bcs check_horizontal_neighbors
     jsr arrow_hit_monster
     jsr deactivate_arrow
     rts
+
+check_horizontal_neighbors
+    ; Horizontal shots can be visually between map rows, so probe one row above/below.
+    lda arrow_dir
+    cmp #WEST
+    beq check_above
+    cmp #EAST
+    bne check_wall
+
+check_above
+    mwa map_ptr tmp_addr1
+    sbw map_ptr #map_width
+    lda (map_ptr),y
+    cmp #44
+    bcc check_below
+    cmp #52
+    bcs check_below
+    jsr arrow_hit_monster
+    jsr deactivate_arrow
+    rts
+
+check_below
+    mwa tmp_addr1 map_ptr
+    adw map_ptr #map_width
+    lda (map_ptr),y
+    cmp #44
+    bcc restore_for_wall
+    cmp #52
+    bcs restore_for_wall
+    jsr arrow_hit_monster
+    jsr deactivate_arrow
+    rts
+
+restore_for_wall
+    mwa tmp_addr1 map_ptr
+
 check_wall
+    lda (map_ptr),y
     cmp #PASSABLE_MIN
     bcs passable
     jsr deactivate_arrow
@@ -1445,10 +1559,12 @@ passable
     sbc #44
     tax
 
-    ; Compute scaled HP for this floor (harder to kill deeper down).
+    ; Compute scaled HP for this floor (same scaling as melee combat).
     lda monster_hp_table,x
     sta monster_hp
     lda dungeon_floor
+    sec
+    sbc #1
     lsr
     asl
     asl
@@ -1456,11 +1572,22 @@ passable
     adc monster_hp
     sta monster_hp
 
-    ; Bow hit only kills when ranged damage meets scaled HP.
+    ; Middle-ground balance:
+    ; - Guaranteed kill if (ranged damage * 3) >= scaled monster HP
+    ; - Otherwise 25% chance to kill (lucky shot)
     lda player_ranged_dmg
+    sta tmp2
+    asl
+    clc
+    adc tmp2
     cmp monster_hp
-    bcc survived
+    bcs kill_monster
 
+    jsr random16
+    and #3
+    bne survived
+
+kill_monster
     lda monster_xp_table,x
     clc
     adc player_xp
@@ -1481,28 +1608,28 @@ survived
     sta arrow_active
     jsr clear_arrow_missile
     lda #0
-    sta HPOSM2              ; M2 position off-screen
+    sta HPOSM2
     rts
     .endp
 
 ; Draw arrow missile at current position (using M2)
-; M2 uses PCOLR2 color (white), bits 4-5 in missile byte
 .proc draw_arrow_missile
     lda arrow_x
-    sta HPOSM2              ; Set horizontal position for M2
+    sta HPOSM2
     lda arrow_y
+    lsr                     ; PMG is in double-line mode: 2 scanlines per byte
     tax
-    ; M2 = bits 4-5, value %00110000 = visible
     lda #%00110000
     sta pmg_missiles,x
     inx
-    sta pmg_missiles,x      ; 2 scanlines total (small arrow)
+    sta pmg_missiles,x
     rts
     .endp
 
 ; Clear arrow missile (2 scanlines to match draw)
 .proc clear_arrow_missile
     lda arrow_y
+    lsr                     ; PMG is in double-line mode: 2 scanlines per byte
     tax
     lda #0
     sta pmg_missiles,x
@@ -1510,33 +1637,3 @@ survived
     sta pmg_missiles,x
     rts
     .endp
-
-	icl 'macros.asm'
-	icl 'hardware.asm'
-	icl 'labels.asm'
-	icl 'dlist.asm'
-	icl 'pmgdata.asm'
-	icl 'map_gen.asm'
-	icl 'input.asm'
-	icl 'status_chars.asm'
-
-	icl 'charset_dungeon_a.asm'
-	icl 'charset_dungeon_b.asm'
-	icl 'charset_outdoor_a.asm'
-	icl 'charset_outdoor_b.asm'
-	icl 'monsters_a.asm'
-	icl 'monsters_b.asm'
-	icl 'room_types.asm'
-	icl 'room_positions.asm'
-	icl 'room_pos_doors'
-	icl 'room_type_doors'
-	;icl 'test_map.asm'
-	icl 'charset_dungeon_a_colors.asm'
-	icl 'charset_dungeon_b_colors.asm'
-	icl 'charset_outdoor_a_colors.asm'
-	icl 'charset_outdoor_b_colors.asm'
-	icl 'monsters_a_colors.asm'
-	icl 'monsters_b_colors.asm'
-powers_of_two
-	.byte 1,2,4,8,16,32,64,128
-	
