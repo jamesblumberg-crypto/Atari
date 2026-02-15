@@ -11666,14 +11666,14 @@ Source: monsters_b_colors.asm
   1314
   1315 				; Constants for arrow
   1316 = 0001			ARROW_SPEED      = 1           ; Pixels per update
-  1317 = 0008			ARROW_TILE_SIZE  = 8           ; Advance map tile after 8 subtile steps
-  1318 = 0040			ARROW_START_Y    = 64          ; Starting scanline (center of player area)
+  1317 = 0010			ARROW_TILE_SIZE  = 16          ; Advance map tile after 16 subtile steps
+  1318 = 007C			ARROW_START_Y    = 124         ; Starting scanline near player center in double-line PMG
   1319 = 005C			ARROW_START_X    = 92          ; Starting X (same as player HPOS)
   1320 = 0008			ARROW_MIN_Y      = 8           ; Top boundary of dungeon viewport
   1321 = 00D8			ARROW_MAX_Y      = 216         ; Bottom boundary of dungeon viewport
   1322 = 0010			ARROW_MIN_X      = 16          ; Left boundary
   1323 = 00B0			ARROW_MAX_X      = 176         ; Right boundary (stop before HUD panel)
-  1324 6C00-6DB7> 00		arrow_tick       .byte 0       ; Last RTCLK2 tick that advanced arrow
+  1324 6C00-6DC4> 00		arrow_tick       .byte 0       ; Last RTCLK2 tick that advanced arrow
   1325 6C01 00			arrow_tick_div   .byte 0       ; Additional slowdown divider
   1326 6C02 00			monster_tick     .byte 0       ; Last RTCLK2 tick that advanced monsters
   1327 6C03 00			monster_tick_div .byte 0       ; Monster movement slowdown divider
@@ -11685,7 +11685,7 @@ Source: monsters_b_colors.asm
   1333
   1334 6C09 A9 5C		    lda #ARROW_START_X
   1335 6C0B 8D 75 73		    sta arrow_x
-  1336 6C0E A9 40		    lda #ARROW_START_Y
+  1336 6C0E A9 7C		    lda #ARROW_START_Y
   1337 6C10 8D 76 73		    sta arrow_y
   1338 6C13 AD 7A 73		    lda player_dir
   1339 6C16 8D 77 73		    sta arrow_dir
@@ -11702,7 +11702,7 @@ Source: monsters_b_colors.asm
   1350 6C35 A9 01		    lda #1
   1351 6C37 8D 74 73		    sta arrow_active
   1352 6C3A E6 DA		    inc stick_action
-  1353 6C3C 20 94 6D		    jsr draw_arrow_missile
+  1353 6C3C 20 A1 6D		    jsr draw_arrow_missile
   1354 6C3F			already_active
   1355 6C3F 60			    rts
   1356 				    .endp
@@ -11725,12 +11725,12 @@ Source: monsters_b_colors.asm
   1373 6C5E			no_tick_advance
   1374 6C5E 60			    rts
   1375 6C5F			arrow_is_active
-  1376 6C5F 20 A9 6D		    jsr clear_arrow_missile
+  1376 6C5F 20 B6 6D		    jsr clear_arrow_missile
   1377 6C62 AD 7B 73		    lda arrow_subtile
   1378 6C65 18			    clc
   1379 6C66 69 01		    adc #ARROW_SPEED
   1380 6C68 8D 7B 73		    sta arrow_subtile
-  1381 6C6B C9 08		    cmp #ARROW_TILE_SIZE
+  1381 6C6B C9 10		    cmp #ARROW_TILE_SIZE
   1382 6C6D 90 61		    bcc move_screen_only
   1383 6C6F A9 00		    lda #0
   1384 6C71 8D 7B 73		    sta arrow_subtile
@@ -11814,10 +11814,10 @@ Source: main.asm
   1449 6D1C 90 08		    bcc deactivate
   1450 6D1E C9 B0		    cmp #ARROW_MAX_X
   1451 6D20 B0 04		    bcs deactivate
-  1452 6D22 20 94 6D		    jsr draw_arrow_missile
+  1452 6D22 20 A1 6D		    jsr draw_arrow_missile
   1453 6D25 60			    rts
   1454 6D26			deactivate
-  1455 6D26 20 86 6D		    jsr deactivate_arrow
+  1455 6D26 20 93 6D		    jsr deactivate_arrow
   1456 6D29 60			    rts
   1457 				    .endp
   1458
@@ -11831,12 +11831,12 @@ Source: main.asm
   1466 6D3C C9 34		    cmp #52
   1467 6D3E B0 07		    bcs check_wall
   1468 6D40 20 4F 6D		    jsr arrow_hit_monster
-  1469 6D43 20 86 6D		    jsr deactivate_arrow
+  1469 6D43 20 93 6D		    jsr deactivate_arrow
   1470 6D46 60			    rts
   1471 6D47			check_wall
   1472 6D47 C9 37		    cmp #PASSABLE_MIN
   1473 6D49 B0 03		    bcs passable
-  1474 6D4B 20 86 6D		    jsr deactivate_arrow
+  1474 6D4B 20 93 6D		    jsr deactivate_arrow
   1475 6D4E			passable
   1476 6D4E 60			    rts
   1477 				    .endp
@@ -11852,66 +11852,79 @@ Source: main.asm
   1487 6D58 E9 2C		    sbc #44
   1488 6D5A AA			    tax
   1489
-  1490 6D5B BD E5 BE		    lda monster_hp_table,x
-  1491 6D5E 85 E3		    sta monster_hp
-  1492 6D60 A5 D8		    lda dungeon_floor
-  1493 6D62 4A			    lsr
-  1494 6D63 0A			    asl
-  1495 6D64 0A			    asl
-  1496 6D65 18			    clc
-  1497 6D66 65 E3		    adc monster_hp
-  1498 6D68 85 E3		    sta monster_hp
-  1499
-  1500 6D6A AD 71 73		    lda player_ranged_dmg
-  1501 6D6D C5 E3		    cmp monster_hp
-  1502 6D6F 90 14		    bcc survived
-  1503
-  1504 6D71 BD F5 BE		    lda monster_xp_table,x
-  1505 6D74 18			    clc
-  1506 6D75 65 E8		    adc player_xp
-  1507 6D77 85 E8		    sta player_xp
-  1508 6D79 20 D9 B2		    jsr update_xp_bar
-  1509 6D7C 20 C9 B3		    jsr check_level_up
-  1510 6D7F A0 00		    ldy #0
-  1511 6D81 A9 7F		    lda #MAP_FLOOR
-  1512 6D83 91 92		    sta (map_ptr),y
-  1513
-  1514 6D85			survived
-  1515 6D85 60			    rts
-  1516 				    .endp
-  1517
-  1518 				; Deactivate the arrow
-  1519 6D86			.proc deactivate_arrow
-  1520 6D86 A9 00		    lda #0
-  1521 6D88 8D 74 73		    sta arrow_active
-  1522 6D8B 20 A9 6D		    jsr clear_arrow_missile
-  1523 6D8E A9 00		    lda #0
-  1524 6D90 8D 06 D0		    sta HPOSM2
-  1525 6D93 60			    rts
-  1526 				    .endp
-  1527
-  1528 				; Draw arrow missile at current position (using M2)
-  1529 6D94			.proc draw_arrow_missile
-  1530 6D94 AD 75 73		    lda arrow_x
-  1531 6D97 8D 06 D0		    sta HPOSM2
-  1532 6D9A AD 76 73		    lda arrow_y
-  1533 6D9D 4A			    lsr                     ; PMG is in double-line mode: 2 scanlines per byte
-  1534 6D9E AA			    tax
-  1535 6D9F A9 30		    lda #%00110000
-  1536 6DA1 9D 80 75		    sta pmg_missiles,x
-  1537 6DA4 E8			    inx
-  1538 6DA5 9D 80 75		    sta pmg_missiles,x
-  1539 6DA8 60			    rts
-  1540 				    .endp
-  1541
-  1542 				; Clear arrow missile (2 scanlines to match draw)
-  1543 6DA9			.proc clear_arrow_missile
-  1544 6DA9 AD 76 73		    lda arrow_y
-  1545 6DAC 4A			    lsr                     ; PMG is in double-line mode: 2 scanlines per byte
-  1546 6DAD AA			    tax
-  1547 6DAE A9 00		    lda #0
-  1548 6DB0 9D 80 75		    sta pmg_missiles,x
-  1549 6DB3 E8			    inx
-  1550 6DB4 9D 80 75		    sta pmg_missiles,x
-  1551 6DB7 60			    rts
-  1552 				    .endp
+  1490 				    ; Compute scaled HP for this floor (same scaling as melee combat).
+  1491 6D5B BD E5 BE		    lda monster_hp_table,x
+  1492 6D5E 85 E3		    sta monster_hp
+  1493 6D60 A5 D8		    lda dungeon_floor
+  1494 6D62 4A			    lsr
+  1495 6D63 0A			    asl
+  1496 6D64 0A			    asl
+  1497 6D65 18			    clc
+  1498 6D66 65 E3		    adc monster_hp
+  1499 6D68 85 E3		    sta monster_hp
+  1500
+  1501 				    ; Middle-ground balance:
+  1502 				    ; - Guaranteed kill if (ranged damage * 3) >= scaled monster HP
+  1503 				    ; - Otherwise 25% chance to kill (lucky shot)
+  1504 6D6A AD 71 73		    lda player_ranged_dmg
+  1505 6D6D 85 BD		    sta tmp2
+  1506 6D6F 0A			    asl
+  1507 6D70 18			    clc
+  1508 6D71 65 BD		    adc tmp2
+  1509 6D73 C5 E3		    cmp monster_hp
+  1510 6D75 B0 07		    bcs kill_monster
+  1511
+  1512 6D77 20 06 BD		    jsr random16
+  1513 6D7A 29 03		    and #3
+  1514 6D7C D0 14		    bne survived
+  1515
+  1516 6D7E			kill_monster
+  1517 6D7E BD F5 BE		    lda monster_xp_table,x
+  1518 6D81 18			    clc
+  1519 6D82 65 E8		    adc player_xp
+  1520 6D84 85 E8		    sta player_xp
+  1521 6D86 20 D9 B2		    jsr update_xp_bar
+  1522 6D89 20 C9 B3		    jsr check_level_up
+  1523 6D8C A0 00		    ldy #0
+  1524 6D8E A9 7F		    lda #MAP_FLOOR
+  1525 6D90 91 92		    sta (map_ptr),y
+  1526
+  1527 6D92			survived
+  1528 6D92 60			    rts
+  1529 				    .endp
+  1530
+  1531 				; Deactivate the arrow
+  1532 6D93			.proc deactivate_arrow
+  1533 6D93 A9 00		    lda #0
+  1534 6D95 8D 74 73		    sta arrow_active
+  1535 6D98 20 B6 6D		    jsr clear_arrow_missile
+  1536 6D9B A9 00		    lda #0
+  1537 6D9D 8D 06 D0		    sta HPOSM2
+  1538 6DA0 60			    rts
+  1539 				    .endp
+  1540
+  1541 				; Draw arrow missile at current position (using M2)
+  1542 6DA1			.proc draw_arrow_missile
+  1543 6DA1 AD 75 73		    lda arrow_x
+  1544 6DA4 8D 06 D0		    sta HPOSM2
+  1545 6DA7 AD 76 73		    lda arrow_y
+  1546 6DAA 4A			    lsr                     ; PMG is in double-line mode: 2 scanlines per byte
+  1547 6DAB AA			    tax
+  1548 6DAC A9 30		    lda #%00110000
+  1549 6DAE 9D 80 75		    sta pmg_missiles,x
+  1550 6DB1 E8			    inx
+  1551 6DB2 9D 80 75		    sta pmg_missiles,x
+  1552 6DB5 60			    rts
+  1553 				    .endp
+  1554
+  1555 				; Clear arrow missile (2 scanlines to match draw)
+  1556 6DB6			.proc clear_arrow_missile
+  1557 6DB6 AD 76 73		    lda arrow_y
+  1558 6DB9 4A			    lsr                     ; PMG is in double-line mode: 2 scanlines per byte
+  1559 6DBA AA			    tax
+  1560 6DBB A9 00		    lda #0
+  1561 6DBD 9D 80 75		    sta pmg_missiles,x
+  1562 6DC0 E8			    inx
+  1563 6DC1 9D 80 75		    sta pmg_missiles,x
+  1564 6DC4 60			    rts
+  1565 				    .endp

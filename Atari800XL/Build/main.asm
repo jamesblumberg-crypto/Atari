@@ -1462,13 +1462,50 @@ deactivate
     ldy #0
     lda (map_ptr),y
     cmp #44
-    bcc check_wall
+    bcc check_horizontal_neighbors
     cmp #52
-    bcs check_wall
+    bcs check_horizontal_neighbors
     jsr arrow_hit_monster
     jsr deactivate_arrow
     rts
+
+check_horizontal_neighbors
+    ; Horizontal shots can be visually between map rows, so probe one row above/below.
+    lda arrow_dir
+    cmp #WEST
+    beq check_above
+    cmp #EAST
+    bne check_wall
+
+check_above
+    mwa map_ptr tmp_addr1
+    sbw map_ptr #map_width
+    lda (map_ptr),y
+    cmp #44
+    bcc check_below
+    cmp #52
+    bcs check_below
+    jsr arrow_hit_monster
+    jsr deactivate_arrow
+    rts
+
+check_below
+    mwa tmp_addr1 map_ptr
+    adw map_ptr #map_width
+    lda (map_ptr),y
+    cmp #44
+    bcc restore_for_wall
+    cmp #52
+    bcs restore_for_wall
+    jsr arrow_hit_monster
+    jsr deactivate_arrow
+    rts
+
+restore_for_wall
+    mwa tmp_addr1 map_ptr
+
 check_wall
+    lda (map_ptr),y
     cmp #PASSABLE_MIN
     bcs passable
     jsr deactivate_arrow
