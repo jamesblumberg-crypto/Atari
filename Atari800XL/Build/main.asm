@@ -131,20 +131,20 @@ player_xp            = $e8
 player_level         = $e9
 
 ; Weapon system variables
-player_ranged_dmg    = $ea  ; Ranged weapon damage (bow)
-has_bow              = $eb  ; 0 = no bow, 1 = has bow
-equipped_weapon      = $ec  ; 0 = melee, 1 = ranged (bow)
+player_ranged_dmg    = $7371  ; Ranged weapon damage (bow)
+has_bow              = $7372  ; 0 = no bow, 1 = has bow
+equipped_weapon      = $7373  ; 0 = melee, 1 = ranged (bow)
 
 ; Arrow missile variables
-arrow_active         = $ed  ; 0 = no arrow, 1 = arrow in flight
-arrow_x              = $ee  ; Arrow horizontal position (screen coords)
-arrow_y              = $ef  ; Arrow vertical position (scanline)
-arrow_dir            = $f0  ; Arrow direction (1=N, 2=S, 3=W, 4=E)
-arrow_map_x          = $f1  ; Arrow map X coordinate
-arrow_map_y          = $f2  ; Arrow map Y coordinate
-player_dir           = $f3  ; Last direction player moved (for aiming)
-arrow_subtile        = $f4  ; Sub-tile counter (0-7, update map coord when wraps)
-arrow_ptr            = $f5  ; Arrow map pointer (16-bit)
+arrow_active         = $7374  ; 0 = no arrow, 1 = arrow in flight
+arrow_x              = $7375  ; Arrow horizontal position (screen coords)
+arrow_y              = $7376  ; Arrow vertical position (scanline)
+arrow_dir            = $7377  ; Arrow direction (1=N, 2=S, 3=W, 4=E)
+arrow_map_x          = $7378  ; Arrow map X coordinate
+arrow_map_y          = $7379  ; Arrow map Y coordinate
+player_dir           = $737A  ; Last direction player moved (for aiming)
+arrow_subtile        = $737B  ; Sub-tile counter (0-7, update map coord when wraps)
+arrow_ptr            = $737C  ; Arrow map pointer (16-bit)
 
 ; Colors
 white 				= $0a
@@ -1276,14 +1276,46 @@ monster_xp_table
 	; 30HP/5dmg->15XP, 45HP/8dmg->20XP, 50HP/12dmg->25XP, 60HP/15dmg->30XP,
 	; 70HP/18dmg->40XP, 80HP/22dmg->45XP, 90HP/25dmg->50XP, 100HP/30dmg->60XP
 
+; Arrow routines moved to $6C00 to keep executable code below $C000.
+
+	icl 'macros.asm'
+	icl 'hardware.asm'
+	icl 'labels.asm'
+	icl 'dlist.asm'
+	icl 'pmgdata.asm'
+	icl 'map_gen.asm'
+	icl 'input.asm'
+	icl 'status_chars.asm'
+
+	icl 'charset_dungeon_a.asm'
+	icl 'charset_dungeon_b.asm'
+	icl 'charset_outdoor_a.asm'
+	icl 'charset_outdoor_b.asm'
+	icl 'monsters_a.asm'
+	icl 'monsters_b.asm'
+	icl 'room_types.asm'
+	icl 'room_positions.asm'
+	icl 'room_pos_doors'
+	icl 'room_type_doors'
+	;icl 'test_map.asm'
+	icl 'charset_dungeon_a_colors.asm'
+	icl 'charset_dungeon_b_colors.asm'
+	icl 'charset_outdoor_a_colors.asm'
+	icl 'charset_outdoor_b_colors.asm'
+	icl 'monsters_a_colors.asm'
+	icl 'monsters_b_colors.asm'
+powers_of_two
+	.byte 1,2,4,8,16,32,64,128
+
 ; ============================================
-; Arrow missile procedures (in main code area)
+; Arrow missile procedures (relocated to RAM)
 ; ============================================
+	org $6c00
 
 ; Constants for arrow
-ARROW_SPEED      = 1           ; Pixels per update (very slow for visibility)
-ARROW_TILE_SIZE  = 8           ; Advance map tile less often so shot can travel
-ARROW_START_Y    = 64          ; Starting scanline (center of player area)
+ARROW_SPEED      = 1           ; Pixels per update
+ARROW_TILE_SIZE  = 16          ; Advance map tile after 16 subtile steps
+ARROW_START_Y    = 124         ; Starting scanline near player center in double-line PMG
 ARROW_START_X    = 92          ; Starting X (same as player HPOS)
 ARROW_MIN_Y      = 8           ; Top boundary of dungeon viewport
 ARROW_MAX_Y      = 216         ; Bottom boundary of dungeon viewport
@@ -1299,7 +1331,6 @@ monster_tick_div .byte 0       ; Monster movement slowdown divider
     lda arrow_active
     bne already_active
 
-    ; Set base position
     lda #ARROW_START_X
     sta arrow_x
     lda #ARROW_START_Y
@@ -1311,7 +1342,6 @@ monster_tick_div .byte 0       ; Monster movement slowdown divider
     lda player_y
     sta arrow_map_y
 
-    ; Initialize arrow_ptr to player's map position
     mwa player_ptr arrow_ptr
 
     lda #0
@@ -1327,14 +1357,13 @@ already_active
 
 ; Update arrow position and check for collisions
 .proc update_arrow
-    ; Throttle to clock ticks so the missile remains visible.
     lda RTCLK2
     cmp arrow_tick
     beq no_tick_advance
     sta arrow_tick
     inc arrow_tick_div
     lda arrow_tick_div
-    cmp #3                  ; Move every 3 ticks (~20 updates/sec)
+    cmp #3
     bcc no_tick_advance
     lda #0
     sta arrow_tick_div
@@ -1458,22 +1487,7 @@ passable
     sbc #44
     tax
 
-    ; Compute scaled HP for this floor (harder to kill deeper down).
-    lda monster_hp_table,x
-    sta monster_hp
-    lda dungeon_floor
-    lsr
-    asl
-    asl
-    clc
-    adc monster_hp
-    sta monster_hp
-
-    ; Bow hit only kills when ranged damage meets scaled HP.
-    lda player_ranged_dmg
-    cmp monster_hp
-    bcc survived
-
+    ; Ranged hits are lethal on contact.
     lda monster_xp_table,x
     clc
     adc player_xp
@@ -1484,7 +1498,6 @@ passable
     lda #MAP_FLOOR
     sta (map_ptr),y
 
-survived
     rts
     .endp
 
@@ -1494,23 +1507,21 @@ survived
     sta arrow_active
     jsr clear_arrow_missile
     lda #0
-    sta HPOSM2              ; M2 position off-screen
+    sta HPOSM2
     rts
     .endp
 
 ; Draw arrow missile at current position (using M2)
-; M2 uses PCOLR2 color (white), bits 4-5 in missile byte
 .proc draw_arrow_missile
     lda arrow_x
-    sta HPOSM2              ; Set horizontal position for M2
+    sta HPOSM2
     lda arrow_y
     lsr                     ; PMG is in double-line mode: 2 scanlines per byte
     tax
-    ; M2 = bits 4-5, value %00110000 = visible
     lda #%00110000
     sta pmg_missiles,x
     inx
-    sta pmg_missiles,x      ; 2 scanlines total (small arrow)
+    sta pmg_missiles,x
     rts
     .endp
 
@@ -1525,33 +1536,3 @@ survived
     sta pmg_missiles,x
     rts
     .endp
-
-	icl 'macros.asm'
-	icl 'hardware.asm'
-	icl 'labels.asm'
-	icl 'dlist.asm'
-	icl 'pmgdata.asm'
-	icl 'map_gen.asm'
-	icl 'input.asm'
-	icl 'status_chars.asm'
-
-	icl 'charset_dungeon_a.asm'
-	icl 'charset_dungeon_b.asm'
-	icl 'charset_outdoor_a.asm'
-	icl 'charset_outdoor_b.asm'
-	icl 'monsters_a.asm'
-	icl 'monsters_b.asm'
-	icl 'room_types.asm'
-	icl 'room_positions.asm'
-	icl 'room_pos_doors'
-	icl 'room_type_doors'
-	;icl 'test_map.asm'
-	icl 'charset_dungeon_a_colors.asm'
-	icl 'charset_dungeon_b_colors.asm'
-	icl 'charset_outdoor_a_colors.asm'
-	icl 'charset_outdoor_b_colors.asm'
-	icl 'monsters_a_colors.asm'
-	icl 'monsters_b_colors.asm'
-powers_of_two
-	.byte 1,2,4,8,16,32,64,128
-	
