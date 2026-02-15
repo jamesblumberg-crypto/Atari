@@ -209,6 +209,8 @@ blocked
     ; Scale monster stats by floor depth.
     ; bonus = dungeon_floor / 2
     lda dungeon_floor
+    sec
+    sbc #1
     lsr
     sta tmp
 
@@ -261,7 +263,7 @@ monster_counter
     ; Update the HP bar to show damage
     jsr update_hp_bar
 
-    jmp combat_loop             ; Continue combat
+    rts                         ; One combat exchange per contact
 
 monster_dead
     ; Monster died - award XP based on monster type
@@ -346,7 +348,7 @@ death_loop
     sta has_bow
 
     ; Give the bow 10 damage (can be upgraded)
-    lda #10
+    lda #18
     sta player_ranged_dmg
 
     ; Remove bow from map (replace with floor)

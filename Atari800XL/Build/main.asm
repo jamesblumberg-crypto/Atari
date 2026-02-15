@@ -203,6 +203,7 @@ clear_all_missiles
 	sta player_xp
 	lda #1
 	sta player_level
+	sta dungeon_floor        ; Start on floor 1 (prevents over-scaling from garbage RAM)
 
 	; Initialize weapon system
 	lda #0
@@ -1079,7 +1080,9 @@ place
 	rts
 	.endp
 
-; Move one random monster occasionally.
+; Move every monster once per update tick.
+; First pass marks moved monsters as tile+16 (60-67) to avoid moving them twice.
+; Second pass restores those temporary tiles back to 44-51.
 .proc update_monsters
 	lda RTCLK2
 	cmp monster_tick
@@ -1097,93 +1100,130 @@ update_monsters_div_ready
 	lda #0
 	sta monster_tick_div
 
-	ldx #8
-find_monster
-	random16
-	cmp #map_width
-	bcc find_monster_x_ok
-	jmp next_try
-find_monster_x_ok
-	sta tmp_x
-
-	random16
-	cmp #map_height
-	bcc find_monster_y_ok
-	jmp next_try
-find_monster_y_ok
+	; Pass 1: scan all map cells and try to move each monster once.
+	mwa #map map_ptr
+	lda #0
 	sta tmp_y
-
-	advance_ptr #map map_ptr #map_width tmp_y tmp_x
+row_loop
+	lda #0
+	sta tmp_x
+col_loop
 	ldy #0
 	lda (map_ptr),y
 	cmp #44
-	bcs find_monster_low_ok
-	jmp next_try
-find_monster_low_ok
+	bcs monster_low_ok
+	jmp next_cell
+monster_low_ok
 	cmp #52
-	bcc find_monster_high_ok
-	jmp next_try
-find_monster_high_ok
+	bcc monster_high_ok
+	jmp next_cell
+monster_high_ok
 	sta tmp
 
-	; Pick a random direction and build the destination pointer.
+	; Build candidate destination from current position.
 	mwa map_ptr tmp_addr1
 	random16
 	and #3
-	tax
-	cpx #0
-	bne check_south
-	lda tmp_y
-	beq done
-	sbw tmp_addr1 #map_width
-	jmp check_dest
-check_south
-	cpx #1
-	bne check_west
-	lda tmp_y
-	cmp #(map_height - 1)
-	beq done
-	adw tmp_addr1 #map_width
-	jmp check_dest
-check_west
-	cpx #2
-	bne move_east
-	lda tmp_x
-	beq done
-	dec16 tmp_addr1
-	jmp check_dest
-move_east
+	sta tmp2
+
+	lda tmp2
+	beq dir_north
+	cmp #1
+	beq dir_south
+	cmp #2
+	beq dir_west
+
+dir_east
 	lda tmp_x
 	cmp #(map_width - 1)
-	beq done
+	beq next_cell
 	inc16 tmp_addr1
+	jmp check_dest
+
+dir_north
+	lda tmp_y
+	beq next_cell
+	sbw tmp_addr1 #map_width
+	jmp check_dest
+
+dir_south
+	lda tmp_y
+	cmp #(map_height - 1)
+	beq next_cell
+	adw tmp_addr1 #map_width
+	jmp check_dest
+
+dir_west
+	lda tmp_x
+	beq next_cell
+	dec16 tmp_addr1
 
 check_dest
 	; Never move onto the player tile.
 	lda tmp_addr1
 	cmp player_ptr
-	bne check_tile
+	bne check_dest_tile
 	lda tmp_addr1+1
 	cmp player_ptr+1
-	beq done
+	beq next_cell
 
-check_tile
+check_dest_tile
 	ldy #0
 	lda (tmp_addr1),y
 	cmp #MAP_FLOOR
-	bne done
+	bne next_cell
 
+	; Move monster and mark as "already moved" for this tick.
 	lda tmp
+	clc
+	adc #16
 	sta (tmp_addr1),y
 	lda #MAP_FLOOR
 	ldy #0
 	sta (map_ptr),y
-	jmp done
 
-next_try
-	dex
-	beq done
-	jmp find_monster
+next_cell
+	inc16 map_ptr
+	inc tmp_x
+	lda tmp_x
+	cmp #map_width
+	bcs next_row
+	jmp col_loop
+next_row
+	inc tmp_y
+	lda tmp_y
+	cmp #map_height
+	bcs pass2_start
+	jmp row_loop
+
+pass2_start
+	; Pass 2: normalize moved markers (60-67) back to normal monster tiles (44-51).
+	mwa #map map_ptr
+	lda #0
+	sta tmp_y
+cleanup_row
+	lda #0
+	sta tmp_x
+cleanup_col
+	ldy #0
+	lda (map_ptr),y
+	cmp #60
+	bcc cleanup_next
+	cmp #68
+	bcs cleanup_next
+	sec
+	sbc #16
+	sta (map_ptr),y
+cleanup_next
+	inc16 map_ptr
+	inc tmp_x
+	lda tmp_x
+	cmp #map_width
+	bcc cleanup_col
+	inc tmp_y
+	lda tmp_y
+	cmp #map_height
+	bcc cleanup_row
 
 done
 	rts
@@ -1249,6 +1289,7 @@ found_floor
 	lda #0
 	sta arrow_active
 	sta stick_action
+	inc dungeon_floor
 
 	new_map()
 	place_monsters num_monsters #8
@@ -1314,7 +1355,8 @@ powers_of_two
 
 ; Constants for arrow
 ARROW_SPEED      = 1           ; Pixels per update
-ARROW_TILE_SIZE  = 16          ; Advance map tile after 16 subtile steps
+ARROW_TILE_SIZE_V = 16         ; Vertical: map tile advances every 16 subtile steps
+ARROW_TILE_SIZE_H = 8          ; Horizontal: map tile advances every 8 subtile steps
 ARROW_START_Y    = 124         ; Starting scanline near player center in double-line PMG
 ARROW_START_X    = 92          ; Starting X (same as player HPOS)
 ARROW_MIN_Y      = ARROW_START_Y - ((playfield_height * 8) / 2) ; Dungeon viewport top
@@ -1377,8 +1419,20 @@ arrow_is_active
     clc
     adc #ARROW_SPEED
     sta arrow_subtile
-    cmp #ARROW_TILE_SIZE
+    lda arrow_dir
+    cmp #WEST
+    beq check_horiz_step
+    cmp #EAST
+    beq check_horiz_step
+    lda arrow_subtile
+    cmp #ARROW_TILE_SIZE_V
     bcc move_screen_only
+    jmp step_map
+check_horiz_step
+    lda arrow_subtile
+    cmp #ARROW_TILE_SIZE_H
+    bcc move_screen_only
+step_map
     lda #0
     sta arrow_subtile
     lda arrow_dir
@@ -1527,6 +1581,8 @@ passable
     lda monster_hp_table,x
     sta monster_hp
     lda dungeon_floor
+    sec
+    sbc #1
     lsr
     asl
     asl
