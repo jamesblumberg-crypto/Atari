@@ -1273,7 +1273,6 @@ found_floor
 	lda #0
 	sta arrow_active
 	sta stick_action
-	inc dungeon_floor
 
 	new_map()
 	place_monsters num_monsters #8
