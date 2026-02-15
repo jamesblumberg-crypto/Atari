@@ -1083,13 +1083,17 @@ place
 .proc update_monsters
 	lda RTCLK2
 	cmp monster_tick
-	beq done
+	bne update_monsters_tick_changed
+	jmp done
+update_monsters_tick_changed
 	sta monster_tick
 
 	inc monster_tick_div
 	lda monster_tick_div
 	cmp #4
-	bcc done
+	bcs update_monsters_div_ready
+	jmp done
+update_monsters_div_ready
 	lda #0
 	sta monster_tick_div
 
@@ -1097,21 +1101,29 @@ place
 find_monster
 	random16
 	cmp #map_width
-	bcs next_try
+	bcc find_monster_x_ok
+	jmp next_try
+find_monster_x_ok
 	sta tmp_x
 
 	random16
 	cmp #map_height
-	bcs next_try
+	bcc find_monster_y_ok
+	jmp next_try
+find_monster_y_ok
 	sta tmp_y
 
 	advance_ptr #map map_ptr #map_width tmp_y tmp_x
 	ldy #0
 	lda (map_ptr),y
 	cmp #44
-	bcc next_try
+	bcs find_monster_low_ok
+	jmp next_try
+find_monster_low_ok
 	cmp #52
-	bcs next_try
+	bcc find_monster_high_ok
+	jmp next_try
+find_monster_high_ok
 	sta tmp
 
 	; Pick a random direction and build the destination pointer.
@@ -1170,7 +1182,8 @@ check_tile
 
 next_try
 	dex
-	bne find_monster
+	beq done
+	jmp find_monster
 
 done
 	rts
@@ -1355,11 +1368,11 @@ not_north_map
 not_south_map
     cmp #WEST
     bne not_west_map
-    dec arrow_ptr
+    dec16 arrow_ptr
     dec arrow_map_x
     jmp check_map_collision
 not_west_map
-    inc arrow_ptr
+    inc16 arrow_ptr
     inc arrow_map_x
 check_map_collision
     jsr check_arrow_collision
@@ -1491,6 +1504,7 @@ survived
     lda arrow_x
     sta HPOSM2              ; Set horizontal position for M2
     lda arrow_y
+    lsr                     ; PMG is in double-line mode: 2 scanlines per byte
     tax
     ; M2 = bits 4-5, value %00110000 = visible
     lda #%00110000
@@ -1503,6 +1517,7 @@ survived
 ; Clear arrow missile (2 scanlines to match draw)
 .proc clear_arrow_missile
     lda arrow_y
+    lsr                     ; PMG is in double-line mode: 2 scanlines per byte
     tax
     lda #0
     sta pmg_missiles,x
