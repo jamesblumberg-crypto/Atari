@@ -1317,10 +1317,10 @@ ARROW_SPEED      = 1           ; Pixels per update
 ARROW_TILE_SIZE  = 16          ; Advance map tile after 16 subtile steps
 ARROW_START_Y    = 124         ; Starting scanline near player center in double-line PMG
 ARROW_START_X    = 92          ; Starting X (same as player HPOS)
-ARROW_MIN_Y      = 8           ; Top boundary of dungeon viewport
-ARROW_MAX_Y      = 216         ; Bottom boundary of dungeon viewport
-ARROW_MIN_X      = 16          ; Left boundary
-ARROW_MAX_X      = 176         ; Right boundary (stop before HUD panel)
+ARROW_MIN_Y      = ARROW_START_Y - ((playfield_height * 8) / 2) ; Dungeon viewport top
+ARROW_MAX_Y      = ARROW_START_Y + ((playfield_height * 8) / 2) ; Dungeon viewport bottom
+ARROW_MIN_X      = ARROW_START_X - ((playfield_width  * 8) / 2) ; Dungeon viewport left
+ARROW_MAX_X      = ARROW_START_X + ((playfield_width  * 8) / 2) ; Dungeon viewport right
 arrow_tick       .byte 0       ; Last RTCLK2 tick that advanced arrow
 arrow_tick_div   .byte 0       ; Additional slowdown divider
 monster_tick     .byte 0       ; Last RTCLK2 tick that advanced monsters
