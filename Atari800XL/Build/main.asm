@@ -1487,7 +1487,33 @@ passable
     sbc #44
     tax
 
-    ; Ranged hits are lethal on contact.
+    ; Compute scaled HP for this floor (same scaling as melee combat).
+    lda monster_hp_table,x
+    sta monster_hp
+    lda dungeon_floor
+    lsr
+    asl
+    asl
+    clc
+    adc monster_hp
+    sta monster_hp
+
+    ; Middle-ground balance:
+    ; - Guaranteed kill if (ranged damage * 3) >= scaled monster HP
+    ; - Otherwise 25% chance to kill (lucky shot)
+    lda player_ranged_dmg
+    sta tmp2
+    asl
+    clc
+    adc tmp2
+    cmp monster_hp
+    bcs kill_monster
+
+    jsr random16
+    and #3
+    bne survived
+
+kill_monster
     lda monster_xp_table,x
     clc
     adc player_xp
@@ -1498,6 +1524,7 @@ passable
     lda #MAP_FLOOR
     sta (map_ptr),y
 
+survived
     rts
     .endp
 
