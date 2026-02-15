@@ -79,7 +79,7 @@ map_room_rows		= 8
 playfield_width 	= 11
 playfield_height 	= 11
 
-input_speed 		= 5
+input_speed 		= 1
 anim_speed 			= 20
 
 input_timer 		= $a4
@@ -259,6 +259,7 @@ skip_monster_tables
 	lda #0
 	sta charset_a              ; Start with charset A
 	sta anim_timer             ; Initialize animation timer
+	lda RTCLK2
 	sta input_timer            ; Initialize input timer
 	mwa #cur_char_colors_a char_colors_ptr  ; Initialize color pointer
 
@@ -267,7 +268,7 @@ skip_monster_tables
 
 game
 	mva RTCLK2 clock
-	animate                     ; Re-enabled after fix_color fix
+	;animate                    ; Disabled to reduce frame hitches during movement
 	get_input                   ; Re-enabled to test
 	jsr read_keyboard           ; Check for weapon switching keys
 	jsr update_arrow            ; Update arrow position and check collisions
@@ -548,12 +549,13 @@ no_level_up
 
 .macro get_input
 	lda clock
-	cmp input_timer
-	bne input_done
+	sec
+	sbc input_timer
+	cmp #input_speed
+	bcc input_done
 	read_joystick()
 	blit_screen()
 	lda clock
-	add #input_speed
 	sta input_timer
 input_done
 	.endm
@@ -1080,9 +1082,7 @@ place
 	rts
 	.endp
 
-; Move every monster once per update tick.
-; First pass marks moved monsters as tile+16 (60-67) to avoid moving them twice.
-; Second pass restores those temporary tiles back to 44-51.
+; Move a small random subset of monsters each update tick (lightweight).
 .proc update_monsters
 	lda RTCLK2
 	cmp monster_tick
@@ -1093,137 +1093,119 @@ update_monsters_tick_changed
 
 	inc monster_tick_div
 	lda monster_tick_div
-	cmp #4
+	cmp #32
 	bcs update_monsters_div_ready
 	jmp done
 update_monsters_div_ready
 	lda #0
 	sta monster_tick_div
 
-	; Pass 1: scan all map cells and try to move each monster once.
-	mwa #map map_ptr
-	lda #0
-	sta tmp_y
-row_loop
-	lda #0
+	; Try to move 1 monster per update.
+	ldx #1
+move_one
+	ldy #24
+find_monster
+	random16
+	cmp #map_width
+	bcc x_ok
+	jmp retry_pick
+x_ok
 	sta tmp_x
-col_loop
+
+	random16
+	cmp #map_height
+	bcc y_ok
+	jmp retry_pick
+y_ok
+	sta tmp_y
+
+	advance_ptr #map map_ptr #map_width tmp_y tmp_x
 	ldy #0
 	lda (map_ptr),y
 	cmp #44
-	bcs monster_low_ok
-	jmp next_cell
-monster_low_ok
+	bcs monster_lo_ok
+	jmp retry_pick
+monster_lo_ok
 	cmp #52
-	bcc monster_high_ok
-	jmp next_cell
-monster_high_ok
+	bcc monster_hi_ok
+	jmp retry_pick
+monster_hi_ok
 	sta tmp
 
-	; Build candidate destination from current position.
+	; Pick destination direction.
 	mwa map_ptr tmp_addr1
 	random16
 	and #3
 	sta tmp2
 
 	lda tmp2
-	beq dir_north
+	beq try_north
 	cmp #1
-	beq dir_south
+	beq try_south
 	cmp #2
-	beq dir_west
+	beq try_west
 
-dir_east
+try_east
 	lda tmp_x
 	cmp #(map_width - 1)
-	beq next_cell
+	beq retry_pick
 	inc16 tmp_addr1
 	jmp check_dest
 
-dir_north
+try_north
 	lda tmp_y
-	beq next_cell
+	beq retry_pick
 	sbw tmp_addr1 #map_width
 	jmp check_dest
 
-dir_south
+try_south
 	lda tmp_y
 	cmp #(map_height - 1)
-	beq next_cell
+	beq retry_pick
 	adw tmp_addr1 #map_width
 	jmp check_dest
 
-dir_west
+try_west
 	lda tmp_x
-	beq next_cell
+	beq retry_pick
 	dec16 tmp_addr1
 
 check_dest
 	; Never move onto the player tile.
 	lda tmp_addr1
 	cmp player_ptr
-	bne check_dest_tile
+	bne check_tile
 	lda tmp_addr1+1
 	cmp player_ptr+1
-	beq next_cell
+	beq retry_pick
 
-check_dest_tile
+check_tile
 	ldy #0
 	lda (tmp_addr1),y
 	cmp #MAP_FLOOR
-	bne next_cell
+	bne retry_pick
 
-	; Move monster and mark as "already moved" for this tick.
+	; Execute move.
 	lda tmp
-	clc
-	adc #16
 	sta (tmp_addr1),y
 	lda #MAP_FLOOR
 	ldy #0
 	sta (map_ptr),y
 
-next_cell
-	inc16 map_ptr
-	inc tmp_x
-	lda tmp_x
-	cmp #map_width
-	bcs next_row
-	jmp col_loop
-next_row
-	inc tmp_y
-	lda tmp_y
-	cmp #map_height
-	bcs pass2_start
-	jmp row_loop
+next_monster
+	dex
+	beq done
+	jmp move_one
+	jmp done
 
-pass2_start
-	; Pass 2: normalize moved markers (60-67) back to normal monster tiles (44-51).
-	mwa #map map_ptr
-	lda #0
-	sta tmp_y
-cleanup_row
-	lda #0
-	sta tmp_x
-cleanup_col
-	ldy #0
-	lda (map_ptr),y
-	cmp #60
-	bcc cleanup_next
-	cmp #68
-	bcs cleanup_next
-	sec
-	sbc #16
-	sta (map_ptr),y
-cleanup_next
-	inc16 map_ptr
-	inc tmp_x
-	lda tmp_x
-	cmp #map_width
-	bcc cleanup_col
-	inc tmp_y
-	lda tmp_y
-	cmp #map_height
-	bcc cleanup_row
+retry_pick
+	dey
+	beq retry_exhausted
+	jmp find_monster
+retry_exhausted
+	dex
+	beq done
+	jmp move_one
 
 done
 	rts

@@ -1,25 +1,25 @@
 .proc read_joystick
     ; Temp vars used
     cur_btn = tmp1          ; Current button state
-    
-    mva STRIG0 cur_btn      ; Get current button state from HW register (1 = up, 0 = down)
-    bne up                  ; If current button state is non-zero, the button is up
 
-down                        ; The button is currently down
-    lda stick_btn           ; Get the previous button state
-    bne done                ; If previous button state is non-zero and current button state is zero, it was just pushed
+    mva STRIG0 cur_btn      ; 1 = up, 0 = down
+    read_direction()        ; Always read stick and prepare dir_ptr
 
-held                        ; The button is held down
-    lda stick_action        ; Get the action state
-    bne done                ; If the action state is non-zero, don't do the action again
-    read_direction()        ; Update the direction pointer
-    player_action()         ; Do the action
-    jmp done                ; Skip to done
+    ; Fire/action on button edge only (just pressed).
+    lda cur_btn
+    bne no_action_press
+    lda stick_btn
+    beq no_action_press     ; Already held, don't repeat action
+    player_action()
 
-up                          ; The button is currently up
-    read_direction()        ; Update the direction pointer
-    player_move()           ; Move the player
-    clr stick_action        ; If the player is moving, we don't care about the action state so reset it                      
+no_action_press
+    ; Movement is independent from trigger state to keep controls consistent.
+    player_move()
+
+    ; When trigger is up, clear action latch so next press can trigger again.
+    lda cur_btn
+    beq done
+    clr stick_action
 
 done
     mva cur_btn stick_btn   ; Set the stick button for next time
