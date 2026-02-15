@@ -261,7 +261,6 @@ skip_monster_tables
 	sta anim_timer             ; Initialize animation timer
 	lda RTCLK2
 	sta input_timer            ; Initialize input timer
-	sta dungeon_floor          ; Start on floor 0
 	mwa #cur_char_colors_a char_colors_ptr  ; Initialize color pointer
 
 	; Draw initial screen before game loop
@@ -1070,7 +1069,9 @@ place
 	bcs place
 	sta tmp_y
 
-	advance_ptr #map map_ptr #map_width tmp_y tmp_x
+	stx tmp1                   ; Save X (monster count)
+	jsr fast_map_ptr           ; map_ptr = map + tmp_y * 139 + tmp_x
+	ldx tmp1                   ; Restore X
 	ldy #0
 	lda (map_ptr),y
 	cmp #MAP_FLOOR
@@ -1079,6 +1080,89 @@ place
 	sta (map_ptr),y
 	dex
 	bne pick
+
+	rts
+	.endp
+
+; Fast map pointer calculation: map_ptr = map + tmp_y * 139 + tmp_x
+; Uses shift-and-add instead of looping. 139 = 128 + 8 + 2 + 1
+.proc fast_map_ptr
+	; Start: tmp_addr2 = tmp_y (16-bit)
+	lda tmp_y
+	sta tmp_addr2
+	lda #0
+	sta tmp_addr2+1
+
+	; map_ptr = tmp_addr2 (×1)
+	lda tmp_addr2
+	sta map_ptr
+	lda tmp_addr2+1
+	sta map_ptr+1
+
+	; tmp_addr2 <<= 1 (×2)
+	asl tmp_addr2
+	rol tmp_addr2+1
+
+	; map_ptr += tmp_addr2 (×1 + ×2 = ×3)
+	lda map_ptr
+	clc
+	adc tmp_addr2
+	sta map_ptr
+	lda map_ptr+1
+	adc tmp_addr2+1
+	sta map_ptr+1
+
+	; tmp_addr2 <<= 2 (×8)
+	asl tmp_addr2
+	rol tmp_addr2+1
+	asl tmp_addr2
+	rol tmp_addr2+1
+
+	; map_ptr += tmp_addr2 (×3 + ×8 = ×11)
+	lda map_ptr
+	clc
+	adc tmp_addr2
+	sta map_ptr
+	lda map_ptr+1
+	adc tmp_addr2+1
+	sta map_ptr+1
+
+	; tmp_addr2 <<= 4 (×128)
+	asl tmp_addr2
+	rol tmp_addr2+1
+	asl tmp_addr2
+	rol tmp_addr2+1
+	asl tmp_addr2
+	rol tmp_addr2+1
+	asl tmp_addr2
+	rol tmp_addr2+1
+
+	; map_ptr += tmp_addr2 (×11 + ×128 = ×139)
+	lda map_ptr
+	clc
+	adc tmp_addr2
+	sta map_ptr
+	lda map_ptr+1
+	adc tmp_addr2+1
+	sta map_ptr+1
+
+	; Add tmp_x
+	lda map_ptr
+	clc
+	adc tmp_x
+	sta map_ptr
+	lda map_ptr+1
+	adc #0
+	sta map_ptr+1
+
+	; Add base address of map
+	lda map_ptr
+	clc
+	adc #<map
+	sta map_ptr
+	lda map_ptr+1
+	adc #>map
+	sta map_ptr+1
 
 	rts
 	.endp
@@ -1104,7 +1188,8 @@ update_monsters_div_ready
 	; Try to move 1 monster per update.
 	ldx #1
 move_one
-	ldy #3
+	lda #3
+	sta monster_retries
 find_monster
 	random16
 	cmp #map_width
@@ -1120,7 +1205,9 @@ x_ok
 y_ok
 	sta tmp_y
 
-	advance_ptr #map map_ptr #map_width tmp_y tmp_x
+	stx tmp1                   ; Save X (monster count) before calling fast_map_ptr
+	jsr fast_map_ptr           ; map_ptr = map + tmp_y * 139 + tmp_x
+	ldx tmp1                   ; Restore X
 	ldy #0
 	lda (map_ptr),y
 	cmp #44
@@ -1200,7 +1287,7 @@ next_monster
 	jmp done
 
 retry_pick
-	dey
+	dec monster_retries
 	beq retry_exhausted
 	jmp find_monster
 retry_exhausted
@@ -1350,6 +1437,7 @@ arrow_tick       .byte 0       ; Last RTCLK2 tick that advanced arrow
 arrow_tick_div   .byte 0       ; Additional slowdown divider
 monster_tick     .byte 0       ; Last RTCLK2 tick that advanced monsters
 monster_tick_div .byte 0       ; Monster movement slowdown divider
+monster_retries  .byte 0       ; Retry counter for find_monster
 
 ; Fire an arrow in the direction the player is facing
 .proc fire_arrow
