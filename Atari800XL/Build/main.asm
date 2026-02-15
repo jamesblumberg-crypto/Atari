@@ -79,7 +79,7 @@ map_room_rows		= 8
 playfield_width 	= 11
 playfield_height 	= 11
 
-input_speed 		= 1
+input_speed 		= 4
 anim_speed 			= 20
 
 input_timer 		= $a4
@@ -273,7 +273,7 @@ game
 	get_input                   ; Re-enabled to test
 	jsr read_keyboard           ; Check for weapon switching keys
 	jsr update_arrow            ; Update arrow position and check collisions
-	;jsr update_monsters        ; DISABLED FOR DEBUGGING - test if joystick works without this
+	jsr update_monsters
 	jmp game
 
 .macro set_colors
@@ -1104,7 +1104,7 @@ update_monsters_div_ready
 	; Try to move 1 monster per update.
 	ldx #1
 move_one
-	ldy #24
+	ldy #3
 find_monster
 	random16
 	cmp #map_width
