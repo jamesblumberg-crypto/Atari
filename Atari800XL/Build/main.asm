@@ -261,6 +261,7 @@ skip_monster_tables
 	sta anim_timer             ; Initialize animation timer
 	lda RTCLK2
 	sta input_timer            ; Initialize input timer
+	sta dungeon_floor          ; Start on floor 0
 	mwa #cur_char_colors_a char_colors_ptr  ; Initialize color pointer
 
 	; Draw initial screen before game loop
@@ -1268,6 +1269,7 @@ found_floor
 ; Advance to the next dungeon floor when stepping on a down ladder.
 ; Re-generates the map, re-places monsters and bow, and redraws the view.
 .proc descend_to_next_level
+	inc dungeon_floor
 	lda #0
 	sta arrow_active
 	sta stick_action
