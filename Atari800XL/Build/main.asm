@@ -273,7 +273,7 @@ game
 	get_input                   ; Re-enabled to test
 	jsr read_keyboard           ; Check for weapon switching keys
 	jsr update_arrow            ; Update arrow position and check collisions
-	jsr update_monsters         ; Move monsters on a slow tick
+	;jsr update_monsters        ; DISABLED FOR DEBUGGING - test if joystick works without this
 	jmp game
 
 .macro set_colors
