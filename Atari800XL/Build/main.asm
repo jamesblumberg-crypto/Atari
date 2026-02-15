@@ -1349,7 +1349,6 @@ monster_tick_div .byte 0       ; Monster movement slowdown divider
     sta arrow_tick_div
     lda #1
     sta arrow_active
-    inc stick_action
     jsr draw_arrow_missile
 already_active
     rts
