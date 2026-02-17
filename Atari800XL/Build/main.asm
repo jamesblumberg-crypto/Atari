@@ -52,10 +52,10 @@ monsters_b_colors   = $af53 ; 51 bytes
 ; stick_left  = %0100
 ; stick_right = %1000
 
-map_ptr 			= $92
+map_ptr 				= $92
 screen_ptr 			= $94
-player_x			= $96
-player_y			= $97
+player_x				= $96
+player_y				= $97
 tmp					= $98
 up_tile				= $9a
 down_tile			= $9b
@@ -73,41 +73,41 @@ room_width			= 15
 room_height			= 15
 map_width 			= room_width * 8 + 7 + border * 2
 map_height 			= room_height * 8 + 7 + border * 2
-map_room_columns	= 8
+map_room_columns		= 8
 map_room_rows		= 8
 
-playfield_width 	= 11
+playfield_width 		= 11
 playfield_height 	= 11
 
-input_speed 		= 4
+input_speed 			= 4
 anim_speed 			= 20
 
-input_timer 		= $a4
+input_timer 			= $a4
 status_ptr 			= $a5 ; 16 bit
-rand				= $a7
+rand					= $a7
 room_type			= $a8
-room_pos			= $a9
+room_pos				= $a9
 room_x				= $aa
 room_y				= $ab
-room_ptr			= $ac ; 16 bit
+room_ptr				= $ac ; 16 bit
 tmp_x				= $ae
 tmp_y				= $af
 num_rooms			= $b0
 max_rooms			= $b1
-placed_doors_ptr	= $b2 ; 16 bit
+placed_doors_ptr		= $b2 ; 16 bit
 avail_doors_ptr		= $b4 ; 16 bit
-room_col			= $b6
-room_row			= $b7
-pow2_ptr			= $b8 ; 16 bit
+room_col				= $b6
+room_row				= $b7
+pow2_ptr				= $b8 ; 16 bit
 occupied_rooms_ptr  = $ba ; 16 bit
 doors				= $bc
-tmp2				= $bd
+tmp2					= $bd
 rand16				= $be
 clock				= $bf
 anim_timer			= $c0
 charset_a			= $c1
-num_monsters		= $c2
-starting_monster	= $c3
+num_monsters			= $c2
+starting_monster		= $c3
 no_clip				= $c4
 char_colors_ptr		= $c5 ; 16 bit
 
@@ -148,14 +148,14 @@ arrow_ptr            = $737C  ; Arrow map pointer (16-bit)
 
 ; Colors
 white 				= $0a
-red 				= $32
+red 					= $32
 black 				= $00
 peach 				= $2c
 blue 				= $92
-gold 			= $2a
+gold 				= $2a
 	
 	mwa #map map_ptr
-
+	
 	debug
 	setup_screen()
 	
