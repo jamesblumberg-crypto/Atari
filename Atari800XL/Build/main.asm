@@ -187,7 +187,7 @@ clear_all_missiles
 	;mva #16 starting_monster
 	mva #16 starting_monster  ; start with the monster set starting at character 8 (first 8 characters are reserved for player and UI)
 	;mva #4 num_monsters
-	mva #20 num_monsters ; start with 6 monsters per room (can be 0-8, but 8 is really crowded)
+	mva #5 num_monsters ; start with 5 monsters per room (can be 0-8, but 8 is really crowded)
 
 	lda #16
 	sta player_x
@@ -1167,137 +1167,292 @@ place
 	rts
 	.endp
 
-; Move a small random subset of monsters each update tick (lightweight).
+; Gemini Move a small subset of monsters each update tick (lightweight).
 .proc update_monsters
 	lda RTCLK2
 	cmp monster_tick
 	bne update_monsters_tick_changed
 	jmp done
-update_monsters_tick_changed
+	
+update_monsters_tick_changed:
 	sta monster_tick
 
 	inc monster_tick_div
 	lda monster_tick_div
-	cmp #32
+	cmp #32						; speed of monster movement (Higher = slower)
 	bcs update_monsters_div_ready
 	jmp done
-update_monsters_div_ready
+	
+update_monsters_div_ready:
 	lda #0
 	sta monster_tick_div
 
-	; Try to move 1 monster per update.
+	; Attempt to move 1 monster per update.
 	ldx #1
-move_one
+move_one:
 	lda #3
 	sta monster_retries
-find_monster
+	
+find_monster:
 	random16
 	cmp #map_width
 	bcc x_ok
 	jmp retry_pick
-x_ok
+x_ok:
 	sta tmp_x
 
 	random16
 	cmp #map_height
 	bcc y_ok
 	jmp retry_pick
-y_ok
+y_ok:
 	sta tmp_y
 
-	stx tmp1                   ; Save X (monster count) before calling fast_map_ptr
+	stx tmp1                   ; Save X (monster count)
 	jsr fast_map_ptr           ; map_ptr = map + tmp_y * 139 + tmp_x
 	ldx tmp1                   ; Restore X
+	
 	ldy #0
 	lda (map_ptr),y
-	cmp #44
+	cmp #44						; Monster tile range start
 	bcs monster_lo_ok
 	jmp retry_pick
-monster_lo_ok
-	cmp #52
+monster_lo_ok:
+	cmp #52						; monster tile range end
 	bcc monster_hi_ok
 	jmp retry_pick
-monster_hi_ok
-	sta tmp
+monster_hi_ok:
+	sta tmp						; save the monster's tile id
 
-	; Pick destination direction.
-	mwa map_ptr tmp_addr1
-	random16
-	and #3
+	; Stalking AI Logic Start Gemini 
+	; 50/50 chance to check x or y distance first
+	random 8
+	and #1
+	beq check_x_first
+	
+check_y_first:
+	lda player_y
+	cmp tmp_y
+	beq check_x_stalk			; on same row? stalk horizontally instead
+	bcs stalk_south
+	lda #NORTH					; label value = 1
 	sta tmp2
-
+	jmp direction_picked
+stalk_south:
+	lda #SOUTH					; label value = 2
+	sta tmp2
+	jmmp direction_picked
+stalk_east:
+	lda #EAST					; label value = 4
+	sta tmp2
+	jmp direction_picked
+	
+check_x_stalk:
+	lda player_x
+	cmp tmp_x
+	beq retry_pick				; exactly on player? pick another monster
+	bcs stalk_east
+	lda #WEST		
+	sta tmp2
+	jmp direction_picked
+	
+check_y_stalk:
+	lda player_y
+	cmp tmp_y
+	beq retry_pick
+	bcs stalk_south
+	lda #NORTH
+	sta tmp2
+	
+direction_picked:
+	; Stalking AI logic end gemini
+	
+	;execute the move based on the picked direction (tmp2)
+	mwa map_ptr tmp_addr1
 	lda tmp2
+	cmp #NORTH	
 	beq try_north
-	cmp #1
+	cmp #SOUTH
 	beq try_south
-	cmp #2
-	beq try_west
+	cmp #WEST
+	beq try_wst
 
-try_east
+try_east:
 	lda tmp_x
 	cmp #(map_width - 1)
 	beq retry_pick
 	inc16 tmp_addr1
 	jmp check_dest
 
-try_north
+try_north:
 	lda tmp_y
 	beq retry_pick
 	sbw tmp_addr1 #map_width
 	jmp check_dest
 
-try_south
+try_south:
 	lda tmp_y
-	cmp #(map_height - 1)
+	cmp#(map_height - 1)
 	beq retry_pick
 	adw tmp_addr1 #map_width
 	jmp check_dest
 
-try_west
+try_west:
 	lda tmp_x
 	beq retry_pick
 	dec16 tmp_addr1
 
-check_dest
-	; Never move onto the player tile.
+check_dest:
+	;never move on the player tile
 	lda tmp_addr1
 	cmp player_ptr
 	bne check_tile
-	lda tmp_addr1+1
+	lda tmp_addr+1
 	cmp player_ptr+1
 	beq retry_pick
 
-check_tile
+check_tile:
 	ldy #0
 	lda (tmp_addr1),y
-	cmp #MAP_FLOOR
-	bne retry_pick
+	cmp #MAP_FLOOR 					; only move if destination is floor (127)
+	bne retry_pick					; if its a wall (not 127) don't move 
 
-	; Execute move.
+	; execute move
 	lda tmp
-	sta (tmp_addr1),y
+	sta (tmp_addr1),y				; place monster in new spot
 	lda #MAP_FLOOR
 	ldy #0
-	sta (map_ptr),y
-
-next_monster
+	sta (map_ptr),y					; clear old spot
+	
+next_monster:
 	dex
 	beq done
 	jmp move_one
-	jmp done
-
-retry_pick
+	
+retry_pick:
 	dec monster_retries
 	beq retry_exhausted
-	jmp find_monster
-retry_exhausted
+	jmp find_mosnter
+retry_exhausted:
 	dex
 	beq done
 	jmp move_one
-
-done
+	
+done:
 	rts
-	.endp
+.enp
+	
+	; Pick destination direction.
+	; mwa map_ptr tmp_addr1
+	; random16  changed for the new code to move monsters
+	; and #3
+	; sta tmp2
+	; NEW STALKING LOGIC thanks Gemini
+	; Instead of random16, we compare monster pos (tmp_x, tmp_y) to player pos
+	
+	; Determine Horizontal Direction
+;	lda player_x
+;	cmp tmp_x
+;	beq check_vertical			; if X is same, just check Y
+;	bcs move_east				; if player_x > monster_x, fo East
+	
+;move_west:
+;	lda #3						; 3 = East in your direction labels
+;	sta tmp2
+;	jmp direction_picked 
+	
+;check_vertical:
+;	lda player_y
+;	cmp tmp_y
+;	beq retry_pick				; if same spot (impossible? pick another
+;	bcs move_south				; if player_y> monster_y, go south
+	
+;move_north:
+;	lda #0						; 0 = North
+;	sta tmp2
+;	jmp direction_picked
+	
+;move_south:
+;	lda #1						; 1 = South
+;	sta tmp2
+	
+;direction_picked:
+	; now tmp2 contains "best" direction to reach the player
+	; the rest of your existing locking (check_dest, check_tile)
+	; will ensure they don't walk through walls! Gemini					
+
+;	lda tmp2
+;	beq try_north
+;	cmp #1
+;	beq try_south
+;	cmp #2
+;	beq try_west
+
+;try_east
+;	lda tmp_x
+;	cmp #(map_width - 1)
+;	beq retry_pick
+;	inc16 tmp_addr1
+;	jmp check_dest
+
+;try_north
+;	lda tmp_y
+;	beq retry_pick
+;	sbw tmp_addr1 #map_width
+;	jmp check_dest
+
+;try_south
+;	lda tmp_y
+;	cmp #(map_height - 1)
+;	beq retry_pick
+;	adw tmp_addr1 #map_width
+;	jmp check_dest
+
+;try_west
+;	lda tmp_x
+;	beq retry_pick
+;	dec16 tmp_addr1
+
+;check_dest
+	; Never move onto the player tile.
+;	lda tmp_addr1
+;	cmp player_ptr
+;	bne check_tile
+;	lda tmp_addr1+1
+;	cmp player_ptr+1
+;	beq retry_pick
+
+;check_tile
+;	ldy #0
+;	lda (tmp_addr1),y
+;	cmp #MAP_FLOOR
+;	bne retry_pick
+;
+;	; Execute move.
+;	lda tmp
+;	sta (tmp_addr1),y
+;	lda #MAP_FLOOR
+;	ldy #0
+;	sta (map_ptr),y
+
+;next_monster
+;	dex
+;	beq done
+;	jmp move_one
+;	jmp done
+
+;retry_pick
+;	dec monster_retries
+;	beq retry_exhausted
+;	jmp find_monster
+;retry_exhausted
+;	dex
+;	beq done
+;	jmp move_one
+
+;done
+;	rts
+;	.endp
 
 ; Place a bow item on a floor tile adjacent to player
 .proc place_bow

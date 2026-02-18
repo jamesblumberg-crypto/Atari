@@ -11,17 +11,21 @@
     lda stick_btn
     beq no_action_press     ; Already held, don't repeat action
     player_action()
+    jmp done_input          ; if we acted don't move this tick Gemini
 
 no_action_press
     ; Movement is independent from trigger state to keep controls consistent.
     player_move()
 
+done_input
+    
+    
     ; When trigger is up, clear action latch so next press can trigger again.
-    lda cur_btn
-    beq done
-    clr stick_action
+    ;lda cur_btn            ; 3 lines remarked Gemini
+    ;beq done
+    ;clr stick_action
 
-done
+;done
     mva cur_btn stick_btn   ; Set the stick button for next time
     rts
     .endp

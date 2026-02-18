@@ -1,3 +1,4 @@
+; test
 DOOR_NORTH              = %1000
 DOOR_SOUTH              = %0100
 DOOR_WEST               = %0010
