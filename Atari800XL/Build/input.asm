@@ -382,6 +382,61 @@ death_loop
     jmp death_loop
     .endp
 
+; Monster contact damage when a monster attempts to step into the player.
+.proc damage_player_from_monster
+    txa
+    pha
+
+    lda monster_contact_cooldown
+    beq contact_can_hit
+    pla
+    tax
+    rts
+
+contact_can_hit
+    lda #8
+    sta monster_contact_cooldown
+
+    lda tmp                     ; Current monster tile ID (44-51)
+    sec
+    sbc #44                     ; Convert tile 44-51 to index 0-7
+    tax
+    lda monster_dmg_table,x
+    sta monster_dmg
+
+    ; Scale damage by floor depth.
+    lda dungeon_floor
+    sec
+    sbc #1
+    lsr
+    clc
+    adc monster_dmg
+    sta monster_dmg
+
+    lda player_hp
+    sec
+    sbc monster_dmg
+    sta player_hp
+    bmi contact_player_dead
+    beq contact_player_dead
+
+    jsr update_hp_bar
+    pla
+    tax
+    rts
+
+contact_player_dead
+    lda #0
+    sta player_hp
+    jsr update_hp_bar
+
+    pla
+    tax
+
+contact_death_loop
+    jmp contact_death_loop
+    .endp
+
 ; Pick up a bow item at dir_ptr location
 .proc pickup_bow
     ; Set has_bow flag

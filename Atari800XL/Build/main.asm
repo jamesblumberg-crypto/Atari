@@ -272,6 +272,10 @@ game
 	get_input                   ; Re-enabled to test
 	jsr read_keyboard           ; Check for weapon switching keys
 	jsr update_arrow            ; Update arrow position and check collisions
+	lda monster_contact_cooldown
+	beq monster_contact_ready
+	dec monster_contact_cooldown
+monster_contact_ready:
 	jsr update_monsters
 	jmp game
 
@@ -1238,7 +1242,9 @@ try_east:
 	bne check_east_tile
 	lda tmp_addr1+1
 	cmp player_ptr+1
-	beq try_west
+	bne check_east_tile
+	jsr damage_player_from_monster
+	jmp monster_action_done
 check_east_tile:
 	ldy #0
 	lda (tmp_addr1),y
@@ -1256,7 +1262,9 @@ try_west:
 	bne check_west_tile
 	lda tmp_addr1+1
 	cmp player_ptr+1
-	beq try_north
+	bne check_west_tile
+	jsr damage_player_from_monster
+	jmp monster_action_done
 check_west_tile:
 	ldy #0
 	lda (tmp_addr1),y
@@ -1275,7 +1283,9 @@ try_south:
 	bne check_south_tile
 	lda tmp_addr1+1
 	cmp player_ptr+1
-	beq try_north
+	bne check_south_tile
+	jsr damage_player_from_monster
+	jmp monster_action_done
 check_south_tile:
 	ldy #0
 	lda (tmp_addr1),y
@@ -1296,7 +1306,8 @@ north_in_bounds:
 	lda tmp_addr1+1
 	cmp player_ptr+1
 	bne check_north_tile
-	jmp retry_pick
+	jsr damage_player_from_monster
+	jmp monster_action_done
 check_north_tile:
 	ldy #0
 	lda (tmp_addr1),y
@@ -1318,6 +1329,8 @@ tile_is_clear:
 	blit_screen()
 	ldx tmp1
 	mwa tmp_addr2 map_ptr
+
+monster_action_done:
 	dex
 	beq done
 	dec monster_retries
@@ -1601,6 +1614,7 @@ arrow_tick_div   .byte 0       ; Additional slowdown divider
 monster_tick     .byte 0       ; Last RTCLK2 tick that advanced monsters
 monster_tick_div .byte 0       ; Monster movement slowdown divider
 monster_retries  .byte 0       ; Retry counter for find_monster
+monster_contact_cooldown .byte 0 ; Frames until monster contact can damage again
 
 ; Fire an arrow in the direction the player is facing
 .proc fire_arrow
