@@ -268,7 +268,7 @@ skip_monster_tables
 
 game
 	mva RTCLK2 clock
-	;animate                    ; Disabled to reduce frame hitches during movement
+	animate
 	get_input                   ; Re-enabled to test
 	jsr read_keyboard           ; Check for weapon switching keys
 	jsr update_arrow            ; Update arrow position and check collisions
@@ -1187,26 +1187,17 @@ update_monsters_div_ready:
 	lda #0
 	sta monster_tick_div
 
-	; Attempt to move 1 monster per update.
-	ldx #3
+	; In debug mode, let every visible monster get a move attempt.
+	ldx #(playfield_width * playfield_height)
 move_one:
-	lda player_x
-	sec
-	sbc #(playfield_width / 2)
+	map_offset()
+	lda #0
 	sta tmp_x
-	clc
-	adc #playfield_width
-	sta tmp1                    ; Exclusive X limit for visible-window scan
-	lda player_y
-	sec
-	sbc #(playfield_height / 2)
 	sta tmp_y
 	lda #(playfield_width * playfield_height)
 	sta monster_retries
 	
 find_monster:
-	jsr fast_map_ptr           ; map_ptr = map + tmp_y * 139 + tmp_x
-	
 	ldy #0
 	lda (map_ptr),y
 	cmp #44						; Monster tile range start
@@ -1219,162 +1210,101 @@ monster_lo_ok:
 monster_hi_ok:
 	sta tmp						; save the monster's tile id
 
-	; Chase logic: choose a primary direction toward the player, then
-	; fall back to the other axis if the first step is blocked.
-	lda #0
-	sta tmp_addr2               ; Secondary direction (0 = none)
-	random8
-	and #1
-	bne choose_y_first
+	; Brute-force debug movement: try every adjacent tile until one works.
+	; This removes the chase logic as a variable so movement is obvious.
+	lda tmp_x
+	cmp #(playfield_width / 2)
+	beq choose_vertical
+	bcc try_east
+	jmp try_west
 
-choose_x_first:
-	lda player_x
-	cmp tmp_x
-	beq choose_x_vertical_only
-	bcs choose_x_east
-	lda #WEST
-	sta tmp2
-	jmp choose_x_secondary
-choose_x_east:
-	lda #EAST
-	sta tmp2
-choose_x_secondary:
-	lda player_y
-	cmp tmp_y
-	beq direction_picked
-	bcs choose_x_south_secondary
-	lda #NORTH
-	sta tmp_addr2
-	jmp direction_picked
-choose_x_south_secondary:
-	lda #SOUTH
-	sta tmp_addr2
-	jmp direction_picked
-
-choose_x_vertical_only:
-	lda player_y
-	cmp tmp_y
-	bne choose_x_vertical_move
+choose_vertical:
+	lda tmp_y
+	cmp #(playfield_height / 2)
+	bne vertical_direction
 	jmp retry_pick
-choose_x_vertical_move:
-	bcs choose_only_south
-	lda #NORTH
-	sta tmp2
-	jmp direction_picked
-choose_only_south:
-	lda #SOUTH
-	sta tmp2
-	jmp direction_picked
-
-choose_y_first:
-	lda player_y
-	cmp tmp_y
-	beq choose_y_horizontal_only
-	bcs choose_y_south
-	lda #NORTH
-	sta tmp2
-	jmp choose_y_secondary
-choose_y_south:
-	lda #SOUTH
-	sta tmp2
-choose_y_secondary:
-	lda player_x
-	cmp tmp_x
-	beq direction_picked
-	bcs choose_y_east_secondary
-	lda #WEST
-	sta tmp_addr2
-	jmp direction_picked
-choose_y_east_secondary:
-	lda #EAST
-	sta tmp_addr2
-	jmp direction_picked
-
-choose_y_horizontal_only:
-	lda player_x
-	cmp tmp_x
-	bne choose_y_horizontal_move
-	jmp retry_pick
-choose_y_horizontal_move:
-	bcs choose_only_east
-	lda #WEST
-	sta tmp2
-	jmp direction_picked
-choose_only_east:
-	lda #EAST
-	sta tmp2
-	jmp direction_picked
-	
-direction_picked:
-	; Stalking AI logic end gemini
-	
-	;execute the move based on the picked direction (tmp2)
-	mwa map_ptr tmp_addr1
-	lda tmp2
-	cmp #NORTH	
-	beq try_north
-	cmp #SOUTH
-	beq try_south
-	cmp #WEST
-	beq try_west
+vertical_direction:
+	bcc try_south
+	jmp try_north
 
 try_east:
 	lda tmp_x
-	cmp #(map_width - 1)
-	bne east_ok
-	jmp retry_pick
-east_ok:
+	cmp #(playfield_width - 1)
+	beq try_west
+	mwa map_ptr tmp_addr1
 	inc16 tmp_addr1
-	jmp check_dest
-
-try_north:
-	lda tmp_y
-	bne north_ok
-	jmp retry_pick
-north_ok:
-	sbw tmp_addr1 #map_width
-	jmp check_dest
-
-try_south:
-	lda tmp_y
-	cmp#(map_height - 1)
-	bne south_ok
-	jmp retry_pick
-south_ok:
-	adw tmp_addr1 #map_width
-	jmp check_dest
+	lda tmp_addr1
+	cmp player_ptr
+	bne check_east_tile
+	lda tmp_addr1+1
+	cmp player_ptr+1
+	beq try_west
+check_east_tile:
+	ldy #0
+	lda (tmp_addr1),y
+	cmp #MAP_FLOOR
+	bne try_south
+	jmp tile_is_clear
 
 try_west:
 	lda tmp_x
-	bne west_ok
-	jmp retry_pick
-west_ok:
+	beq try_north
+	mwa map_ptr tmp_addr1
 	dec16 tmp_addr1
-	jmp check_dest
-
-check_dest:
-	;never move on the player tile
 	lda tmp_addr1
 	cmp player_ptr
-	bne check_tile
+	bne check_west_tile
 	lda tmp_addr1+1
 	cmp player_ptr+1
-	bne check_tile
-	jmp retry_pick
-
-check_tile:
+	beq try_north
+check_west_tile:
 	ldy #0
 	lda (tmp_addr1),y
-	cmp #MAP_FLOOR 					; only move if destination is floor (127)
-	beq tile_is_clear
-	lda tmp_addr2
-	beq retry_pick
+	cmp #MAP_FLOOR
+	bne try_north
+	jmp tile_is_clear
+
+try_south:
+	lda tmp_y
+	cmp #(playfield_height - 1)
+	beq try_north
 	mwa map_ptr tmp_addr1
-	lda tmp_addr2
-	sta tmp2
-	lda #0
-	sta tmp_addr2
-	jmp direction_picked
+	adw tmp_addr1 #map_width
+	lda tmp_addr1
+	cmp player_ptr
+	bne check_south_tile
+	lda tmp_addr1+1
+	cmp player_ptr+1
+	beq try_north
+check_south_tile:
+	ldy #0
+	lda (tmp_addr1),y
+	cmp #MAP_FLOOR
+	bne try_west
+	jmp tile_is_clear
+
+try_north:
+	lda tmp_y
+	bne north_in_bounds
+	jmp retry_pick
+north_in_bounds:
+	mwa map_ptr tmp_addr1
+	sbw tmp_addr1 #map_width
+	lda tmp_addr1
+	cmp player_ptr
+	bne check_north_tile
+	lda tmp_addr1+1
+	cmp player_ptr+1
+	bne check_north_tile
+	jmp retry_pick
+check_north_tile:
+	ldy #0
+	lda (tmp_addr1),y
+	cmp #MAP_FLOOR
+	bne north_blocked
+	jmp tile_is_clear
+north_blocked:
+	jmp retry_pick
 tile_is_clear:
 
 	; execute move
@@ -1383,34 +1313,38 @@ tile_is_clear:
 	lda #MAP_FLOOR
 	ldy #0
 	sta (map_ptr),y					; clear old spot
+	mwa map_ptr tmp_addr2
 	stx tmp1
 	blit_screen()
 	ldx tmp1
-	
-next_monster:
+	mwa tmp_addr2 map_ptr
 	dex
 	beq done
-	jmp move_one
+	dec monster_retries
+	beq done
+	jmp advance_scan
 	
 retry_pick:
 	dec monster_retries
 	beq retry_exhausted
+advance_scan:
 	inc tmp_x
+	inc16 map_ptr
 	lda tmp_x
-	cmp tmp1
+	cmp #playfield_width
 	bcs next_scan_row
 	jmp find_monster
 next_scan_row:
-	lda player_x
-	sec
-	sbc #(playfield_width / 2)
+	lda #0
 	sta tmp_x
 	inc tmp_y
+	lda tmp_y
+	cmp #playfield_height
+	bcs done
+	adw map_ptr #(map_width - playfield_width)
 	jmp find_monster
 retry_exhausted:
-	dex
-	beq done
-	jmp move_one
+	jmp done
 	
 done:
 	rts
