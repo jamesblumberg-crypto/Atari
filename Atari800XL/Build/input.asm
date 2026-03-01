@@ -127,7 +127,8 @@ do_melee_action
 ; Player Movement
 .proc player_move
     ldi dir_ptr                 ; Dereference direction pointer
-    beq blocked                 ; Not moving (dir_ptr == 0)
+    bne check_monster
+    jmp blocked                 ; Not moving (dir_ptr == 0)
 
 check_monster
     ; Check if target tile is a monster (tiles 44-51 for 8 monsters)
@@ -159,12 +160,48 @@ close_doorway
     ; Standing on doorway - save old position, move, then close the door
     mwa player_ptr tmp_addr1    ; Save old position in tmp_addr1
     mwa dir_ptr player_ptr      ; Move the player to the correct location
+    lda player_dir
+    cmp #NORTH
+    bne close_not_north
+    dec player_y
+    jmp close_coords_done
+close_not_north
+    cmp #SOUTH
+    bne close_not_south
+    inc player_y
+    jmp close_coords_done
+close_not_south
+    cmp #WEST
+    bne close_move_east
+    dec player_x
+    jmp close_coords_done
+close_move_east
+    inc player_x
+close_coords_done
     lda #MAP_DOOR               ; Load door tile
     sta (tmp_addr1),y           ; Close the door at the old position
     rts
 
 move_player
     mwa dir_ptr player_ptr      ; Move the player to the correct location
+    lda player_dir
+    cmp #NORTH
+    bne move_not_north
+    dec player_y
+    jmp move_coords_done
+move_not_north
+    cmp #SOUTH
+    bne move_not_south
+    inc player_y
+    jmp move_coords_done
+move_not_south
+    cmp #WEST
+    bne move_east
+    dec player_x
+    jmp move_coords_done
+move_east
+    inc player_x
+move_coords_done
 
 check_stairs
     ; If player stepped on a down ladder, generate the next dungeon floor

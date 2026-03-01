@@ -1179,7 +1179,7 @@ update_monsters_tick_changed:
 
 	inc monster_tick_div
 	lda monster_tick_div
-	cmp #32						; speed of monster movement (Higher = slower)
+	cmp #8						; speed of monster movement (Higher = slower)
 	bcs update_monsters_div_ready
 	jmp done
 	
@@ -1188,29 +1188,24 @@ update_monsters_div_ready:
 	sta monster_tick_div
 
 	; Attempt to move 1 monster per update.
-	ldx #1
+	ldx #3
 move_one:
-	lda #3
+	lda player_x
+	sec
+	sbc #(playfield_width / 2)
+	sta tmp_x
+	clc
+	adc #playfield_width
+	sta tmp1                    ; Exclusive X limit for visible-window scan
+	lda player_y
+	sec
+	sbc #(playfield_height / 2)
+	sta tmp_y
+	lda #(playfield_width * playfield_height)
 	sta monster_retries
 	
 find_monster:
-	random16
-	cmp #map_width
-	bcc x_ok
-	jmp retry_pick
-x_ok:
-	sta tmp_x
-
-	random16
-	cmp #map_height
-	bcc y_ok
-	jmp retry_pick
-y_ok:
-	sta tmp_y
-
-	stx tmp1                   ; Save X (monster count)
 	jsr fast_map_ptr           ; map_ptr = map + tmp_y * 139 + tmp_x
-	ldx tmp1                   ; Restore X
 	
 	ldy #0
 	lda (map_ptr),y
@@ -1224,45 +1219,91 @@ monster_lo_ok:
 monster_hi_ok:
 	sta tmp						; save the monster's tile id
 
-	; Stalking AI Logic Start Gemini 
-	; 50/50 chance to check x or y distance first
-	random 8
+	; Chase logic: choose a primary direction toward the player, then
+	; fall back to the other axis if the first step is blocked.
+	lda #0
+	sta tmp_addr2               ; Secondary direction (0 = none)
+	random8
 	and #1
-	beq check_x_first
-	
-check_y_first:
-	lda player_y
-	cmp tmp_y
-	beq check_x_stalk			; on same row? stalk horizontally instead
-	bcs stalk_south
-	lda #NORTH					; label value = 1
-	sta tmp2
-	jmp direction_picked
-stalk_south:
-	lda #SOUTH					; label value = 2
-	sta tmp2
-	jmmp direction_picked
-stalk_east:
-	lda #EAST					; label value = 4
-	sta tmp2
-	jmp direction_picked
-	
-check_x_stalk:
+	bne choose_y_first
+
+choose_x_first:
 	lda player_x
 	cmp tmp_x
-	beq retry_pick				; exactly on player? pick another monster
-	bcs stalk_east
-	lda #WEST		
+	beq choose_x_vertical_only
+	bcs choose_x_east
+	lda #WEST
 	sta tmp2
-	jmp direction_picked
-	
-check_y_stalk:
+	jmp choose_x_secondary
+choose_x_east:
+	lda #EAST
+	sta tmp2
+choose_x_secondary:
 	lda player_y
 	cmp tmp_y
-	beq retry_pick
-	bcs stalk_south
+	beq direction_picked
+	bcs choose_x_south_secondary
+	lda #NORTH
+	sta tmp_addr2
+	jmp direction_picked
+choose_x_south_secondary:
+	lda #SOUTH
+	sta tmp_addr2
+	jmp direction_picked
+
+choose_x_vertical_only:
+	lda player_y
+	cmp tmp_y
+	bne choose_x_vertical_move
+	jmp retry_pick
+choose_x_vertical_move:
+	bcs choose_only_south
 	lda #NORTH
 	sta tmp2
+	jmp direction_picked
+choose_only_south:
+	lda #SOUTH
+	sta tmp2
+	jmp direction_picked
+
+choose_y_first:
+	lda player_y
+	cmp tmp_y
+	beq choose_y_horizontal_only
+	bcs choose_y_south
+	lda #NORTH
+	sta tmp2
+	jmp choose_y_secondary
+choose_y_south:
+	lda #SOUTH
+	sta tmp2
+choose_y_secondary:
+	lda player_x
+	cmp tmp_x
+	beq direction_picked
+	bcs choose_y_east_secondary
+	lda #WEST
+	sta tmp_addr2
+	jmp direction_picked
+choose_y_east_secondary:
+	lda #EAST
+	sta tmp_addr2
+	jmp direction_picked
+
+choose_y_horizontal_only:
+	lda player_x
+	cmp tmp_x
+	bne choose_y_horizontal_move
+	jmp retry_pick
+choose_y_horizontal_move:
+	bcs choose_only_east
+	lda #WEST
+	sta tmp2
+	jmp direction_picked
+choose_only_east:
+	lda #EAST
+	sta tmp2
+	jmp direction_picked
 	
 direction_picked:
 	; Stalking AI logic end gemini
@@ -1275,47 +1316,66 @@ direction_picked:
 	cmp #SOUTH
 	beq try_south
 	cmp #WEST
-	beq try_wst
+	beq try_west
 
 try_east:
 	lda tmp_x
 	cmp #(map_width - 1)
-	beq retry_pick
+	bne east_ok
+	jmp retry_pick
+east_ok:
 	inc16 tmp_addr1
 	jmp check_dest
 
 try_north:
 	lda tmp_y
-	beq retry_pick
+	bne north_ok
+	jmp retry_pick
+north_ok:
 	sbw tmp_addr1 #map_width
 	jmp check_dest
 
 try_south:
 	lda tmp_y
 	cmp#(map_height - 1)
-	beq retry_pick
+	bne south_ok
+	jmp retry_pick
+south_ok:
 	adw tmp_addr1 #map_width
 	jmp check_dest
 
 try_west:
 	lda tmp_x
-	beq retry_pick
+	bne west_ok
+	jmp retry_pick
+west_ok:
 	dec16 tmp_addr1
+	jmp check_dest
 
 check_dest:
 	;never move on the player tile
 	lda tmp_addr1
 	cmp player_ptr
 	bne check_tile
-	lda tmp_addr+1
+	lda tmp_addr1+1
 	cmp player_ptr+1
-	beq retry_pick
+	bne check_tile
+	jmp retry_pick
 
 check_tile:
 	ldy #0
 	lda (tmp_addr1),y
 	cmp #MAP_FLOOR 					; only move if destination is floor (127)
-	bne retry_pick					; if its a wall (not 127) don't move 
+	beq tile_is_clear
+	lda tmp_addr2
+	beq retry_pick
+	mwa map_ptr tmp_addr1
+	lda tmp_addr2
+	sta tmp2
+	lda #0
+	sta tmp_addr2
+	jmp direction_picked
+tile_is_clear:
 
 	; execute move
 	lda tmp
@@ -1323,6 +1383,9 @@ check_tile:
 	lda #MAP_FLOOR
 	ldy #0
 	sta (map_ptr),y					; clear old spot
+	stx tmp1
+	blit_screen()
+	ldx tmp1
 	
 next_monster:
 	dex
@@ -1332,7 +1395,18 @@ next_monster:
 retry_pick:
 	dec monster_retries
 	beq retry_exhausted
-	jmp find_mosnter
+	inc tmp_x
+	lda tmp_x
+	cmp tmp1
+	bcs next_scan_row
+	jmp find_monster
+next_scan_row:
+	lda player_x
+	sec
+	sbc #(playfield_width / 2)
+	sta tmp_x
+	inc tmp_y
+	jmp find_monster
 retry_exhausted:
 	dex
 	beq done
@@ -1340,7 +1414,7 @@ retry_exhausted:
 	
 done:
 	rts
-.enp
+.endp
 	
 	; Pick destination direction.
 	; mwa map_ptr tmp_addr1
@@ -1561,8 +1635,8 @@ monster_xp_table
 	icl 'monsters_b.asm'
 	icl 'room_types.asm'
 	icl 'room_positions.asm'
-	icl 'room_pos_doors'
-	icl 'room_type_doors'
+	icl 'room_pos_doors.asm'
+	icl 'room_type_doors.asm'
 	;icl 'test_map.asm'
 	icl 'charset_dungeon_a_colors.asm'
 	icl 'charset_dungeon_b_colors.asm'
@@ -1880,4 +1954,7 @@ survived
     inx
     sta pmg_missiles,x
     rts
-    .endp
+
+.endp
+
+
