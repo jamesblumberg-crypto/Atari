@@ -145,6 +145,8 @@ arrow_map_y          = $7379  ; Arrow map Y coordinate
 player_dir           = $737A  ; Last direction player moved (for aiming)
 arrow_subtile        = $737B  ; Sub-tile counter (0-7, update map coord when wraps)
 arrow_ptr            = $737C  ; Arrow map pointer (16-bit)
+monster_contact_cooldown = $737E ; Frames until monster can damage again
+player_hp_dirty      = $737F  ; Nonzero when HUD HP bar needs refresh
 
 ; Colors
 white 				= $0a
@@ -277,6 +279,12 @@ game
 	dec monster_contact_cooldown
 monster_contact_ready:
 	jsr update_monsters
+	lda player_hp_dirty
+	beq hp_bar_clean
+	jsr update_hp_bar
+	lda #0
+	sta player_hp_dirty
+hp_bar_clean:
 	jmp game
 
 .macro set_colors
@@ -1183,7 +1191,7 @@ update_monsters_tick_changed:
 
 	inc monster_tick_div
 	lda monster_tick_div
-	cmp #8						; speed of monster movement (Higher = slower)
+	cmp #20						; speed of monster movement (Higher = slower)
 	bcs update_monsters_div_ready
 	jmp done
 	
@@ -1191,8 +1199,8 @@ update_monsters_div_ready:
 	lda #0
 	sta monster_tick_div
 
-	; In debug mode, let every visible monster get a move attempt.
-	ldx #(playfield_width * playfield_height)
+	; Limit how many visible monsters can act per update.
+	ldx #2
 move_one:
 	map_offset()
 	lda #0
@@ -1213,6 +1221,11 @@ monster_lo_ok:
 	jmp retry_pick
 monster_hi_ok:
 	sta tmp						; save the monster's tile id
+
+	jsr monster_adjacent_to_player
+	bcc try_east
+	jsr damage_player_from_monster
+	jmp monster_action_done
 
 	; Brute-force debug movement: try every adjacent tile until one works.
 	; This removes the chase logic as a variable so movement is obvious.
@@ -1242,9 +1255,7 @@ try_east:
 	bne check_east_tile
 	lda tmp_addr1+1
 	cmp player_ptr+1
-	bne check_east_tile
-	jsr damage_player_from_monster
-	jmp monster_action_done
+	beq try_south
 check_east_tile:
 	ldy #0
 	lda (tmp_addr1),y
@@ -1262,9 +1273,7 @@ try_west:
 	bne check_west_tile
 	lda tmp_addr1+1
 	cmp player_ptr+1
-	bne check_west_tile
-	jsr damage_player_from_monster
-	jmp monster_action_done
+	beq try_north
 check_west_tile:
 	ldy #0
 	lda (tmp_addr1),y
@@ -1283,9 +1292,7 @@ try_south:
 	bne check_south_tile
 	lda tmp_addr1+1
 	cmp player_ptr+1
-	bne check_south_tile
-	jsr damage_player_from_monster
-	jmp monster_action_done
+	beq try_west
 check_south_tile:
 	ldy #0
 	lda (tmp_addr1),y
@@ -1305,9 +1312,7 @@ north_in_bounds:
 	bne check_north_tile
 	lda tmp_addr1+1
 	cmp player_ptr+1
-	bne check_north_tile
-	jsr damage_player_from_monster
-	jmp monster_action_done
+	beq retry_pick
 check_north_tile:
 	ldy #0
 	lda (tmp_addr1),y
@@ -1360,6 +1365,55 @@ retry_exhausted:
 	jmp done
 	
 done:
+	rts
+.endp
+
+.proc monster_adjacent_to_player
+	mwa map_ptr tmp_addr2
+	inc16 tmp_addr2
+	lda tmp_addr2
+	cmp player_ptr
+	bne check_adjacent_west
+	lda tmp_addr2+1
+	cmp player_ptr+1
+	beq adjacent_found
+
+check_adjacent_west:
+	mwa map_ptr tmp_addr2
+	dec16 tmp_addr2
+	lda tmp_addr2
+	cmp player_ptr
+	bne check_adjacent_south
+	lda tmp_addr2+1
+	cmp player_ptr+1
+	beq adjacent_found
+
+check_adjacent_south:
+	mwa map_ptr tmp_addr2
+	adw tmp_addr2 #map_width
+	lda tmp_addr2
+	cmp player_ptr
+	bne check_adjacent_north
+	lda tmp_addr2+1
+	cmp player_ptr+1
+	beq adjacent_found
+
+check_adjacent_north:
+	mwa map_ptr tmp_addr2
+	sbw tmp_addr2 #map_width
+	lda tmp_addr2
+	cmp player_ptr
+	bne not_adjacent
+	lda tmp_addr2+1
+	cmp player_ptr+1
+	beq adjacent_found
+
+not_adjacent:
+	clc
+	rts
+
+adjacent_found:
+	sec
 	rts
 .endp
 	
@@ -1475,6 +1529,75 @@ done:
 ;	rts
 ;	.endp
 
+; Build guard: this must remain below $C000 (OS ROM area).
+MAIN_BANK_END_GUARD
+
+; Arrow routines moved to $6C00 to keep executable code below $C000.
+
+	icl 'macros.asm'
+	icl 'hardware.asm'
+	icl 'labels.asm'
+	icl 'dlist.asm'
+	icl 'pmgdata.asm'
+	icl 'map_gen.asm'
+	icl 'input.asm'
+	icl 'status_chars.asm'
+
+	icl 'charset_dungeon_a.asm'
+	icl 'charset_dungeon_b.asm'
+	icl 'charset_outdoor_a.asm'
+	icl 'charset_outdoor_b.asm'
+	icl 'monsters_a.asm'
+	icl 'monsters_b.asm'
+	icl 'room_types.asm'
+	icl 'room_positions.asm'
+	icl 'room_pos_doors.asm'
+	icl 'room_type_doors.asm'
+	;icl 'test_map.asm'
+	icl 'charset_dungeon_a_colors.asm'
+	icl 'charset_dungeon_b_colors.asm'
+	icl 'charset_outdoor_a_colors.asm'
+	icl 'charset_outdoor_b_colors.asm'
+	icl 'monsters_a_colors.asm'
+	icl 'monsters_b_colors.asm'
+powers_of_two
+	.byte 1,2,4,8,16,32,64,128
+
+; ============================================
+; Arrow missile procedures (relocated to RAM)
+; ============================================
+	org $6c00
+
+; Constants for arrow
+ARROW_SPEED      = 1           ; Pixels per update
+ARROW_TILE_SIZE_V = 16         ; Vertical: map tile advances every 16 subtile steps
+ARROW_TILE_SIZE_H = 8          ; Horizontal: map tile advances every 8 subtile steps
+ARROW_START_Y    = 124         ; Starting scanline near player center in double-line PMG
+ARROW_START_X    = 92          ; Starting X (same as player HPOS)
+ARROW_MIN_Y      = ARROW_START_Y - ((playfield_height * 8) / 2) ; Dungeon viewport top
+ARROW_MAX_Y      = ARROW_START_Y + ((playfield_height * 8) / 2) ; Dungeon viewport bottom
+ARROW_MIN_X      = ARROW_START_X - ((playfield_width  * 8) / 2) ; Dungeon viewport left
+ARROW_MAX_X      = ARROW_START_X + ((playfield_width  * 8) / 2) ; Dungeon viewport right
+arrow_tick       .byte 0       ; Last RTCLK2 tick that advanced arrow
+arrow_tick_div   .byte 0       ; Additional slowdown divider
+monster_tick     .byte 0       ; Last RTCLK2 tick that advanced monsters
+monster_tick_div .byte 0       ; Monster movement slowdown divider
+monster_retries  .byte 0       ; Retry counter for find_monster
+
+; Monster HP table - indexed by monster type (0-7)
+; Monster tiles are 44-51, so subtract 44 to get index
+monster_hp_table
+	.byte 30, 45, 50, 60, 70, 80, 90, 100
+
+; Monster damage table - indexed by monster type (0-7)
+monster_dmg_table
+	.byte 5, 8, 12, 15, 18, 22, 25, 30
+
+; Monster XP reward table - indexed by monster type (0-7)
+; XP rewards scale with monster difficulty (HP and damage)
+monster_xp_table
+	.byte 15, 20, 25, 30, 40, 45, 50, 60
+
 ; Place a bow item on a floor tile adjacent to player
 .proc place_bow
 	; Use player_ptr as our base - it's already set up by init_player_ptr
@@ -1545,76 +1668,6 @@ found_floor
 
 	rts
 	.endp
-
-; Monster HP table - indexed by monster type (0-7)
-; Monster tiles are 44-51, so subtract 44 to get index
-monster_hp_table
-	.byte 30, 45, 50, 60, 70, 80, 90, 100
-
-; Monster damage table - indexed by monster type (0-7)
-monster_dmg_table
-	.byte 5, 8, 12, 15, 18, 22, 25, 30
-
-; Monster XP reward table - indexed by monster type (0-7)
-; XP rewards scale with monster difficulty (HP and damage)
-; Format: HP/Damage -> XP reward
-monster_xp_table
-	.byte 15, 20, 25, 30, 40, 45, 50, 60
-	; 30HP/5dmg->15XP, 45HP/8dmg->20XP, 50HP/12dmg->25XP, 60HP/15dmg->30XP,
-	; 70HP/18dmg->40XP, 80HP/22dmg->45XP, 90HP/25dmg->50XP, 100HP/30dmg->60XP
-
-; Arrow routines moved to $6C00 to keep executable code below $C000.
-
-	icl 'macros.asm'
-	icl 'hardware.asm'
-	icl 'labels.asm'
-	icl 'dlist.asm'
-	icl 'pmgdata.asm'
-	icl 'map_gen.asm'
-	icl 'input.asm'
-	icl 'status_chars.asm'
-
-	icl 'charset_dungeon_a.asm'
-	icl 'charset_dungeon_b.asm'
-	icl 'charset_outdoor_a.asm'
-	icl 'charset_outdoor_b.asm'
-	icl 'monsters_a.asm'
-	icl 'monsters_b.asm'
-	icl 'room_types.asm'
-	icl 'room_positions.asm'
-	icl 'room_pos_doors.asm'
-	icl 'room_type_doors.asm'
-	;icl 'test_map.asm'
-	icl 'charset_dungeon_a_colors.asm'
-	icl 'charset_dungeon_b_colors.asm'
-	icl 'charset_outdoor_a_colors.asm'
-	icl 'charset_outdoor_b_colors.asm'
-	icl 'monsters_a_colors.asm'
-	icl 'monsters_b_colors.asm'
-powers_of_two
-	.byte 1,2,4,8,16,32,64,128
-
-; ============================================
-; Arrow missile procedures (relocated to RAM)
-; ============================================
-	org $6c00
-
-; Constants for arrow
-ARROW_SPEED      = 1           ; Pixels per update
-ARROW_TILE_SIZE_V = 16         ; Vertical: map tile advances every 16 subtile steps
-ARROW_TILE_SIZE_H = 8          ; Horizontal: map tile advances every 8 subtile steps
-ARROW_START_Y    = 124         ; Starting scanline near player center in double-line PMG
-ARROW_START_X    = 92          ; Starting X (same as player HPOS)
-ARROW_MIN_Y      = ARROW_START_Y - ((playfield_height * 8) / 2) ; Dungeon viewport top
-ARROW_MAX_Y      = ARROW_START_Y + ((playfield_height * 8) / 2) ; Dungeon viewport bottom
-ARROW_MIN_X      = ARROW_START_X - ((playfield_width  * 8) / 2) ; Dungeon viewport left
-ARROW_MAX_X      = ARROW_START_X + ((playfield_width  * 8) / 2) ; Dungeon viewport right
-arrow_tick       .byte 0       ; Last RTCLK2 tick that advanced arrow
-arrow_tick_div   .byte 0       ; Additional slowdown divider
-monster_tick     .byte 0       ; Last RTCLK2 tick that advanced monsters
-monster_tick_div .byte 0       ; Monster movement slowdown divider
-monster_retries  .byte 0       ; Retry counter for find_monster
-monster_contact_cooldown .byte 0 ; Frames until monster contact can damage again
 
 ; Fire an arrow in the direction the player is facing
 .proc fire_arrow

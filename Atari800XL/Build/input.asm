@@ -382,19 +382,17 @@ death_loop
     jmp death_loop
     .endp
 
-; Monster contact damage when a monster attempts to step into the player.
+; Monster attack damage when a monster is adjacent to the player.
 .proc damage_player_from_monster
-    txa
-    pha
+    stx tmp2                    ; Preserve monster loop index without stack use
 
     lda monster_contact_cooldown
     beq contact_can_hit
-    pla
-    tax
+    ldx tmp2
     rts
 
 contact_can_hit
-    lda #8
+    lda #48
     sta monster_contact_cooldown
 
     lda tmp                     ; Current monster tile ID (44-51)
@@ -417,24 +415,21 @@ contact_can_hit
     sec
     sbc monster_dmg
     sta player_hp
+    lda #1
+    sta player_hp_dirty
     bmi contact_player_dead
     beq contact_player_dead
 
-    jsr update_hp_bar
-    pla
-    tax
+    ldx tmp2
     rts
 
 contact_player_dead
     lda #0
     sta player_hp
-    jsr update_hp_bar
-
-    pla
-    tax
-
-contact_death_loop
-    jmp contact_death_loop
+    lda #1
+    sta player_hp_dirty
+    ldx tmp2
+    rts
     .endp
 
 ; Pick up a bow item at dir_ptr location
