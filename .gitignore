@@ -8,5 +8,14 @@ _hold/
 # Office temp files
 ~
 ~$*
+
+# macOS junk
+.DS_Store
+**/.DS_Store
+
+# VS Code
 .vscode/
-.vscode/
+
+# keys
+*.pub
+jimatari
