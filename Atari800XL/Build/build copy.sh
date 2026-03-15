@@ -5,14 +5,18 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo "Cleaning old build..."
-rm -f main.xex main_build.lab
+rm -f main.xex
 
-MADS_CMD="${MADS_CMD:-/Users/jimblumberg/Tools/Atari/MADS/mads}"
-
-if [ ! -x "$MADS_CMD" ]; then
-    echo "MADS assembler not found or not executable at:"
-    echo "  $MADS_CMD"
-    exit 127
+MADS_CMD="${MADS_CMD:-}"
+if [ -z "$MADS_CMD" ]; then
+    if command -v mads >/dev/null 2>&1; then
+        MADS_CMD="mads"
+    elif command -v mads.exe >/dev/null 2>&1; then
+        MADS_CMD="mads.exe"
+    else
+        echo "MADS assembler not found in PATH. Set MADS_CMD or add mads/mads.exe to PATH."
+        exit 127
+    fi
 fi
 
 echo "Assembling with MADS (${MADS_CMD})..."
@@ -30,5 +34,11 @@ fi
 
 echo "Build succeeded."
 
-echo "Launching emulator..."
-open main.xex || true
+echo "Launching Altirra..."
+ALTIRRA_PATH="${ALTIRRA_PATH:-/c/Tools/Altirra/altirra64.exe}"
+
+if [ -f "$ALTIRRA_PATH" ]; then
+    "$ALTIRRA_PATH" main.xex &
+else
+    echo "Altirra not found at: $ALTIRRA_PATH"
+fi

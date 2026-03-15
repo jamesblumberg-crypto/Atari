@@ -2,16 +2,24 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Build and Run (Altirra64)",
+      "label": "Build Atari800XL",
       "type": "shell",
-      "command": "cmd.exe",
-      "args": [
-        "/d",
-        "/c",
-        "mads \"${file}\" -o:\"${fileDirname}\\${fileBasenameNoExtension}.xex\" -l:\"${fileDirname}\\${fileBasenameNoExtension}.lab\" && \"altirra64\" \"${fileDirname}\\${fileBasenameNoExtension}.xex\""
-      ],
-      "group": { "kind": "build", "isDefault": true },
-      "presentation": { "reveal": "always" },
+      "command": "${workspaceFolder}/Atari800XL/Build/build.sh",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "env": {
+        "MADS_CMD": "/Users/jimblumberg/Tools/Atari/MADS/mads"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
       "problemMatcher": []
     }
   ]

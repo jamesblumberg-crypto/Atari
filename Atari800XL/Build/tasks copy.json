@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build and Run (Altirra64)",
+      "type": "shell",
+      "command": "cmd.exe",
+      "args": [
+        "/d",
+        "/c",
+        "mads \"${file}\" -o:\"${fileDirname}\\${fileBasenameNoExtension}.xex\" -l:\"${fileDirname}\\${fileBasenameNoExtension}.lab\" && \"altirra64\" \"${fileDirname}\\${fileBasenameNoExtension}.xex\""
+      ],
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    }
+  ]
+}
