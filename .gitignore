@@ -10,12 +10,13 @@ _hold/
 ~$*
 
 # macOS junk
-.DS_Store
 **/.DS_Store
 
 # VS Code
-.vscode/
+.vscode/*
+!.vscode/tasks.json
+!.vscode/settings.json
 
-# keys
+# SSH keys
 *.pub
 jimatari
