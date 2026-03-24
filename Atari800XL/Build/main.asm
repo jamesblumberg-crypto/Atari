@@ -1200,7 +1200,7 @@ update_monsters_div_ready:
 	sta monster_tick_div
 
 	; Limit how many visible monsters can act per update.
-	ldx #2
+	ldx #1
 move_one:
 	map_offset()
 	lda #0
@@ -1591,7 +1591,7 @@ monster_hp_table
 
 ; Monster damage table - indexed by monster type (0-7)
 monster_dmg_table
-	.byte 5, 8, 12, 15, 18, 22, 25, 30
+	.byte 3, 5, 8, 10, 12, 15, 18, 20
 
 ; Monster XP reward table - indexed by monster type (0-7)
 ; XP rewards scale with monster difficulty (HP and damage)

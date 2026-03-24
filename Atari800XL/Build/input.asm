@@ -392,7 +392,7 @@ death_loop
     rts
 
 contact_can_hit
-    lda #48
+    lda #120                    ; Increased from 48 to 120 frames (~2 seconds at 60fps)
     sta monster_contact_cooldown
 
     lda tmp                     ; Current monster tile ID (44-51)
