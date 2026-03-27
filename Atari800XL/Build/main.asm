@@ -213,6 +213,8 @@ clear_all_missiles
 	sta has_bow             ; Player starts without bow
 	sta equipped_weapon     ; Start with melee equipped (0 = melee)
 	sta arrow_active        ; No arrow in flight
+	lda #0
+	sta monster_contact_cooldown ; Clears the value of monster_contact_cooldown to ensure monsters can damage immediately if player starts next to them
 	lda #SOUTH              ; Default facing direction
 	sta player_dir
 	
