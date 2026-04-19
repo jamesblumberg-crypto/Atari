@@ -276,9 +276,9 @@ game
 	get_input                   ; Re-enabled to test
 	jsr read_keyboard           ; Check for weapon switching keys
 	jsr update_arrow            ; Update arrow position and check collisions
-	lda monster_contact_cooldown
-	beq monster_contact_ready
-	dec monster_contact_cooldown
+	lda monster_contact_cooldown ; loads the value of monster_contact_cooldown into the A register
+	beq monster_contact_ready	; If the cooldown is zero, we can check for monster contact and update monsters. If it's not zero, we skip updating monsters to prevent them from damaging the player again until the cooldown expires.
+	dec monster_contact_cooldown ; If the cooldown is not zero, decrement it to count down to when monsters can damage the player again.
 monster_contact_ready:
 	jsr update_monsters
 	lda player_hp_dirty
@@ -313,7 +313,7 @@ sc_done
 calc_segments
 	cmp #17                     ; Is HP >= 17?
 	bcc draw_bars               ; If less, start drawing
-	sec
+	sec 
 	sbc #17                     ; Subtract 17
 	inx                         ; Increment segment counter
 	cpx #6                      ; Max 6 segments
