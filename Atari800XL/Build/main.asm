@@ -181,6 +181,7 @@ gold 				= $2a
 
 	; Explicitly clear all missile graphics data
 	ldx #127
+	; Clear 128 bytes of missile memory to ensure all missile graphics are off
 clear_all_missiles
 	sta pmg_missiles,x
 	dex
@@ -273,12 +274,12 @@ skip_monster_tables
 game
 	mva RTCLK2 clock
 	animate
-	get_input                   ; Re-enabled to test
+	get_input                   ; Handle joystick input and update screen
 	jsr read_keyboard           ; Check for weapon switching keys
 	jsr update_arrow            ; Update arrow position and check collisions
-	lda monster_contact_cooldown ; loads the value of monster_contact_cooldown into the A register
-	beq monster_contact_ready	; If the cooldown is zero, we can check for monster contact and update monsters. If it's not zero, we skip updating monsters to prevent them from damaging the player again until the cooldown expires.
-	dec monster_contact_cooldown ; If the cooldown is not zero, decrement it to count down to when monsters can damage the player again.
+	lda monster_contact_cooldown ; Check monster contact cooldown
+	beq monster_contact_ready	; Skip monster update if cooldown active.
+	dec monster_contact_cooldown ; Decrement cooldown.
 monster_contact_ready:
 	jsr update_monsters
 	lda player_hp_dirty
@@ -301,6 +302,10 @@ sc_done
 
 ; Update the HP bar display based on current player HP
 ; HP bar has 6 segments, each represents roughly 1/6 of max HP
+; Update the HP bar display based on current player HP
+	mwa #screen screen_ptr
+	adw screen_ptr #28          ; Position at start of HP bar (column offset for HP bar)
+; Side effects: Modifies screen memory and temporary variables.
 .proc update_hp_bar
 	mwa #screen screen_ptr
 	adw screen_ptr #28          ; Position at start of HP bar
@@ -308,12 +313,13 @@ sc_done
 	; Calculate number of full segments (~17 HP each for 100 HP max)
 	lda player_hp
 	clc
+	; Add a bias of 16 to achieve ceiling division, so 100 HP fills all 6 segments
 	adc #16                    ; Bias so 100 HP gives 6 segments (ceil division)
 	ldx #0                      ; X counts full segments
 calc_segments
 	cmp #17                     ; Is HP >= 17?
 	bcc draw_bars               ; If less, start drawing
-	sec 
+	sec                         ; Always set carry before SBC
 	sbc #17                     ; Subtract 17
 	inx                         ; Increment segment counter
 	cpx #6                      ; Max 6 segments
