@@ -1199,7 +1199,7 @@ update_monsters_tick_changed:
 
 	inc monster_tick_div
 	lda monster_tick_div
-	cmp #20						; speed of monster movement (Higher = slower)
+	cmp #10						; speed of monster movement (Higher = slower)
 	bcs update_monsters_div_ready
 	jmp done
 	
@@ -1207,8 +1207,8 @@ update_monsters_div_ready:
 	lda #0
 	sta monster_tick_div
 
-	; Limit how many visible monsters can act per update.
-	ldx #1
+	; Let a few visible monsters act per update so the room feels responsive.
+	ldx #3
 move_one:
 	map_offset()
 	lda #0
@@ -1965,5 +1965,4 @@ survived
     rts
 
 .endp
-
 

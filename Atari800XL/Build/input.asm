@@ -392,7 +392,7 @@ death_loop
     rts
 
 contact_can_hit
-    lda #120                    ; Increased from 48 to 120 frames (~2 seconds at 60fps)
+    lda #12                     ; Short grace window so contact damage is reliable without stunlocking.
     sta monster_contact_cooldown
 
     lda tmp                     ; Current monster tile ID (44-51)
@@ -482,6 +482,5 @@ check_melee_key
 done
     rts
     .endp
-
 
 
