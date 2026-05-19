@@ -150,7 +150,7 @@ player_hp_dirty      = $737F  ; Nonzero when HUD HP bar needs refresh
 
 ; Colors
 white 				= $0a
-red 					= $32
+red 				= $32
 black 				= $00
 peach 				= $2c
 blue 				= $92
@@ -1199,7 +1199,7 @@ update_monsters_tick_changed:
 
 	inc monster_tick_div
 	lda monster_tick_div
-	cmp #10						; speed of monster movement (Higher = slower)
+	cmp #20						; speed of monster movement (Higher = slower)
 	bcs update_monsters_div_ready
 	jmp done
 	
@@ -1207,8 +1207,8 @@ update_monsters_div_ready:
 	lda #0
 	sta monster_tick_div
 
-	; Let a few visible monsters act per update so the room feels responsive.
-	ldx #3
+	; Limit how many visible monsters can act per update.
+	ldx #1
 move_one:
 	map_offset()
 	lda #0
@@ -1231,107 +1231,20 @@ monster_hi_ok:
 	sta tmp						; save the monster's tile id
 
 	jsr monster_adjacent_to_player
-	bcc try_east
+	bcc start_monster_chase
 	jsr damage_player_from_monster
 	jmp monster_action_done
 
-	; Brute-force debug movement: try every adjacent tile until one works.
-	; This removes the chase logic as a variable so movement is obvious.
-	lda tmp_x
-	cmp #(playfield_width / 2)
-	beq choose_vertical
-	bcc try_east
-	jmp try_west
-
-choose_vertical:
-	lda tmp_y
-	cmp #(playfield_height / 2)
-	bne vertical_direction
-	jmp retry_pick
-vertical_direction:
-	bcc try_south
-	jmp try_north
-
-try_east:
-	lda tmp_x
-	cmp #(playfield_width - 1)
-	beq try_west
-	mwa map_ptr tmp_addr1
-	inc16 tmp_addr1
-	lda tmp_addr1
-	cmp player_ptr
-	bne check_east_tile
-	lda tmp_addr1+1
-	cmp player_ptr+1
-	beq try_south
-check_east_tile:
-	ldy #0
-	lda (tmp_addr1),y
-	cmp #MAP_FLOOR
-	bne try_south
+start_monster_chase:
+	jsr move_monster_toward_player
+	bcc chase_failed
 	jmp tile_is_clear
-
-try_west:
-	lda tmp_x
-	beq try_north
-	mwa map_ptr tmp_addr1
-	dec16 tmp_addr1
-	lda tmp_addr1
-	cmp player_ptr
-	bne check_west_tile
-	lda tmp_addr1+1
-	cmp player_ptr+1
-	beq try_north
-check_west_tile:
-	ldy #0
-	lda (tmp_addr1),y
-	cmp #MAP_FLOOR
-	bne try_north
-	jmp tile_is_clear
-
-try_south:
-	lda tmp_y
-	cmp #(playfield_height - 1)
-	beq try_north
-	mwa map_ptr tmp_addr1
-	adw tmp_addr1 #map_width
-	lda tmp_addr1
-	cmp player_ptr
-	bne check_south_tile
-	lda tmp_addr1+1
-	cmp player_ptr+1
-	beq try_west
-check_south_tile:
-	ldy #0
-	lda (tmp_addr1),y
-	cmp #MAP_FLOOR
-	bne try_west
-	jmp tile_is_clear
-
-try_north:
-	lda tmp_y
-	bne north_in_bounds
-	jmp retry_pick
-north_in_bounds:
-	mwa map_ptr tmp_addr1
-	sbw tmp_addr1 #map_width
-	lda tmp_addr1
-	cmp player_ptr
-	bne check_north_tile
-	lda tmp_addr1+1
-	cmp player_ptr+1
-	beq retry_pick
-check_north_tile:
-	ldy #0
-	lda (tmp_addr1),y
-	cmp #MAP_FLOOR
-	bne north_blocked
-	jmp tile_is_clear
-north_blocked:
+chase_failed:
 	jmp retry_pick
 tile_is_clear:
 
 	; execute move
+	ldy #0
 	lda tmp
 	sta (tmp_addr1),y				; place monster in new spot
 	lda #MAP_FLOOR
@@ -1574,7 +1487,261 @@ powers_of_two
 ; ============================================
 ; Arrow missile procedures (relocated to RAM)
 ; ============================================
-	org $6c00
+	org $6b80
+
+.proc move_monster_toward_player
+	; Chase the player by favoring the axis with the larger distance from
+	; the viewport center, then falling back to the other axis.
+	lda tmp_x
+	cmp #(playfield_width / 2)
+	bcs horizontal_right_or_center
+	lda #(playfield_width / 2)
+	sec
+	sbc tmp_x
+	sta tmp1
+	jmp have_horizontal_distance
+horizontal_right_or_center:
+	sec
+	sbc #(playfield_width / 2)
+	sta tmp1
+have_horizontal_distance:
+	lda tmp_y
+	cmp #(playfield_height / 2)
+	bcs vertical_below_or_center
+	lda #(playfield_height / 2)
+	sec
+	sbc tmp_y
+	sta tmp2
+	jmp have_vertical_distance
+vertical_below_or_center:
+	sec
+	sbc #(playfield_height / 2)
+	sta tmp2
+have_vertical_distance:
+
+	lda tmp1
+	cmp tmp2
+	bcs horizontal_first
+	jmp vertical_first
+
+horizontal_first:
+	lda tmp_x
+	cmp #(playfield_width / 2)
+	bcc horizontal_try_east
+	beq horizontal_second_choice
+	jsr try_move_west
+	bcc horizontal_second_choice
+	sec
+	rts
+horizontal_try_east:
+	jsr try_move_east
+	bcc horizontal_second_choice
+	sec
+	rts
+
+horizontal_second_choice:
+	lda tmp_y
+	cmp #(playfield_height / 2)
+	bcc horizontal_try_south
+	beq horizontal_third_choice
+	jsr try_move_north
+	bcc horizontal_third_choice
+	sec
+	rts
+horizontal_try_south:
+	jsr try_move_south
+	bcc horizontal_third_choice
+	sec
+	rts
+
+horizontal_third_choice:
+	lda tmp_x
+	cmp #(playfield_width / 2)
+	bcc horizontal_try_west
+	beq horizontal_fourth_choice
+	jsr try_move_east
+	bcc horizontal_fourth_choice
+	sec
+	rts
+horizontal_try_west:
+	jsr try_move_west
+	bcc horizontal_fourth_choice
+	sec
+	rts
+
+horizontal_fourth_choice:
+	lda tmp_y
+	cmp #(playfield_height / 2)
+	bcc horizontal_try_north
+	beq move_monster_failed
+	jsr try_move_south
+	bcc move_monster_failed
+	sec
+	rts
+horizontal_try_north:
+	jsr try_move_north
+	bcc move_monster_failed
+	sec
+	rts
+
+vertical_first:
+	lda tmp_y
+	cmp #(playfield_height / 2)
+	bcc vertical_try_south
+	beq vertical_second_choice
+	jsr try_move_north
+	bcc vertical_second_choice
+	sec
+	rts
+vertical_try_south:
+	jsr try_move_south
+	bcc vertical_second_choice
+	sec
+	rts
+
+vertical_second_choice:
+	lda tmp_x
+	cmp #(playfield_width / 2)
+	bcc vertical_try_east
+	beq vertical_third_choice
+	jsr try_move_west
+	bcc vertical_third_choice
+	sec
+	rts
+vertical_try_east:
+	jsr try_move_east
+	bcc vertical_third_choice
+	sec
+	rts
+
+vertical_third_choice:
+	lda tmp_y
+	cmp #(playfield_height / 2)
+	bcc vertical_try_north
+	beq vertical_fourth_choice
+	jsr try_move_south
+	bcc vertical_fourth_choice
+	sec
+	rts
+vertical_try_north:
+	jsr try_move_north
+	bcc vertical_fourth_choice
+	sec
+	rts
+
+vertical_fourth_choice:
+	lda tmp_x
+	cmp #(playfield_width / 2)
+	bcc vertical_try_west
+	beq move_monster_failed
+	jsr try_move_east
+	bcc move_monster_failed
+	sec
+	rts
+vertical_try_west:
+	jsr try_move_west
+	bcc move_monster_failed
+	sec
+	rts
+
+move_monster_failed:
+	clc
+	rts
+.endp
+
+.proc try_move_east
+	lda tmp_x
+	cmp #(playfield_width - 1)
+	beq east_blocked
+	mwa map_ptr tmp_addr1
+	inc16 tmp_addr1
+	lda tmp_addr1
+	cmp player_ptr
+	bne east_check_tile
+	lda tmp_addr1+1
+	cmp player_ptr+1
+	beq east_blocked
+east_check_tile:
+	ldy #0
+	lda (tmp_addr1),y
+	cmp #MAP_FLOOR
+	bne east_blocked
+	sec
+	rts
+east_blocked:
+	clc
+	rts
+.endp
+
+.proc try_move_west
+	lda tmp_x
+	beq west_blocked
+	mwa map_ptr tmp_addr1
+	dec16 tmp_addr1
+	lda tmp_addr1
+	cmp player_ptr
+	bne west_check_tile
+	lda tmp_addr1+1
+	cmp player_ptr+1
+	beq west_blocked
+west_check_tile:
+	ldy #0
+	lda (tmp_addr1),y
+	cmp #MAP_FLOOR
+	bne west_blocked
+	sec
+	rts
+west_blocked:
+	clc
+	rts
+.endp
+
+.proc try_move_south
+	lda tmp_y
+	cmp #(playfield_height - 1)
+	beq south_blocked
+	mwa map_ptr tmp_addr1
+	adw tmp_addr1 #map_width
+	lda tmp_addr1
+	cmp player_ptr
+	bne south_check_tile
+	lda tmp_addr1+1
+	cmp player_ptr+1
+	beq south_blocked
+south_check_tile:
+	ldy #0
+	lda (tmp_addr1),y
+	cmp #MAP_FLOOR
+	bne south_blocked
+	sec
+	rts
+south_blocked:
+	clc
+	rts
+.endp
+
+.proc try_move_north
+	lda tmp_y
+	beq north_blocked
+	mwa map_ptr tmp_addr1
+	sbw tmp_addr1 #map_width
+	lda tmp_addr1
+	cmp player_ptr
+	bne north_check_tile
+	lda tmp_addr1+1
+	cmp player_ptr+1
+	beq north_blocked
+north_check_tile:
+	ldy #0
+	lda (tmp_addr1),y
+	cmp #MAP_FLOOR
+	bne north_blocked
+	sec
+	rts
+north_blocked:
+	clc
+	rts
+.endp
 
 ; Constants for arrow
 ARROW_SPEED      = 1           ; Pixels per update
@@ -1965,4 +2132,3 @@ survived
     rts
 
 .endp
-
