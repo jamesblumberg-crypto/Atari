@@ -185,7 +185,7 @@ next
 loop
     ldy #0                      ; Init Y
     lda (tmp_addr1),y           ; Load in current placed_door
-    beq done                    ; if 0, we're done
+    beq next_room               ; placed_doors is sparse, so keep scanning later room slots
     sta doors                   ; Store into doors var
     lda room_pos                ; Load room position
     asl                         ; Multiply by 2 because positions are 2 bytes wide
@@ -198,36 +198,28 @@ loop
     sta room_x                  ; Save in room_x
 
 check_north
-    lda doors
-    and #DOOR_NORTH
-    beq check_south
-    place_north_door()
+    ; North doors are now drawn by the room above via its south door.      ; avoids one-sided duplicate seams
 
 check_south
-    lda doors
-    and #DOOR_SOUTH
-    beq check_west
-    place_south_door()
-
-check_west
-    lda doors
-    and #DOOR_WEST
-    beq check_east
-    place_west_door()
+    lda doors                          ; inspect the current room's connection bits                         ; graph-driven door draw
+    and #DOOR_SOUTH                    ; keep only the south connection bit                                ; only shared south seams are drawn here
+    beq check_east                     ; no south connection, so skip to east                              ; north/west are intentionally skipped
+    place_south_door()                 ; draw the south-facing door once for this seam                     ; single source of truth for vertical doors
 
 check_east
-    lda doors
-    and #DOOR_EAST
-    beq done
-    place_east_door()
+    lda doors                          ; re-read the connection bits                                        ; south handling above may have changed A
+    and #DOOR_EAST                     ; keep only the east connection bit                                 ; only shared east seams are drawn here
+    beq next_room                      ; no east connection, so move on to the next room slot              ; do not terminate sparse scan early
+    place_east_door()                  ; draw the east-facing door once for this seam                      ; single source of truth for horizontal doors
     
-done
+next_room
     inw tmp_addr1
     inc room_pos
     lda room_pos
-    cmp #64
-    bcc loop
+    cmp #64                            ; scan every possible room slot, not just until the first zero entry
+    bcc loop                           ; continue until all 64 room positions have been checked
 
+done
     rts
     .endp
 
@@ -485,10 +477,10 @@ false
 ; Moves room position to new room
 ; Updates new available doors to prevent backtracking
 .proc walk_north (.byte y) .reg
-    ; Add door to placed rooms in current room
-    lda (placed_doors_ptr),y
-    add #DOOR_NORTH
-    sta (placed_doors_ptr),y
+    ; Add door to placed rooms in current room.                           ; current room records the outward connection
+    lda (placed_doors_ptr),y            ; load current room door bits                                         ; room before movement
+    ora #DOOR_NORTH                     ; set the north bit                                                   ; safer than arithmetic on bitmasks
+    sta (placed_doors_ptr),y            ; save updated current room door bits                                ; preserves any existing door bits
 
     ; Remove door from available doors in current room
     lda (avail_doors_ptr),y
@@ -502,11 +494,14 @@ false
 
     get_doors()
 
-    ; Remove door from available doors in the new room
-    ldy room_pos
-    lda (avail_doors_ptr),y
-    sub #DOOR_SOUTH
-    sta (avail_doors_ptr),y
+    ; Remove door from available doors in the new room.                   ; prevents immediate backtracking candidate
+    ldy room_pos                        ; point at the destination room                                       ; room after movement
+    lda (avail_doors_ptr),y             ; load destination available-door bits                               ; used only for walk generation
+    sub #DOOR_SOUTH                     ; clear the opposite direction                                        ; no instant reverse walk
+    sta (avail_doors_ptr),y             ; save destination available-door bits                               ; keeps growth moving outward
+    lda (placed_doors_ptr),y            ; load destination placed-door bits                                  ; reciprocal graph record
+    ora #DOOR_SOUTH                     ; set the reciprocal south bit                                       ; proves the two rooms really connect
+    sta (placed_doors_ptr),y            ; save destination placed-door bits                                  ; later draw pass can trust this seam
     
     rts
     .endp
@@ -518,10 +513,10 @@ false
 ; Moves room position to new room
 ; Updates new available doors to prevent backtracking
 .proc walk_south (.byte y) .reg
-    ; Add door to placed rooms in current room
-    lda (placed_doors_ptr),y
-    add #DOOR_SOUTH
-    sta (placed_doors_ptr),y
+    ; Add door to placed rooms in current room.                           ; current room records the outward connection
+    lda (placed_doors_ptr),y            ; load current room door bits                                         ; room before movement
+    ora #DOOR_SOUTH                     ; set the south bit                                                   ; safer than arithmetic on bitmasks
+    sta (placed_doors_ptr),y            ; save updated current room door bits                                ; preserves any existing door bits
 
     ; Remove door from available doors in current room
     lda (avail_doors_ptr),y
@@ -534,11 +529,14 @@ false
     
     get_doors()
 
-    ; Remove door from available doors in the new room
-    ldy room_pos
-    lda (avail_doors_ptr),y
-    sub #DOOR_NORTH
-    sta (avail_doors_ptr),y
+    ; Remove door from available doors in the new room.                   ; prevents immediate backtracking candidate
+    ldy room_pos                        ; point at the destination room                                       ; room after movement
+    lda (avail_doors_ptr),y             ; load destination available-door bits                               ; used only for walk generation
+    sub #DOOR_NORTH                     ; clear the opposite direction                                        ; no instant reverse walk
+    sta (avail_doors_ptr),y             ; save destination available-door bits                               ; keeps growth moving outward
+    lda (placed_doors_ptr),y            ; load destination placed-door bits                                  ; reciprocal graph record
+    ora #DOOR_NORTH                     ; set the reciprocal north bit                                       ; proves the two rooms really connect
+    sta (placed_doors_ptr),y            ; save destination placed-door bits                                  ; later draw pass can trust this seam
     
     rts
     .endp
@@ -550,10 +548,10 @@ false
 ; Moves room position to new room
 ; Updates new available doors to prevent backtracking
 .proc walk_west (.byte y) .reg
-    ; Add door to placed rooms in current room
-    lda (placed_doors_ptr),y
-    add #DOOR_WEST
-    sta (placed_doors_ptr),y
+    ; Add door to placed rooms in current room.                           ; current room records the outward connection
+    lda (placed_doors_ptr),y            ; load current room door bits                                         ; room before movement
+    ora #DOOR_WEST                      ; set the west bit                                                    ; safer than arithmetic on bitmasks
+    sta (placed_doors_ptr),y            ; save updated current room door bits                                ; preserves any existing door bits
 
     ; Remove door from available doors in current room
     lda (avail_doors_ptr),y
@@ -565,11 +563,14 @@ false
     
     get_doors()
 
-    ; Remove door from available doors in the new room
-    ldy room_pos
-    lda (avail_doors_ptr),y
-    sub #DOOR_EAST
-    sta (avail_doors_ptr),y
+    ; Remove door from available doors in the new room.                   ; prevents immediate backtracking candidate
+    ldy room_pos                        ; point at the destination room                                       ; room after movement
+    lda (avail_doors_ptr),y             ; load destination available-door bits                               ; used only for walk generation
+    sub #DOOR_EAST                      ; clear the opposite direction                                        ; no instant reverse walk
+    sta (avail_doors_ptr),y             ; save destination available-door bits                               ; keeps growth moving outward
+    lda (placed_doors_ptr),y            ; load destination placed-door bits                                  ; reciprocal graph record
+    ora #DOOR_EAST                      ; set the reciprocal east bit                                        ; proves the two rooms really connect
+    sta (placed_doors_ptr),y            ; save destination placed-door bits                                  ; later draw pass can trust this seam
 
     rts
     .endp
@@ -581,10 +582,10 @@ false
 ; Moves room position to new room
 ; Updates new available doors to prevent backtracking
 .proc walk_east (.byte y) .reg
-    ; Add door to placed rooms in current room
-    lda (placed_doors_ptr),y
-    add #DOOR_EAST
-    sta (placed_doors_ptr),y
+    ; Add door to placed rooms in current room.                           ; current room records the outward connection
+    lda (placed_doors_ptr),y            ; load current room door bits                                         ; room before movement
+    ora #DOOR_EAST                      ; set the east bit                                                    ; safer than arithmetic on bitmasks
+    sta (placed_doors_ptr),y            ; save updated current room door bits                                ; preserves any existing door bits
 
     ; Remove door from available doors in current room
     lda (avail_doors_ptr),y
@@ -596,11 +597,14 @@ false
 
     get_doors()
 
-    ; Remove door from available doors in the new room
-    ldy room_pos
-    lda (avail_doors_ptr),y
-    sub #DOOR_WEST
-    sta (avail_doors_ptr),y
+    ; Remove door from available doors in the new room.                   ; prevents immediate backtracking candidate
+    ldy room_pos                        ; point at the destination room                                       ; room after movement
+    lda (avail_doors_ptr),y             ; load destination available-door bits                               ; used only for walk generation
+    sub #DOOR_WEST                      ; clear the opposite direction                                        ; no instant reverse walk
+    sta (avail_doors_ptr),y             ; save destination available-door bits                               ; keeps growth moving outward
+    lda (placed_doors_ptr),y            ; load destination placed-door bits                                  ; reciprocal graph record
+    ora #DOOR_WEST                      ; set the reciprocal west bit                                        ; proves the two rooms really connect
+    sta (placed_doors_ptr),y            ; save destination placed-door bits                                  ; later draw pass can trust this seam
     
     rts
     .endp

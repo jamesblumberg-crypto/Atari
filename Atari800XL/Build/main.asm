@@ -1744,7 +1744,7 @@ north_blocked:
 .endp
 
 ; Constants for arrow
-ARROW_SPEED      = 1           ; Pixels per update
+ARROW_SPEED      = 2           ; Faster projectile travel for more responsive bow combat
 ARROW_TILE_SIZE_V = 16         ; Vertical: map tile advances every 16 subtile steps
 ARROW_TILE_SIZE_H = 8          ; Horizontal: map tile advances every 8 subtile steps
 ARROW_START_Y    = 124         ; Starting scanline near player center in double-line PMG
@@ -1880,7 +1880,7 @@ already_active
     sta arrow_tick
     inc arrow_tick_div
     lda arrow_tick_div
-    cmp #3
+    cmp #1
     bcc no_tick_advance
     lda #0
     sta arrow_tick_div
