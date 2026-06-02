@@ -110,6 +110,7 @@ num_monsters			= $c2
 starting_monster		= $c3
 no_clip				= $c4
 char_colors_ptr		= $c5 ; 16 bit
+player_type			= $c6 ; 0 = male, 1 = female
 
 	
 dungeon_floor		= $d8
@@ -204,6 +205,7 @@ clear_all_missiles
 	sta player_melee_dmg
 	lda #0
 	sta player_xp
+	sta player_type           ; 0 = male player sprite (default)
 	lda #1
 	sta player_level
 	sta dungeon_floor        ; Start on floor 1 (prevents over-scaling from garbage RAM)
@@ -669,14 +671,28 @@ pmg_p2 = pmg + $300
 pmg_p3 = pmg + $380
 
 	ldx #0
-loop
+	lda player_type
+	cmp #0
+	beq load_male
+	
+load_female
+	mva pmgdata_female,x pmg_p0+60,x
+	mva pmgdata_female+8,x pmg_p1+60,x
+	mva pmgdata_female+16,x pmg_p2+60,x
+	mva pmgdata_female+24,x pmg_p3+60,x
+	inx
+	cpx #8
+	bne load_female
+	rts
+	
+load_male
 	mva pmgdata,x pmg_p0+60,x
 	mva pmgdata+8,x pmg_p1+60,x
 	mva pmgdata+16,x pmg_p2+60,x
 	mva pmgdata+24,x pmg_p3+60,x
 	inx
 	cpx #8
-	bne loop
+	bne load_male
 	rts
 	.endp
 

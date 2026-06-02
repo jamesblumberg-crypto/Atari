@@ -204,13 +204,13 @@ check_south
     lda doors                          ; inspect the current room's connection bits                         ; graph-driven door draw
     and #DOOR_SOUTH                    ; keep only the south connection bit                                ; only shared south seams are drawn here
     beq check_east                     ; no south connection, so skip to east                              ; north/west are intentionally skipped
-    place_south_door()                 ; draw the south-facing door once for this seam                     ; single source of truth for vertical doors
+    jsr place_south_door               ; draw the south-facing door once for this seam                     ; single source of truth for vertical doors
 
 check_east
     lda doors                          ; re-read the connection bits                                        ; south handling above may have changed A
     and #DOOR_EAST                     ; keep only the east connection bit                                 ; only shared east seams are drawn here
     beq next_room                      ; no east connection, so move on to the next room slot              ; do not terminate sparse scan early
-    place_east_door()                  ; draw the east-facing door once for this seam                      ; single source of truth for horizontal doors
+    jsr place_east_door                ; draw the east-facing door once for this seam                      ; single source of truth for horizontal doors
     
 next_room
     inw tmp_addr1
@@ -225,7 +225,7 @@ done
 
 .proc place_north_door
     advance_ptr #map map_ptr #map_width room_y room_x
-    sbw map_ptr #map_width
+    adw map_ptr #map_width
     adw map_ptr #(room_width / 2)
     lda #MAP_DOOR
     ldy #0
@@ -239,7 +239,7 @@ done
 loop
     adw map_ptr #map_width
     iny
-    cpy #room_height
+    cpy #(room_height - 1)
     bne loop
 
     adw map_ptr #(room_width / 2)
@@ -251,7 +251,7 @@ loop
 
 .proc place_west_door
     advance_ptr #map map_ptr #map_width room_y room_x
-    dew map_ptr
+    inw map_ptr
     ldy #0
 loop
     adw map_ptr #map_width
@@ -272,7 +272,7 @@ loop
 loop
     adw map_ptr #map_width
     iny
-    cpy #(room_height / 2)
+    cpy #(room_height / 2 - 1)
     bne loop
 
     lda #MAP_DOOR
