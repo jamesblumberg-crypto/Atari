@@ -14,6 +14,7 @@
     mva #0 num_rooms
     mva #8 max_rooms
 
+    clear_room_gen_state
     fill_map
 
 first_room
@@ -48,6 +49,30 @@ place
 
 done
     place_doors
+
+    rts
+    .endp
+
+; Clears leftover door/occupancy bookkeeping from the previous level.
+; Without this, stale placed_doors bits from the prior map cause
+; place_doors() to draw doors at room slots the new layout never
+; occupies, showing up as doors embedded in plain border wall.
+.proc clear_room_gen_state
+    lda #0
+    ldy #0
+loop
+    sta placed_doors,y
+    sta avail_doors,y
+    iny
+    cpy #64
+    bne loop
+
+    ldy #0
+loop2
+    sta occupied_rooms,y
+    iny
+    cpy #8
+    bne loop2
 
     rts
     .endp
