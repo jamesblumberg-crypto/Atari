@@ -413,7 +413,7 @@ done
     lda (avail_doors_ptr),y
     sub #DOOR_NORTH
     sta (avail_doors_ptr),y
-    bne false
+    jmp false
 true
     lda #1
     rts
@@ -437,7 +437,7 @@ false
     lda (avail_doors_ptr),y
     sub #DOOR_SOUTH
     sta (avail_doors_ptr),y
-    bne false
+    jmp false
 
 true
     lda #1
@@ -461,7 +461,7 @@ false
     lda (avail_doors_ptr),y
     sub #DOOR_WEST
     sta (avail_doors_ptr),y
-    bne false
+    jmp false
 
 true
     lda #1
@@ -485,7 +485,7 @@ false
     lda (avail_doors_ptr),y
     sub #DOOR_EAST
     sta (avail_doors_ptr),y
-    bne false
+    jmp false
 
 true
     lda #1
