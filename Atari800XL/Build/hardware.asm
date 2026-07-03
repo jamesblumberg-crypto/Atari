@@ -36,7 +36,6 @@ CH_NONE = $ff   ; No key pressed
 ; Key codes for weapon switching
 KEY_B  = $15    ; 'B' key code - equip bow
 KEY_M  = $25    ; 'M' key code - equip melee
-KEY_G  = $22    ; 'G' key code - toggle gender
 
 ; Missile hardware registers
 HPOSM0 = $D004  ; Horizontal position missile 0

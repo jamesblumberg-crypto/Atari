@@ -473,24 +473,12 @@ check_bow_key
 
 check_melee_key
     cmp #KEY_M                  ; 'M' key pressed?
-    bne check_gender_key        ; No, check gender toggle
+    bne done                    ; No, exit
     lda #0                      ; Equip melee weapon
     sta equipped_weapon
-    lda #CH_NONE                ; Clear the key press
-    sta CH
-    rts
-
-check_gender_key
-    cmp #KEY_G                  ; 'G' key pressed?
-    bne done                    ; No, exit
-    lda player_type             ; Toggle between male (0) and female (1)
-    eor #1
-    sta player_type
-    jsr load_pmg                ; Reload the player sprite
     lda #CH_NONE                ; Clear the key press
     sta CH
 
 done
     rts
     .endp
-

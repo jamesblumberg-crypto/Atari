@@ -31,4 +31,4 @@ fi
 echo "Build succeeded."
 
 echo "Launching emulator..."
-open main.xex || true
+open -a "Atari800MacX" main.xex

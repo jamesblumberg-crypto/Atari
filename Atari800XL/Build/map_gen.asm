@@ -225,7 +225,7 @@ done
 
 .proc place_north_door
     advance_ptr #map map_ptr #map_width room_y room_x
-    adw map_ptr #map_width
+    sbw map_ptr #map_width
     adw map_ptr #(room_width / 2)
     lda #MAP_DOOR
     ldy #0
@@ -239,7 +239,7 @@ done
 loop
     adw map_ptr #map_width
     iny
-    cpy #(room_height - 1)
+    cpy #room_height
     bne loop
 
     adw map_ptr #(room_width / 2)
@@ -251,7 +251,7 @@ loop
 
 .proc place_west_door
     advance_ptr #map map_ptr #map_width room_y room_x
-    inw map_ptr
+    dew map_ptr
     ldy #0
 loop
     adw map_ptr #map_width
@@ -272,7 +272,7 @@ loop
 loop
     adw map_ptr #map_width
     iny
-    cpy #(room_height / 2 - 1)
+    cpy #(room_height / 2)
     bne loop
 
     lda #MAP_DOOR
