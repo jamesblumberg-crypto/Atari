@@ -142,9 +142,18 @@ check_monster
 check_item
     ldi dir_ptr                 ; Re-load tile from direction
     cmp #MAP_BOW                ; Is it a bow pickup?
-    bne check_passable          ; No, check if passable
+    bne check_gem
     jsr pickup_bow              ; Yes, pick up the bow!
-    ; Continue to move onto the tile after pickup
+    jmp check_passable          ; Continue to move onto the tile after pickup
+
+check_gem
+    cmp #MAP_GEM_WHITE
+    bcc check_passable
+    cmp #(MAP_GEM_GOLD + 1)
+    bcs check_passable
+    ; and #1                      ; reject odd right-half glyph ids
+    ; bne check_passable
+    jsr pickup_gem
 
 check_passable
     is_passable()               ; Detect collision
@@ -450,6 +459,46 @@ contact_player_dead
     ; Update the ranged damage display on HUD
     jsr update_ranged_display
 
+    rts
+    .endp
+
+; Pick up a gem at dir_ptr. Sets the matching has_gems bit and refreshes HUD sockets.
+.proc pickup_gem
+    ldy #0
+    lda (dir_ptr),y
+
+    cmp #MAP_GEM_BLUE
+    bne not_blue
+    lda #GEM_BLUE
+    jmp apply_gem
+not_blue
+    cmp #MAP_GEM_GOLD
+    bne not_gold
+    lda #GEM_GOLD
+    jmp apply_gem
+not_gold
+    cmp #MAP_GEM_RED
+    bne not_red
+    lda #GEM_RED
+    jmp apply_gem
+not_red
+    cmp #MAP_GEM_BLACK
+    bne not_black
+    lda #GEM_BLACK
+    jmp apply_gem
+not_black
+    cmp #MAP_GEM_WHITE
+    bne clear_tile              ; unknown / already handled
+    lda #GEM_WHITE
+
+apply_gem
+    ora has_gems
+    sta has_gems
+
+clear_tile
+    lda #MAP_FLOOR
+    sta (dir_ptr),y
+    jsr update_gem_display
     rts
     .endp
 

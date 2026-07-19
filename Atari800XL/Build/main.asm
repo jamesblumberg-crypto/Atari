@@ -32,7 +32,11 @@ monsters_a          = $9000 ; Monster characters (1K)
 monsters_b          = $9400 ; Monster characters (1K)
 ; free
 dlist				= $9800
-room_types			= $a000 ; 3600 Bytes
+; $9800-$AE0F : runtime code chain (dlist, pmgdata, map_gen, input, ...)
+; Must stay BELOW room_positions. Do not place a large data blob at $A000 —
+; it will overwrite this code when the XEX loads (Atari800MacX hard crash
+; after the map draws).
+; room_types removed: templates were all floor; copy_room fills MAP_FLOOR.
 room_positions		= $ae10	; 128 bytes
 room_pos_doors		= $ae90 ; 64 bytes
 room_type_doors		= $aed0 ; 16 bytes
@@ -43,7 +47,7 @@ charset_outdoor_b_colors = $af10 ; 16 bytes
 monsters_a_colors   = $af20 ; 51 bytes
 monsters_b_colors   = $af53 ; 51 bytes
 
-; free
+; free $AF86-$AFFF
 
 ; B000-BFFF (Code)
 
@@ -129,6 +133,7 @@ player_hp            = $e6
 player_max_hp        = $e7
 player_xp            = $e8
 player_level         = $e9
+has_gems             = $ea    ; bitfield: blue/gold/red/black/white (see GEM_* in labels.asm)
 
 ; Weapon system variables
 player_ranged_dmg    = $7371  ; Ranged weapon damage (bow)
@@ -214,6 +219,7 @@ clear_all_missiles
 	sta has_bow             ; Player starts without bow
 	sta equipped_weapon     ; Start with melee equipped (0 = melee)
 	sta arrow_active        ; No arrow in flight
+	sta has_gems            ; No gems collected yet
 	lda #0
 	sta monster_contact_cooldown ; Clears the value of monster_contact_cooldown to ensure monsters can damage immediately if player starts next to them
 	lda #SOUTH              ; Default facing direction
@@ -259,6 +265,7 @@ skip_monster_tables
 
 	init_player_ptr()
 	jsr place_bow               ; Place bow on floor adjacent to player
+	jsr place_gems              ; Scatter any gems the player still needs
 
 	; Initialize variables that need starting values
 	lda #0
@@ -270,6 +277,7 @@ skip_monster_tables
 
 	; Draw initial screen before game loop
 	blit_screen()
+	jsr update_gem_display      ; Blank slots until gems are found
 
 game
 	mva RTCLK2 clock
@@ -940,29 +948,19 @@ loop
 	blit_char #UI_NUMBER_0 screen_ptr #31
 	blit_char #UI_NUMBER_0 screen_ptr #32
 
-	; Amulet
+	; Amulet frame + gem sockets (gems filled by update_gem_display)
 	adw screen_ptr #screen_char_width
 	adw screen_ptr #screen_char_width
 	blit_char #UI_AMULET_NW_ICON_LEFT screen_ptr #29
 	blit_char #UI_AMULET_NW_ICON_RIGHT screen_ptr #30
-	blit_char #UI_BLACK_GEM_ICON_LEFT screen_ptr #31
-	blit_char #UI_BLACK_GEM_ICON_RIGHT screen_ptr #32
 	blit_char #UI_AMULET_NE_ICON_LEFT screen_ptr #33
 	blit_char #UI_AMULET_NE_ICON_RIGHT screen_ptr #34
 
 	adw screen_ptr #screen_char_width
-	blit_char #UI_BLUE_GEM_ICON_LEFT screen_ptr #29
-	blit_char #UI_BLUE_GEM_ICON_RIGHT screen_ptr #30
-	blit_char #UI_WHITE_GEM_ICON_LEFT screen_ptr #31
-	blit_char #UI_WHITE_GEM_ICON_RIGHT screen_ptr #32
-	blit_char #UI_RED_GEM_ICON_LEFT screen_ptr #33
-	blit_char #UI_RED_GEM_ICON_RIGHT screen_ptr #34
 
 	adw screen_ptr #screen_char_width
 	blit_char #UI_AMULET_SW_ICON_LEFT screen_ptr #29
 	blit_char #UI_AMULET_SW_ICON_RIGHT screen_ptr #30
-	blit_char #UI_GOLD_GEM_ICON_LEFT screen_ptr #31
-	blit_char #UI_GOLD_GEM_ICON_RIGHT screen_ptr #32
 	blit_char #UI_AMULET_SE_ICON_LEFT screen_ptr #33
 	blit_char #UI_AMULET_SE_ICON_RIGHT screen_ptr #34
 
@@ -986,6 +984,71 @@ loop
 	blit_char #UI_GOLD_KEY_ICON screen_ptr #26
 	blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
 
+	rts
+	.endp
+
+; Refresh the five amulet gem sockets from has_gems.
+; Layout (cols 29-34 on the right HUD panel):
+;   row top:    .  BLACK  .
+;   row mid:  BLUE WHITE RED
+;   row bot:    .  GOLD   .
+.proc update_gem_display
+	; --- top row: black ---
+	mwa #(screen + 7 * screen_char_width) screen_ptr
+	lda has_gems
+	and #GEM_BLACK
+	beq black_blank
+	blit_char #UI_BLACK_GEM_ICON_LEFT screen_ptr #31
+	blit_char #UI_BLACK_GEM_ICON_RIGHT screen_ptr #32
+	jmp mid_row
+black_blank
+	blit_char #UI_BLANK_GEM_ICON_LEFT screen_ptr #31
+	blit_char #UI_BLANK_GEM_ICON_RIGHT screen_ptr #32
+
+mid_row
+	mwa #(screen + 8 * screen_char_width) screen_ptr
+	; blue
+	lda has_gems
+	and #GEM_BLUE
+	beq blue_blank
+	blit_char #UI_BLUE_GEM_ICON_LEFT screen_ptr #29
+	blit_char #UI_BLUE_GEM_ICON_RIGHT screen_ptr #30
+	jmp white_slot
+blue_blank
+	blit_char #UI_BLANK_GEM_ICON_LEFT screen_ptr #29
+	blit_char #UI_BLANK_GEM_ICON_RIGHT screen_ptr #30
+white_slot
+	lda has_gems
+	and #GEM_WHITE
+	beq white_blank
+	blit_char #UI_WHITE_GEM_ICON_LEFT screen_ptr #31
+	blit_char #UI_WHITE_GEM_ICON_RIGHT screen_ptr #32
+	jmp red_slot
+white_blank
+	blit_char #UI_BLANK_GEM_ICON_LEFT screen_ptr #31
+	blit_char #UI_BLANK_GEM_ICON_RIGHT screen_ptr #32
+red_slot
+	lda has_gems
+	and #GEM_RED
+	beq red_blank
+	blit_char #UI_RED_GEM_ICON_LEFT screen_ptr #33
+	blit_char #UI_RED_GEM_ICON_RIGHT screen_ptr #34
+	jmp bot_row
+red_blank
+	blit_char #UI_BLANK_GEM_ICON_LEFT screen_ptr #33
+	blit_char #UI_BLANK_GEM_ICON_RIGHT screen_ptr #34
+
+bot_row
+	mwa #(screen + 9 * screen_char_width) screen_ptr
+	lda has_gems
+	and #GEM_GOLD
+	beq gold_blank
+	blit_char #UI_GOLD_GEM_ICON_LEFT screen_ptr #31
+	blit_char #UI_GOLD_GEM_ICON_RIGHT screen_ptr #32
+	rts
+gold_blank
+	blit_char #UI_BLANK_GEM_ICON_LEFT screen_ptr #31
+	blit_char #UI_BLANK_GEM_ICON_RIGHT screen_ptr #32
 	rts
 	.endp
 
@@ -1470,7 +1533,7 @@ MAIN_BANK_END_GUARD
 	icl 'charset_outdoor_b.asm'
 	icl 'monsters_a.asm'
 	icl 'monsters_b.asm'
-	icl 'room_types.asm'
+	; room_types.asm intentionally not linked — see copy_room in map_gen.asm
 	icl 'room_positions.asm'
 	icl 'room_pos_doors.asm'
 	icl 'room_type_doors.asm'
@@ -1839,7 +1902,9 @@ found_floor
 	place_monsters num_monsters #8
 	init_player_ptr()
 	jsr place_bow
+	jsr place_gems
 	blit_screen()
+	jsr update_gem_display
 
 	rts
 	.endp

@@ -1,4 +1,4 @@
-; test
+ff; test
 DOOR_NORTH              = %1000
 DOOR_SOUTH              = %0100
 DOOR_WEST               = %0010
@@ -11,8 +11,22 @@ MAP_DOWN                = 57
 MAP_DOOR                = 4
 MAP_DOORWAY             = 59
 
-; Item tiles (must be > 55 to avoid monster graphics overwrite range 44-55)
+; Item tiles (must be >= PASSABLE_MIN / outside monster range 44-51)
 MAP_BOW                 = 56    ; Bow pickup item (uses chars 112-113)
+; Map gem tiles reuse dungeon gem icon left-halves (same glyphs as the HUD)
+MAP_GEM_WHITE           = 34    ; map id is charset index / 2 because of blit_tile’s asl
+MAP_GEM_BLACK           = 35
+MAP_GEM_BLUE            = 36
+MAP_GEM_RED             = 37
+MAP_GEM_GOLD            = 38
+
+; Inventory bitfield (has_gems)
+GEM_BLUE                = %00000001
+GEM_GOLD                = %00000010
+GEM_RED                 = %00000100
+GEM_BLACK               = %00001000
+GEM_WHITE               = %00010000
+GEM_ALL                 = %00011111
 
 UI_VERT_BORDER          = 1
 UI_HORIZ_BORDER         = 4
