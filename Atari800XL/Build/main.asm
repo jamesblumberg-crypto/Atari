@@ -134,6 +134,8 @@ player_max_hp        = $e7
 player_xp            = $e8
 player_level         = $e9
 has_gems             = $ea    ; bitfield: blue/gold/red/black/white (see GEM_* in labels.asm)
+item_tile            = $eb    ; Map tile id while place_one_item runs (must not share tmp)
+occ_bitmap           = $ec    ; Scratch for get/set_room_occupied (must not share tmp)
 
 ; Weapon system variables
 player_ranged_dmg    = $7371  ; Ranged weapon damage (bow)
@@ -192,10 +194,7 @@ clear_all_missiles
 	dex
 	bpl clear_all_missiles
 
-	;mva #16 starting_monster
-	mva #16 starting_monster  ; start with the monster set starting at character 8 (first 8 characters are reserved for player and UI)
-	;mva #4 num_monsters
-	mva #5 num_monsters ; start with 5 monsters per room (can be 0-8, but 8 is really crowded)
+	mva #5 num_monsters         ; base pack size (0-8); floor 5 also gets a boss
 
 	lda #16
 	sta player_x
@@ -224,6 +223,10 @@ clear_all_missiles
 	sta monster_contact_cooldown ; Clears the value of monster_contact_cooldown to ensure monsters can damage immediately if player starts next to them
 	lda #SOUTH              ; Default facing direction
 	sta player_dir
+	lda #BUTTON_UP          ; Trigger starts released (edge detect works on first press)
+	sta stick_btn
+	lda #0
+	sta stick_action        ; Unused latch; keep zero for debug / future use
 	
 	mva #123 rand
 	mva #201 rand16
@@ -235,10 +238,8 @@ clear_all_missiles
 	copy_data charset_dungeon_b cur_charset_b 4
 	copy_bytes charset_dungeon_a_colors cur_char_colors_a 16
 	copy_bytes charset_dungeon_b_colors cur_char_colors_b 16
-	copy_monsters monsters_a cur_charset_a starting_monster
-	copy_monsters monsters_b cur_charset_b starting_monster
-	copy_monster_colors monsters_a_colors cur_char_colors_a starting_monster
-	copy_monster_colors monsters_b_colors cur_char_colors_b starting_monster
+	; Ribbon 0 (first monsters in PNG) for floor 1 — easiest art + stats
+	jsr setup_floor_monsters
 	
 	new_map()
 
@@ -265,7 +266,8 @@ skip_monster_tables
 
 	init_player_ptr()
 	jsr place_bow               ; Place bow on floor adjacent to player
-	jsr place_gems              ; Scatter any gems the player still needs
+	jsr place_gems              ; One gem for this floor (if not already collected)
+	jsr place_floor_boss        ; Floor 5: extra tough guardian
 
 	; Initialize variables that need starting values
 	lda #0
@@ -1888,21 +1890,60 @@ found_floor
 	lda #MAP_BOW
 	sta (map_ptr),y
 	rts
-	.endp
+	.endp ; end of place_bow
+
+; Pick monster ribbon from dungeon_floor and copy art into the live charset.
+; Floor 1 → ribbon 0 (first row of monsters_*.png, easiest)
+; Floor 2 → ribbon 1
+; Floor 3 → ribbon 2
+; Floor 4+ → ribbon 3 (bottom of sheet: large dragon art)
+; .proc setup_floor_monsters
+; 	lda dungeon_floor
+; 	sec
+; 	sbc #1                      ; 0-based
+; 	cmp #4
+; 	bcc ribbon_ok
+; 	lda #3                      ; cap at hardest ribbon
+; ribbon_ok
+; 	sta starting_monster
+
+; 	copy_monsters monsters_a cur_charset_a starting_monster
+; 	copy_monsters monsters_b cur_charset_b starting_monster
+; 	copy_monster_colors monsters_a_colors cur_char_colors_a starting_monster
+; 	copy_monster_colors monsters_b_colors cur_char_colors_b starting_monster
+; 	rts
+; 	.endp
+
+; ; Floor 5: place one type-7 monster as a boss guardian (uses ribbon-3 dragon art slot).
+; ; True multi-tile dragons need a future multi-cell entity; this is a single-tile boss
+; ; with the bottom-ribbon graphics and special combat stats.
+; .proc place_floor_boss
+; 	lda dungeon_floor
+; 	cmp #5
+; 	bne boss_done
+; 	lda #51                     ; map tile for monster type 7
+; 	jsr place_one_item
+; boss_done
+; 	rts
+; 	.endp
 
 ; Advance to the next dungeon floor when stepping on a down ladder.
-; Re-generates the map, re-places monsters and bow, and redraws the view.
+; Re-generates the map, swaps monster ribbon, re-places items, redraws.
 .proc descend_to_next_level
 	inc dungeon_floor
 	lda #0
 	sta arrow_active
-	sta stick_action
 
 	new_map()
+	jsr setup_floor_monsters    ; new ribbon for this depth
 	place_monsters num_monsters #8
 	init_player_ptr()
+	lda has_bow
+	bne skip_place_bow
 	jsr place_bow
+skip_place_bow
 	jsr place_gems
+	jsr place_floor_boss
 	blit_screen()
 	jsr update_gem_display
 
@@ -2118,18 +2159,13 @@ passable
     sbc #44
     tax
 
-    ; Compute scaled HP for this floor (same scaling as melee combat).
+    ; Scaled HP for this floor (same scale_monster_stats as melee).
     lda monster_hp_table,x
     sta monster_hp
-    lda dungeon_floor
-    sec
-    sbc #1
-    lsr
-    asl
-    asl
-    clc
-    adc monster_hp
-    sta monster_hp
+    lda #0
+    sta monster_dmg             ; scale only needs HP here; dmg unused for arrow
+    ; tmp1 already holds monster tile id
+    jsr scale_monster_stats
 
     ; Middle-ground balance:
     ; - Guaranteed kill if (ranged damage * 3) >= scaled monster HP

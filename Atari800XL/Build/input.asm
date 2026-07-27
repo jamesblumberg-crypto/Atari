@@ -11,22 +11,14 @@
     lda stick_btn
     beq no_action_press     ; Already held, don't repeat action
     player_action()
-    jmp done_input          ; if we acted don't move this tick Gemini
+    jmp done_input          ; Action this tick: don't also move
 
 no_action_press
     ; Movement is independent from trigger state to keep controls consistent.
     player_move()
 
 done_input
-    
-    
-    ; When trigger is up, clear action latch so next press can trigger again.
-    ;lda cur_btn            ; 3 lines remarked Gemini
-    ;beq done
-    ;clr stick_action
-
-;done
-    mva cur_btn stick_btn   ; Set the stick button for next time
+    mva cur_btn stick_btn   ; Remember button state for next edge detect
     rts
     .endp
 
@@ -58,10 +50,10 @@ check_down
     rts
 
 check_left
-    lda stick_dir               ; Re-copy non-mutated stick dir to AA
+    lda stick_dir               ; Re-copy non-mutated stick dir to A
     and #STICK_LEFT             ; Check to see if it's pushed LEFT
     bne check_right             ; It's not pushed LEFT, so move to the next check
-    dec dir_ptr                 ; It is pushed LEFT, so move the temp pointer left one
+    dec16 dir_ptr               ; 16-bit: left one tile (handles page cross)
     lda #WEST                   ; Track direction for arrow aiming
     sta player_dir
     rts
@@ -69,8 +61,8 @@ check_left
 check_right
     lda stick_dir               ; Re-copy non-mutated stick dir to A
     and #STICK_RIGHT            ; Check to see if it's pushed RIGHT
-    bne done                    ; If not, we're done checking
-    inc dir_ptr                 ; It is pushed RIGHT, so move the temp pointer left one
+    bne done                    ; If not, we're done checking (stick centered)
+    inc16 dir_ptr               ; 16-bit: right one tile (handles page cross)
     lda #EAST                   ; Track direction for arrow aiming
     sta player_dir
 
@@ -112,23 +104,30 @@ do_melee_action
 .proc open_door
     lda #MAP_DOORWAY            ; Load in the doorway tile
     sti dir_ptr                 ; Swap door for doorway
-    inc stick_action            ; Set the action flag
     rts
     .endp
 
 .proc close_door
     lda #MAP_DOOR               ; Load in the door tile
     sti dir_ptr                 ; Swap doorway for door
-    inc stick_action            ; Set the action flag
     rts
     .endp
 
     
 ; Player Movement
 .proc player_move
-    ldi dir_ptr                 ; Dereference direction pointer
-    bne check_monster
-    jmp blocked                 ; Not moving (dir_ptr == 0)
+    ; Stick centered: dir_ptr still equals player_ptr — do not move,
+    ; close doors, pick up items, or adjust player_x/y.
+    lda dir_ptr
+    cmp player_ptr
+    bne has_move
+    lda dir_ptr+1
+    cmp player_ptr+1
+    bne has_move
+    jmp blocked                 ; same cell (branch distance too far for BEQ)
+
+has_move
+    ldi dir_ptr                 ; Dereference direction pointer (tile at target)
 
 check_monster
     ; Check if target tile is a monster (tiles 44-51 for 8 monsters)
@@ -151,8 +150,6 @@ check_gem
     bcc check_passable
     cmp #(MAP_GEM_GOLD + 1)
     bcs check_passable
-    ; and #1                      ; reject odd right-half glyph ids
-    ; bne check_passable
     jsr pickup_gem
 
 check_passable
@@ -220,7 +217,7 @@ check_stairs
     bne blocked
     jsr descend_to_next_level
 
-blocked                         ; We are blocked
+blocked                         ; Idle, blocked, or move finished
     rts
     .endp
 
@@ -256,27 +253,7 @@ blocked
     lda monster_dmg_table,x     ; Load monster's base damage
     sta monster_dmg             ; Store in monster_dmg variable
 
-    ; Scale monster stats by floor depth.
-    ; bonus = dungeon_floor / 2
-    lda dungeon_floor
-    sec
-    sbc #1
-    lsr
-    sta tmp
-
-    ; HP bonus = bonus * 4
-    lda tmp
-    asl
-    asl
-    clc
-    adc monster_hp
-    sta monster_hp
-
-    ; Damage bonus = bonus
-    lda monster_dmg
-    clc
-    adc tmp
-    sta monster_dmg
+    jsr scale_monster_stats     ; Floor depth + floor-5 boss override
 
 combat_loop
     ; Player attacks monster - use equipped weapon's damage
@@ -405,20 +382,17 @@ contact_can_hit
     sta monster_contact_cooldown
 
     lda tmp                     ; Current monster tile ID (44-51)
+    sta tmp1                    ; tile id for boss check in scale_monster_stats
     sec
     sbc #44                     ; Convert tile 44-51 to index 0-7
     tax
+    lda monster_hp_table,x
+    sta monster_hp
     lda monster_dmg_table,x
     sta monster_dmg
 
-    ; Scale damage by floor depth.
-    lda dungeon_floor
-    sec
-    sbc #1
-    lsr
-    clc
-    adc monster_dmg
-    sta monster_dmg
+    jsr scale_monster_stats
+    ldx tmp2                    ; restore loop index (scale uses tmp)
 
     lda player_hp
     sec
@@ -438,6 +412,56 @@ contact_player_dead
     lda #1
     sta player_hp_dirty
     ldx tmp2
+    rts
+    .endp
+
+; Apply floor difficulty to monster_hp / monster_dmg.
+; Uses dungeon_floor: HP += (floor-1)*8, DMG += (floor-1)*2
+; Floor 5 + type 7 (tile 51 / index 7): boss override (dragon guardian).
+; In: monster_hp, monster_dmg set from tables; tmp1 = monster tile OR type?
+; Callers set tmp1 to tile id (44-51) before combat, or type in X for contact.
+; Here: if tmp1 >= 44 treat as tile, else treat as 0-7 index in X... 
+; Simpler: check X for type 0-7 after table load — callers have type in X.
+; Actually attack_monster has type in X then clobbers; saves tile in tmp1.
+; damage_player sets tmp1 = type via stx after load... we stx tmp1 as type 0-7.
+;
+; Convention: tmp1 holds monster TILE id (44-51) when possible.
+; scale_monster_stats uses dungeon_floor always; boss if floor==5 and (tmp1==51 or tmp1==7).
+.proc scale_monster_stats
+    lda dungeon_floor
+    cmp #5
+    bne not_boss
+    lda tmp1
+    cmp #51                     ; boss tile
+    beq apply_boss
+    cmp #7                      ; or type index 7
+    bne not_boss
+apply_boss
+    lda #200                    ; tough guardian
+    sta monster_hp
+    lda #28
+    sta monster_dmg
+    rts
+
+not_boss
+    ; bonus = floor - 1
+    lda dungeon_floor
+    sec
+    sbc #1
+    sta tmp
+    ; HP += bonus * 8
+    asl
+    asl
+    asl
+    clc
+    adc monster_hp
+    sta monster_hp
+    ; DMG += bonus * 2
+    lda tmp
+    asl
+    clc
+    adc monster_dmg
+    sta monster_dmg
     rts
     .endp
 
@@ -513,19 +537,19 @@ check_bow_key
     cmp #KEY_B                  ; 'B' key pressed?
     bne check_melee_key         ; No, check next key
     lda has_bow                 ; Do we have a bow?
-    beq done                    ; No bow, can't equip it
+    beq clear_key               ; No bow, still consume the key
     lda #1                      ; Yes, equip ranged weapon
     sta equipped_weapon
-    lda #CH_NONE                ; Clear the key press
-    sta CH
-    rts
+    jmp clear_key
 
 check_melee_key
     cmp #KEY_M                  ; 'M' key pressed?
-    bne done                    ; No, exit
+    bne clear_key               ; Other key: consume so CH doesn't stick
     lda #0                      ; Equip melee weapon
     sta equipped_weapon
-    lda #CH_NONE                ; Clear the key press
+
+clear_key
+    lda #CH_NONE                ; Always clear after reading CH
     sta CH
 
 done

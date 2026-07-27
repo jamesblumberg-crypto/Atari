@@ -328,7 +328,7 @@ loop
     .endp
 
 .proc get_room_occupied (.byte a) .reg
-bitmap = tmp
+bitmap = occ_bitmap             ; Dedicated scratch — never reuse tmp (breaks place_one_item)
     ; Treat out-of-range room indices as occupied so walks never leave 0-63.
     ; A bad index would otherwise read past occupied_rooms into weapon RAM.
     cmp #64
@@ -351,14 +351,14 @@ in_range
     lda room_col                ; Load in the column
     tay                         ; Copy to Y register
     lda (pow2_ptr),y            ; Get the power of 2 for the column
-    and bitmap                  ; AND with tmp to get the value of the bit position
+    and bitmap                  ; AND with occupancy row to test this room's bit
     ; A contains the result
 
     rts
     .endp
 
 .proc set_room_occupied (.byte a) .reg
-bitmap = tmp
+bitmap = occ_bitmap             ; Same dedicated scratch as get_room_occupied
     cmp #64
     bcs skip
     sta room_row
@@ -666,27 +666,57 @@ false
 ; Place one map item (tile id in A) on a random floor cell. Retries a few times.
 ; Lives in the $9800 code chain so the $6B80 arrow/monster RAM block stays
 ; under the screen buffer at $7000.
+; Tile id is kept in item_tile — never in tmp (get_room_occupied used to
+; stomp tmp and place occupancy bitfields as "gems": bows, doors, junk).
 .proc place_one_item
-    sta tmp
+    sta item_tile
     ; ldx #40
     ldx #80   ; increased to double the amount of tries to find a good place
 try
-    random16
-    cmp #map_width
-    bcs try
+    ; pick room slot 0...63
+    random8
+    and #63
+    sta room_pos
+
+    ; must be a real room (map gen put one here)
+    get_room_occupied room_pos
+    beq try_again   ; A=0 then empty slot
+
+    ; must not already have a gem
+    ldy room_pos
+    lda avail_doors,y
+    bne try_again  ; nonzero - already used
+
+    ; room top-left from ROM table (Y, X pairs)
+    lda room_pos
+    asl             ; *2 for word index
+    tax
+    lda room_positions,x ; y of room
+    sta room_y
+    inx
+    lda room_positions,x ; x of room
+    sta room_x
+
+    ; random cell inside room: offset 0...14
+pick_ox
+    random8
+    and #15
+    cmp #15
+    beq pick_ox ; 15 not allowed (only 0...14)
+    clc
+    adc room_x
     sta tmp_x
-try_y
-    random16
-    cmp #map_height
-    bcs try_y
+
+pick_oy
+    random8
+    and #15
+    cmp #15
+    beq pick_oy
+    clc
+    adc room_y
     sta tmp_y
 
-    ; reject if candidate is within 1 tile of the player (to avoid immediate pickup)
-    ; including the player's own cell. chebyshev: max(|dx|, |dy|) <= 1
-    ; why: gems/items shouldn't spawn underfoot or in the 8 neighboring cells, because the player will pick them up immediately and not see them on the map.
-    ; around the up-ladder start. still only place on map_floor later
-    ; | tmp_x - player_x | <= 1
-
+; still keep start clear (same idea as your near player check)
     lda tmp_x
     sec
     sbc player_x
@@ -697,8 +727,8 @@ try_y
 dx_pos
     sta tmp2
     cmp #2
-    bcs near_ok   ; | dx | > 1, so not near the player
-    ; | tmp_y - player_y | <= 1
+    bcs near_ok
+
     lda tmp_y
     sec
     sbc player_y
@@ -708,60 +738,203 @@ dx_pos
     adc #1
 dy_pos
     cmp #2
-    bcs near_ok   ; | dy | >= 2, far enough from the player
-    ; both | dx | <= 1 and | dy | <= 1, so the candidate is too close to the player
-    dex
-    bne try
-    rts
+    bcs near_ok
+
+    ; too close to player 
+    jmp try_again
 near_ok
 
+    ; must be floor (not door gap, ladder, bow, monster, other gem)
     stx tmp1
     jsr fast_map_ptr
     ldx tmp1
     ldy #0
     lda (map_ptr),y
     cmp #MAP_FLOOR
-    beq put         ; accepted floor cell, place the item
-    dex
-    bne try
-    rts
-put
-    lda tmp
+    bne try_again
+
+    ; Place the real item tile (gem id), not occupancy garbage
+    lda item_tile
     sta (map_ptr),y
+
+    ; mark this room as used
+    ldy room_pos
+    lda #1
+    sta avail_doors,y
+    rts
+
+try_again
+    dex
+    beq give_up
+    jmp try
+give_up
+    rts ; give up this gem after too many tries
+    .endp
+
+;     random16
+;     cmp #map_width
+;     bcs try
+;     sta tmp_x
+; try_y
+;     random16
+;     cmp #map_height
+;     bcs try_y
+;     sta tmp_y
+
+;     ; reject if candidate is within 1 tile of the player (to avoid immediate pickup)
+;     ; including the player's own cell. chebyshev: max(|dx|, |dy|) <= 1
+;     ; why: gems/items shouldn't spawn underfoot or in the 8 neighboring cells, because the player will pick them up immediately and not see them on the map.
+;     ; around the up-ladder start. still only place on map_floor later
+;     ; | tmp_x - player_x | <= 1
+
+;     lda tmp_x
+;     sec
+;     sbc player_x
+;     bcs dx_pos
+;     eor #$FF
+;     clc
+;     adc #1
+; dx_pos
+;     sta tmp2
+;     cmp #2
+;     bcs near_ok   ; | dx | > 1, so not near the player
+;     ; | tmp_y - player_y | <= 1
+;     lda tmp_y
+;     sec
+;     sbc player_y
+;     bcs dy_pos
+;     eor #$FF
+;     clc
+;     adc #1
+; dy_pos
+;     cmp #2
+;     bcs near_ok   ; | dy | >= 2, far enough from the player
+;     ; both | dx | <= 1 and | dy | <= 1, so the candidate is too close to the player
+;     dex
+;     bne try
+;     rts
+; near_ok
+
+;     stx tmp1
+;     jsr fast_map_ptr
+;     ldx tmp1
+;     ldy #0
+;     lda (map_ptr),y
+;     cmp #MAP_FLOOR
+;     beq put         ; accepted floor cell, place the item
+;     dex
+;     bne try
+;     rts
+; put
+;     lda tmp
+;     sta (map_ptr),y
+;     rts
+    ; .endp
+
+; Place exactly one gem for this dungeon floor (floors 1-5).
+; Floor 1 = blue, 2 = gold, 3 = red, 4 = black, 5 = white.
+; Skips if that gem is already in has_gems. Floors 6+ place nothing.
+.proc place_gems
+    lda #0
+    ldy #0
+clear_gem_rooms
+    sta avail_doors,y
+    iny
+    cpy #64
+    bne clear_gem_rooms
+
+    lda dungeon_floor
+    beq gems_done               ; safety: floor 0
+    cmp #6
+    bcs gems_done               ; only floors 1-5 have a gem
+    tax
+    dex                         ; 0-4 index
+
+    lda floor_gem_bit,x
+    and has_gems
+    bne gems_done               ; already collected
+
+    lda floor_gem_tile,x
+    jsr place_one_item
+
+gems_done
+    rts
+
+; Map tile ids for floors 1-5
+floor_gem_tile
+    .byte MAP_GEM_BLUE, MAP_GEM_GOLD, MAP_GEM_RED, MAP_GEM_BLACK, MAP_GEM_WHITE
+; Matching has_gems bits
+floor_gem_bit
+    .byte GEM_BLUE, GEM_GOLD, GEM_RED, GEM_BLACK, GEM_WHITE
+    .endp
+; Removed to .endp - moved from main.asm to here to prevent memory buffer overload
+; Pick monster ribbon from dungeon_floor and copy art into the live charset.
+; Floor 1 → ribbon 0 (first row of monsters_*.png, easiest)
+; Floor 2 → ribbon 1
+; Floor 3 → ribbon 2
+; Floor 4+ → ribbon 3 (bottom of sheet: large dragon art)
+; .proc setup_floor_monsters
+; 	lda dungeon_floor
+; 	sec
+; 	sbc #1                      ; 0-based
+; 	cmp #4
+; 	bcc ribbon_ok
+; 	lda #3                      ; cap at hardest ribbon
+; ribbon_ok
+; 	sta starting_monster
+
+; 	copy_monsters monsters_a cur_charset_a starting_monster
+; 	copy_monsters monsters_b cur_charset_b starting_monster
+; 	copy_monster_colors monsters_a_colors cur_char_colors_a starting_monster
+; 	copy_monster_colors monsters_b_colors cur_char_colors_b starting_monster
+; 	rts
+; 	.endp
+; floor - which 16-char ribbon to load from monsters_*.png 
+; floor 1 - ribbon 0 (chars 0-15)
+; floor 2 - ribbon 1 (chars 16-31)
+; floor 3 - ribbon 2 (chars 32-47, scorpion at 32/33)
+; floor 4+ - ribbon 3 (offset 384 = char 48 = tops of 2x2 band, map still 1 tile tall)
+.proc setup_floor_monsters
+    lda dungeon_floor
+    beq use_ribbon0 ; safety: treat 0 as floor 1
+    cmp #1
+    beq use_ribbon0
+    cmp #2
+    beq use_ribbon1
+    cmp #3
+    beq use_ribbon2
+    ; floor 4, 5, ...
+    lda #3
+    jmp store_ribbon
+
+use_ribbon0
+    lda #0
+    jmp store_ribbon
+use_ribbon1
+    lda #1
+    jmp store_ribbon
+use_ribbon2
+    lda #2
+
+store_ribbon
+    sta starting_monster
+
+    copy_monsters monsters_a cur_charset_a starting_monster
+    copy_monsters monsters_b cur_charset_b starting_monster
+    copy_monster_colors monsters_a_colors cur_char_colors_a starting_monster
+    copy_monster_colors monsters_b_colors cur_char_colors_b starting_monster
     rts
     .endp
 
-; Scatter any gems the player has not collected yet onto the current floor.
-.proc place_gems
-    lda has_gems
-    and #GEM_BLUE
-    bne skip_blue
-    lda #MAP_GEM_BLUE
-    jsr place_one_item
-skip_blue
-    lda has_gems
-    and #GEM_GOLD
-    bne skip_gold
-    lda #MAP_GEM_GOLD
-    jsr place_one_item
-skip_gold
-    lda has_gems
-    and #GEM_RED
-    bne skip_red
-    lda #MAP_GEM_RED
-    jsr place_one_item
-skip_red
-    lda has_gems
-    and #GEM_BLACK
-    bne skip_black
-    lda #MAP_GEM_BLACK
-    jsr place_one_item
-skip_black
-    lda has_gems
-    and #GEM_WHITE
-    bne skip_white
-    lda #MAP_GEM_WHITE
-    jsr place_one_item
-skip_white
-    rts
-    .endp
+; Floor 5: extra type-7 monster. with ribbon 3 loaded, type 7 = last pair
+; in the 16-char window (sheet chars 62-63 unless you move boss art later)
+; yellow 2x2 boss still only shows top 2x1 until multi-tile supprt added.
+.proc place_floor_boss
+	lda dungeon_floor
+	cmp #5
+	bne boss_done
+	lda #51                     ; map tile for monster type 7
+	jsr place_one_item
+boss_done
+	rts
+	.endp

@@ -71,6 +71,8 @@ loop
 .endm
 
 .macro copy_monster_colors src dest start
+    ; start = ribbon index 0-3 (matches setup_floor_monsters).
+    ; Color file has 3 bytes per slot; ribbon R uses slot R.
     mwa #:src tmp_addr1
 
     lda :start
@@ -87,39 +89,68 @@ loop
     lda (tmp_addr1),y
     sta :dest + 13
 .endm
-
-
+; Copy one normal ribbon (16 chars = 128 bytes) into live charset chars 88-103
+; your sheet: ribbons 0..2 are 8 monsters x 2 chars wide x 1 tall = 16 chars each
+; offset = ribbon *128 bytes (char 0, 16, 32, 48, 64, 80, 96, 112)
+; do not copy past char 111 (bow/ladders live at 112+)
 .macro copy_monsters src dest start
-    ; Characters are 8 bytes wide
-    ; Tiles are 2 chacters wide
-    ; In the dungeon/outdoor charset, there's an open section starting at character 88
+    ; Characters are 8 bytes wide; map monster tiles are 2 characters wide.
+    ; monsters_*.png is 4 ribbons of 8 monsters (each ~16x16 = 2x2 chars):
+    ;   ribbon 0 = chars 0-31 (easiest), … ribbon 3 = 96-127 (dragons / hardest art)
+    ; start = ribbon index 0-3; source offset = ribbon * 256 bytes.
+    ; Copied into dungeon charset at character 88 (tiles 44-51 use 88-103).
     mwa #:src tmp_addr1
     mwa #:dest tmp_addr2
 
     adw tmp_addr2 #(88 * 8)
-
+    ; removed this text - it was picking the wrong monster chars
+    ; Add ribbon * 256 to source (high byte += ribbon)
+    ; lda tmp_addr1 + 1
+    ; clc
+    ; adc :start
+    ; sta tmp_addr1 + 1
+; offseet = ribbon *128 (ribbon 0-0, 1-128, 2-256, 3-384)
+    ; lda :start
+    ; asl ; *2
+    ; asl ; *4
+    ; asl ; *8
+    ; asl ; *16
+    ; asl ; *32
+    ; asl ; *64
+    ; asl ; *128
+    ; sta tmp ; low 8 bits of offset
+    ; lda tmp_addr1
+    ; clc
+    ; adc tmp
+    ; sta tmp_addr1
+    ; lda tmp_addr1 + 1
+    ; adc #0 ; add carry - high byte (e.g. ribbon 2 - +$0100)
+    ; sta tmp_addr1 + 1
     lda :start
-    cmp #16
-    bne shift
-    adw tmp_addr1 #256
-    jmp done
-shift
-    asl
-    asl
-    asl
-    asl
-    sta tmp
-    adbw tmp_addr1 tmp
-
-done
+    asl          ;*2
+    asl          ;*4
+    asl          ;*8
+    asl          ;*16
+    asl          ;*32
+    asl          ;*64
+    asl          ;*128
+    php          ; save that carry 
+    sta tmp      ; low 8 bits ribbon 2- 0, ribbon 1-128
+    lda tmp_addr1
+    clc
+    adc tmp
+    sta tmp_addr1
+    lda tmp_addr1 + 1
+    plp          ; restore carry from *128
+    adc #0       ; high byte += 1 when offsset >= 256
+    sta tmp_addr1 + 1
     ldy #0
 loop
     lda (tmp_addr1),y
     sta (tmp_addr2),y
     iny
-
-    cpy #192
-    bne loop
+    cpy #128             ; 24 chars - slots 88-111 only (leave 112+ for bow/ladders)
+    bne loop                ; 256 bytes = full ribbon (32 chars)
 
 .endm
 

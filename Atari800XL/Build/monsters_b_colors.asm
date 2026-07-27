@@ -1,54 +1,22 @@
 	org monsters_b_colors
 
+	; ribbon 0 (floor 1) - 3 bytes, bit k of byte g = yellow-flag of ribbon char 8g+k
+	.byte %00000000
+	.byte %00000100
+	.byte %11001100
 
-	.byte %00000000   ; starting_monster = 0
-	.byte %00000100   ; starting_monster = 0
-	.byte %11001100   ; starting_monster = 0
-	.byte %00000000   ; starting_monster = 1
-	.byte %00000001   ; starting_monster = 1
-	.byte %00110011   ; starting_monster = 1
-	.byte %01000000   ; starting_monster = 2
-	.byte %11000000   ; starting_monster = 2
-	.byte %00001100   ; starting_monster = 2
-	.byte %00010000   ; starting_monster = 3
-	.byte %00110000   ; starting_monster = 3
-	.byte %11000011   ; starting_monster = 3
-	.byte %00000100   ; starting_monster = 4
-	.byte %11001100   ; starting_monster = 4
-	.byte %11110000   ; starting_monster = 4
-	.byte %00000001   ; starting_monster = 5
-	.byte %00110011   ; starting_monster = 5
-	.byte %11111100   ; starting_monster = 5
-	.byte %11000000   ; starting_monster = 6
-	.byte %00001100   ; starting_monster = 6
-	.byte %01111111   ; starting_monster = 6
-	.byte %00110000   ; starting_monster = 7
-	.byte %11000011   ; starting_monster = 7
-	.byte %00011111   ; starting_monster = 7
-	.byte %11001100   ; starting_monster = 8
-	.byte %11110000   ; starting_monster = 8
-	.byte %10000111   ; starting_monster = 8
-	.byte %00110011   ; starting_monster = 9
-	.byte %11111100   ; starting_monster = 9
-	.byte %00100001   ; starting_monster = 9
-	.byte %00001100   ; starting_monster = 10
-	.byte %01111111   ; starting_monster = 10
-	.byte %10001000   ; starting_monster = 10
-	.byte %11000011   ; starting_monster = 11
-	.byte %00011111   ; starting_monster = 11
-	.byte %00100010   ; starting_monster = 11
-	.byte %11110000   ; starting_monster = 12
-	.byte %10000111   ; starting_monster = 12
-	.byte %11001000   ; starting_monster = 12
-	.byte %11111100   ; starting_monster = 13
-	.byte %00100001   ; starting_monster = 13
-	.byte %00110010   ; starting_monster = 13
-	.byte %01111111   ; starting_monster = 14
-	.byte %10001000   ; starting_monster = 14
-	.byte %00001100   ; starting_monster = 14
-	.byte %00011111   ; starting_monster = 15
-	.byte %00100010   ; starting_monster = 15
-	.byte %11000011   ; starting_monster = 15
-	.byte %10000111   ; starting_monster = 16
-	.byte %11001000   ; starting_monster = 16
-	.byte %11110000   ; starting_monster = 16
+	; ribbon 1 (floor 2) - 3 bytes, bit k of byte g = yellow-flag of ribbon char 8g+k
+	.byte %11001100
+	.byte %11110000
+	.byte %10000111
+
+	; ribbon 2 (floor 3) - 3 bytes, bit k of byte g = yellow-flag of ribbon char 8g+k
+	.byte %10000111
+	.byte %11001000
+	.byte %11110000
+
+	; ribbon 3 (floor 4) - 3 bytes, bit k of byte g = yellow-flag of ribbon char 8g+k
+	.byte %11110000
+	.byte %11110000
+	.byte %11110000
+
