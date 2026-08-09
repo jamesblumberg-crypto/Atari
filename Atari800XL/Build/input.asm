@@ -245,6 +245,20 @@ blocked
     ldy #0
     lda (dir_ptr),y             ; Load monster tile ID (44-51)
     sta tmp1                    ; Save tile ID for later XP calculation (use tmp1, not tmp!)
+
+    ; Floor-4 boss: any of the 2x2 cells (44-47) shares boss_hp
+    lda dungeon_floor
+    cmp #4
+    bne normal_monster_attack
+    lda tmp1
+    cmp #MAP_BOSS_TL
+    bcc normal_monster_attack
+    cmp #(MAP_BOSS_BR + 1)
+    bcs normal_monster_attack
+    jmp attack_floor4_boss
+
+normal_monster_attack
+    lda tmp1
     sec
     sbc #44                     ; Convert tile 44-51 to index 0-7
     tax                         ; Use as index
@@ -253,7 +267,7 @@ blocked
     lda monster_dmg_table,x     ; Load monster's base damage
     sta monster_dmg             ; Store in monster_dmg variable
 
-    jsr scale_monster_stats     ; Floor depth + floor-5 boss override
+    jsr scale_monster_stats     ; Floor depth scaling
 
 combat_loop
     ; Player attacks monster - use equipped weapon's damage
@@ -366,6 +380,47 @@ death_flash
 death_loop
     ; Game over - infinite loop freezes the game
     jmp death_loop
+    .endp
+
+; Stationary 2x2 boss (floor 4): any cell 44-47 shares boss_hp
+.proc attack_floor4_boss
+    lda boss_alive
+    bne boss_is_up
+    rts
+boss_is_up
+    lda equipped_weapon
+    bne boss_use_ranged
+    lda player_melee_dmg
+    jmp boss_do_hit
+boss_use_ranged
+    lda player_ranged_dmg
+boss_do_hit
+    sta tmp2
+    lda boss_hp
+    sec
+    sbc tmp2
+    sta boss_hp
+    bmi boss_killed
+    beq boss_killed
+
+    lda player_hp
+    sec
+    sbc #25
+    sta player_hp
+    bmi boss_slew_player
+    beq boss_slew_player
+    jsr update_hp_bar
+    rts
+boss_slew_player
+    lda #0
+    sta player_hp
+    jsr update_hp_bar
+boss_player_dead_loop
+    jmp boss_player_dead_loop   ; freeze (same outcome as player_dead)
+boss_killed
+    jsr kill_boss_place_well
+    blit_screen()
+    rts
     .endp
 
 ; Monster attack damage when a monster is adjacent to the player.

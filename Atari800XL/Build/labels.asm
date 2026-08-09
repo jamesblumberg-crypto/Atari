@@ -20,6 +20,16 @@ MAP_GEM_BLUE            = 36
 MAP_GEM_RED             = 37
 MAP_GEM_GOLD            = 38
 
+; Well (dungeon charset chars 22-25 = two map tiles: 11 and 12)
+MAP_WELL_L              = 11    ; chars 22-23
+MAP_WELL_R              = 12    ; chars 24-25
+
+; Floor-4 stationary boss: 2x2 map tiles (each tile = 2 chars in live slots 88-95)
+MAP_BOSS_TL             = 44
+MAP_BOSS_TR             = 45
+MAP_BOSS_BL             = 46
+MAP_BOSS_BR             = 47
+
 ; Inventory bitfield (has_gems)
 GEM_BLUE                = %00000001
 GEM_GOLD                = %00000010

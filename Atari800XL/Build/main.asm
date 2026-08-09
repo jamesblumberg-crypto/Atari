@@ -136,6 +136,9 @@ player_level         = $e9
 has_gems             = $ea    ; bitfield: blue/gold/red/black/white (see GEM_* in labels.asm)
 item_tile            = $eb    ; Map tile id while place_one_item runs (must not share tmp)
 occ_bitmap           = $ec    ; Scratch for get/set_room_occupied (must not share tmp)
+boss_tl_ptr          = $f0    ; 16-bit map address of boss top-left cell
+boss_hp              = $f2    ; Floor-4 boss hit points
+boss_alive           = $f3    ; 0 = dead/absent, 1 = alive
 
 ; Weapon system variables
 player_ranged_dmg    = $7371  ; Ranged weapon damage (bow)
@@ -219,6 +222,7 @@ clear_all_missiles
 	sta equipped_weapon     ; Start with melee equipped (0 = melee)
 	sta arrow_active        ; No arrow in flight
 	sta has_gems            ; No gems collected yet
+	sta boss_alive          ; No floor-4 boss until floor 4
 	lda #0
 	sta monster_contact_cooldown ; Clears the value of monster_contact_cooldown to ensure monsters can damage immediately if player starts next to them
 	lda #SOUTH              ; Default facing direction
@@ -1254,6 +1258,12 @@ place
 
 ; Gemini Move a small subset of monsters each update tick (lightweight).
 .proc update_monsters
+	; Floor 4 boss is stationary — no chase AI
+	lda dungeon_floor
+	cmp #4
+	bne um_not_boss_floor
+	rts
+um_not_boss_floor
 	lda RTCLK2
 	cmp monster_tick
 	bne update_monsters_tick_changed
@@ -1936,7 +1946,11 @@ found_floor
 
 	new_map()
 	jsr setup_floor_monsters    ; new ribbon for this depth
+	lda dungeon_floor
+	cmp #4
+	beq skip_random_monsters    ; floor 4: boss only
 	place_monsters num_monsters #8
+skip_random_monsters
 	init_player_ptr()
 	lda has_bow
 	bne skip_place_bow
@@ -2148,54 +2162,7 @@ passable
     rts
     .endp
 
-; Handle arrow hitting a monster
-.proc arrow_hit_monster
-    ldy #0
-    lda (map_ptr),y
-    sta tmp1
-
-    lda tmp1
-    sec
-    sbc #44
-    tax
-
-    ; Scaled HP for this floor (same scale_monster_stats as melee).
-    lda monster_hp_table,x
-    sta monster_hp
-    lda #0
-    sta monster_dmg             ; scale only needs HP here; dmg unused for arrow
-    ; tmp1 already holds monster tile id
-    jsr scale_monster_stats
-
-    ; Middle-ground balance:
-    ; - Guaranteed kill if (ranged damage * 3) >= scaled monster HP
-    ; - Otherwise 25% chance to kill (lucky shot)
-    lda player_ranged_dmg
-    sta tmp2
-    asl
-    clc
-    adc tmp2
-    cmp monster_hp
-    bcs kill_monster
-
-    jsr random16
-    and #3
-    bne survived
-
-kill_monster
-    lda monster_xp_table,x
-    clc
-    adc player_xp
-    sta player_xp
-    jsr update_xp_bar
-    jsr check_level_up
-    ldy #0
-    lda #MAP_FLOOR
-    sta (map_ptr),y
-
-survived
-    rts
-    .endp
+; arrow_hit_monster lives in map_gen.asm (keeps $6B80 under screen $7000)
 
 ; Deactivate the arrow
 .proc deactivate_arrow

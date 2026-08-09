@@ -926,15 +926,310 @@ store_ribbon
     rts
     .endp
 
-; Floor 5: extra type-7 monster. with ribbon 3 loaded, type 7 = last pair
-; in the 16-char window (sheet chars 62-63 unless you move boss art later)
-; yellow 2x2 boss still only shows top 2x1 until multi-tile supprt added.
+; Floor 4 only: stationary 2x2 boss dragon (sheet 52-55 tops, 68-71 bottoms)
+; live 88-95 as MAP_BOSS_TL/TR/BL/BR. Kill places well (dungeon chars 22-25).
 .proc place_floor_boss
 	lda dungeon_floor
-	cmp #5
-	bne boss_done
-	lda #51                     ; map tile for monster type 7
-	jsr place_one_item
-boss_done
+	cmp #4
+	beq do_floor4_boss
+	lda #0
+	sta boss_alive
+	rts
+
+do_floor4_boss
+	jsr load_boss_dragon_gfx
+
+	ldx #80
+try_boss_spot
+	random8
+	and #63
+	sta room_pos
+	get_room_occupied room_pos
+	bne boss_room_ok
+	jmp try_boss_again
+boss_room_ok
+	lda room_pos
+	asl
+	tay
+	lda room_positions,y
+	sta room_y
+	iny
+	lda room_positions,y
+	sta room_x
+
+pick_bx
+	random8
+	and #15
+	cmp #13
+	bcs pick_bx
+	clc
+	adc room_x
+	sta tmp_x
+pick_by
+	random8
+	and #15
+	cmp #13
+	bcs pick_by
+	clc
+	adc room_y
+	sta tmp_y
+
+	lda tmp_x
+	sec
+	sbc player_x
+	bcs bx_pos
+	eor #$ff
+	clc
+	adc #1
+bx_pos
+	cmp #3
+	bcs boss_dx_ok
+	jmp try_boss_again
+boss_dx_ok
+	lda tmp_y
+	sec
+	sbc player_y
+	bcs by_pos
+	eor #$ff
+	clc
+	adc #1
+by_pos
+	cmp #3
+	bcs boss_dy_ok
+	jmp try_boss_again
+boss_dy_ok
+	jsr fast_map_ptr
+	ldy #0
+	lda (map_ptr),y
+	cmp #MAP_FLOOR
+	beq boss_tl_ok
+	jmp try_boss_again
+boss_tl_ok
+	lda map_ptr
+	clc
+	adc #1
+	sta tmp_addr1
+	lda map_ptr+1
+	adc #0
+	sta tmp_addr1+1
+	lda (tmp_addr1),y
+	cmp #MAP_FLOOR
+	beq boss_tr_ok
+	jmp try_boss_again
+boss_tr_ok
+	lda map_ptr
+	clc
+	adc #<map_width
+	sta tmp_addr1
+	lda map_ptr+1
+	adc #>map_width
+	sta tmp_addr1+1
+	lda (tmp_addr1),y
+	cmp #MAP_FLOOR
+	beq boss_bl_ok
+	jmp try_boss_again
+boss_bl_ok
+	lda tmp_addr1
+	clc
+	adc #1
+	sta tmp_addr2
+	lda tmp_addr1+1
+	adc #0
+	sta tmp_addr2+1
+	lda (tmp_addr2),y
+	cmp #MAP_FLOOR
+	beq boss_place_tiles
+	jmp try_boss_again
+
+boss_place_tiles
+	mwa map_ptr boss_tl_ptr
+	lda #MAP_BOSS_TL
+	sta (map_ptr),y
+	lda map_ptr
+	clc
+	adc #1
+	sta tmp_addr1
+	lda map_ptr+1
+	adc #0
+	sta tmp_addr1+1
+	lda #MAP_BOSS_TR
+	sta (tmp_addr1),y
+	lda boss_tl_ptr
+	clc
+	adc #<map_width
+	sta tmp_addr1
+	lda boss_tl_ptr+1
+	adc #>map_width
+	sta tmp_addr1+1
+	lda #MAP_BOSS_BL
+	sta (tmp_addr1),y
+	lda tmp_addr1
+	clc
+	adc #1
+	sta tmp_addr2
+	lda tmp_addr1+1
+	adc #0
+	sta tmp_addr2+1
+	lda #MAP_BOSS_BR
+	sta (tmp_addr2),y
+
+	lda #1
+	sta boss_alive
+	lda #220
+	sta boss_hp
+	rts
+
+try_boss_again
+	dex
+	beq boss_give_up
+	jmp try_boss_spot
+boss_give_up
+	lda #0
+	sta boss_alive
 	rts
 	.endp
+
+; Second big dragon into live 88-95 (A and B). Tops 52-55, bottoms 68-71.
+.proc load_boss_dragon_gfx
+	mwa #monsters_a tmp_addr1
+	adw tmp_addr1 #(52 * 8)
+	mwa #cur_charset_a tmp_addr2
+	adw tmp_addr2 #(88 * 8)
+	jsr copy_n_bytes_32
+	mwa #monsters_a tmp_addr1
+	adw tmp_addr1 #(68 * 8)
+	mwa #cur_charset_a tmp_addr2
+	adw tmp_addr2 #(92 * 8)
+	jsr copy_n_bytes_32
+	mwa #monsters_b tmp_addr1
+	adw tmp_addr1 #(52 * 8)
+	mwa #cur_charset_b tmp_addr2
+	adw tmp_addr2 #(88 * 8)
+	jsr copy_n_bytes_32
+	mwa #monsters_b tmp_addr1
+	adw tmp_addr1 #(68 * 8)
+	mwa #cur_charset_b tmp_addr2
+	adw tmp_addr2 #(92 * 8)
+	jsr copy_n_bytes_32
+	rts
+	.endp
+
+.proc copy_n_bytes_32
+	ldy #0
+c32_loop
+	lda (tmp_addr1),y
+	sta (tmp_addr2),y
+	iny
+	cpy #32
+	bne c32_loop
+	rts
+	.endp
+
+; After boss dies: well on top row (tiles 11-12 / chars 22-25), floor below.
+.proc kill_boss_place_well
+	lda #0
+	sta boss_alive
+	ldy #0
+	lda #MAP_WELL_L
+	sta (boss_tl_ptr),y
+	lda boss_tl_ptr
+	clc
+	adc #1
+	sta map_ptr
+	lda boss_tl_ptr+1
+	adc #0
+	sta map_ptr+1
+	lda #MAP_WELL_R
+	sta (map_ptr),y
+	lda boss_tl_ptr
+	clc
+	adc #<map_width
+	sta map_ptr
+	lda boss_tl_ptr+1
+	adc #>map_width
+	sta map_ptr+1
+	lda #MAP_FLOOR
+	sta (map_ptr),y
+	lda map_ptr
+	clc
+	adc #1
+	sta map_ptr
+	lda map_ptr+1
+	adc #0
+	sta map_ptr+1
+	lda #MAP_FLOOR
+	sta (map_ptr),y
+
+	lda player_xp
+	clc
+	adc #80
+	sta player_xp
+	jsr update_xp_bar
+	jsr check_level_up
+	rts
+	.endp
+
+; Handle arrow hitting a monster (relocated from $6B80 block)
+.proc arrow_hit_monster
+    ldy #0
+    lda (map_ptr),y
+    sta tmp1
+
+    lda dungeon_floor
+    cmp #4
+    bne arrow_normal_mon
+    lda tmp1
+    cmp #MAP_BOSS_TL
+    bcc arrow_normal_mon
+    cmp #(MAP_BOSS_BR + 1)
+    bcs arrow_normal_mon
+    lda boss_alive
+    beq arrow_boss_done
+    lda player_ranged_dmg
+    sta tmp2
+    lda boss_hp
+    sec
+    sbc tmp2
+    sta boss_hp
+    bmi arrow_boss_kill
+    beq arrow_boss_kill
+arrow_boss_done
+    rts
+arrow_boss_kill
+    jsr kill_boss_place_well
+    blit_screen()
+    rts
+
+arrow_normal_mon
+    lda tmp1
+    sec
+    sbc #44
+    tax
+    lda monster_hp_table,x
+    sta monster_hp
+    lda #0
+    sta monster_dmg
+    jsr scale_monster_stats
+    lda player_ranged_dmg
+    sta tmp2
+    asl
+    clc
+    adc tmp2
+    cmp monster_hp
+    bcs kill_monster
+    jsr random16
+    and #3
+    bne survived
+kill_monster
+    lda monster_xp_table,x
+    clc
+    adc player_xp
+    sta player_xp
+    jsr update_xp_bar
+    jsr check_level_up
+    ldy #0
+    lda #MAP_FLOOR
+    sta (map_ptr),y
+survived
+    rts
+    .endp
