@@ -24,6 +24,16 @@ MAP_GEM_GOLD            = 38
 MAP_WELL_L              = 11    ; chars 22-23
 MAP_WELL_R              = 12    ; chars 24-25
 
+; Keys (inventory bits)
+KEY_BLUE                = %00000001
+KEY_RED                 = %00000010
+KEY_GOLD                = %00000100
+KEY_WHITE               = %00001000
+KEY_BLACK               = %00010000
+
+; Floor key item (map tile - chars 12-13 via blit_tile asl)
+MAP_KEY_BLUE            = 6
+
 ; Floor-4 stationary boss: 2x2 map tiles (each tile = 2 chars in live slots 88-95)
 MAP_BOSS_TL             = 44
 MAP_BOSS_TR             = 45

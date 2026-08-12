@@ -105,13 +105,13 @@ room_row			= $b7
 pow2_ptr			= $b8 ; 16 bit
 occupied_rooms_ptr  = $ba ; 16 bit
 doors				= $bc
-tmp2					= $bd
+tmp2				= $bd
 rand16				= $be
 clock				= $bf
 anim_timer			= $c0
 charset_a			= $c1
-num_monsters			= $c2
-starting_monster		= $c3
+num_monsters		= $c2
+starting_monster	= $c3
 no_clip				= $c4
 char_colors_ptr		= $c5 ; 16 bit
 
@@ -134,6 +134,7 @@ player_max_hp        = $e7
 player_xp            = $e8
 player_level         = $e9
 has_gems             = $ea    ; bitfield: blue/gold/red/black/white (see GEM_* in labels.asm)
+has_keys             = $f6	  ; bitfield: blue/red/gold/white/black keys
 item_tile            = $eb    ; Map tile id while place_one_item runs (must not share tmp)
 occ_bitmap           = $ec    ; Scratch for get/set_room_occupied (must not share tmp)
 boss_tl_ptr          = $f0    ; 16-bit map address of boss top-left cell
@@ -225,6 +226,7 @@ clear_all_missiles
 	sta equipped_weapon     ; Start with melee equipped (0 = melee)
 	sta arrow_active        ; No arrow in flight
 	sta has_gems            ; No gems collected yet
+	sta has_keys            ; No keys collected yet
 	sta boss_alive          ; No floor-4 boss until floor 4
 	lda #0
 	sta monster_contact_cooldown ; Clears the value of monster_contact_cooldown to ensure monsters can damage immediately if player starts next to them

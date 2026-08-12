@@ -1152,7 +1152,7 @@ c32_loop
 	lda boss_tl_ptr+1
 	adc #>map_width
 	sta map_ptr+1
-	lda #MAP_FLOOR
+	lda #MAP_KEY_BLUE   ; key beside the well
 	sta (map_ptr),y
 	lda map_ptr
 	clc
@@ -1161,7 +1161,7 @@ c32_loop
 	lda map_ptr+1
 	adc #0
 	sta map_ptr+1
-	lda #MAP_FLOOR
+	lda #MAP_FLOOR      ; still floor tile
 	sta (map_ptr),y
 
 	lda player_xp

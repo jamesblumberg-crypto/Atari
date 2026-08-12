@@ -141,8 +141,14 @@ check_monster
 check_item
     ldi dir_ptr                 ; Re-load tile from direction
     cmp #MAP_BOW                ; Is it a bow pickup?
-    bne check_gem
+    bne check_key
     jsr pickup_bow              ; Yes, pick up the bow!
+    jmp check_passable          ; Continue to move onto the tile after pickup
+
+check_key
+    cmp #MAP_KEY_BLUE           ; is the blue key on the floor?
+    bne check_gem               ; No, check for gems
+    jsr pickup_key              ; Yes, pick up the key!
     jmp check_passable          ; Continue to move onto the tile after pickup
 
 check_gem
@@ -537,6 +543,22 @@ not_boss
 
     ; Update the ranged damage display on HUD
     jsr update_ranged_display
+
+    rts
+    .endp
+
+; pick up blue key at dir_ptr. sets KEY_BLUE in has_keys, clears map tile
+.proc pickup_key
+    lda #KEY_BLUE
+    ora has_keys
+    sta has_keys
+
+    ldy #0
+    lda #MAP_FLOOR
+    sta (dir_ptr),y
+
+    ; HUD refresh comes in step 5:
+    ; jsr update_key_display
 
     rts
     .endp
