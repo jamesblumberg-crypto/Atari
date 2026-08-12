@@ -139,6 +139,9 @@ occ_bitmap           = $ec    ; Scratch for get/set_room_occupied (must not shar
 boss_tl_ptr          = $f0    ; 16-bit map address of boss top-left cell
 boss_hp              = $f2    ; Floor-4 boss hit points
 boss_alive           = $f3    ; 0 = dead/absent, 1 = alive
+boss_map_x		     = $f4    ; map column of boss top-left
+boss_map_y           = $f5    ; map row of boss top-left
+
 
 ; Weapon system variables
 player_ranged_dmg    = $7371  ; Ranged weapon damage (bow)
@@ -1258,10 +1261,25 @@ place
 
 ; Gemini Move a small subset of monsters each update tick (lightweight).
 .proc update_monsters
-	; Floor 4 boss is stationary — no chase AI
+	; Floor 4: only the 2x2 boss acts (no normal monster pack)
 	lda dungeon_floor
 	cmp #4
 	bne um_not_boss_floor
+	lda boss_alive
+	beq um_boss_floor_idle
+	; same timing as normal monsters
+	lda RTCLK2
+	cmp monster_tick
+	beq um_boss_floor_idle
+	sta monster_tick
+	inc monster_tick_div
+	lda Monster_tick_div
+	cmp #20  ; same speed constant as below (raise = slower)
+	bcc um_boss_floor_idle
+	lda #0
+	sta monster_tick_div
+	jsr move_floor4_boss
+um_boss_floor_idle 
 	rts
 um_not_boss_floor
 	lda RTCLK2

@@ -1043,6 +1043,10 @@ boss_bl_ok
 
 boss_place_tiles
 	mwa map_ptr boss_tl_ptr
+    lda tmp_x
+    sta boss_map_x
+    lda tmp_y
+    sta boss_map_y
 	lda #MAP_BOSS_TL
 	sta (map_ptr),y
 	lda map_ptr
@@ -1168,6 +1172,284 @@ c32_loop
 	jsr check_level_up
 	rts
 	.endp
+
+; move the 2x2 boss one step toward the player (N/S/E/W)
+; uses boss_tl_ptr as top-left map address. prefers larger axis gap.
+.proc move_floor4_boss
+    lda boss_alive
+    bne mfb_go
+    rts
+mfb_go
+    ; rebuild boss map x,y from boss_tl_ptr into tmp_x / tmp_y
+    ; (simple: store boss_x / boss_y when placing - see optional Step C)
+    ; for now assume you add boss_map_x / boss_map_y (see Step C)
+    
+    lda boss_map_x
+    cmp player_x
+    beq mfb_check_y
+    bcc mfb_want_east
+    ; boss x > player x - try west
+    jsr boss_try_west
+    bcs mfb_moved
+    ; fall through try other axes
+mfb_want_east
+    jsr boss_try_east
+    bcs mfb_moved
+mfb_check_y
+    lda boss_map_y
+    cmp player_y
+    beq mfb_done
+    bcc mfb_want_south
+    jsr boss_try_north
+    bcs mfb_moved
+    jmp mfb_done
+mfb_want_south
+    jsr boss_try_south
+mfb_moved
+    ; carry set if a try_* succeeded (they blit)
+mfb_done
+    rts
+    .endp
+
+; IN: tmp_x, tmp_y = cell to test
+; Out: carry set = ok (floor or already part of boss)
+.proc boss_cell_ok
+    jsr fast_map_ptr
+    ldy #0
+    lda (map_ptr),y
+    cmp #MAP_FLOOR
+    beq bco_yes
+    cmp #MAP_BOSS_TL
+    beq bco_yes
+    cmp #MAP_BOSS_TR
+    beq bco_yes
+    cmp #MAP_BOSS_BL
+    beq bco_yes
+    cmp #MAP_BOSS_BR
+    beq bco_yes
+    clc
+    rts
+bco_yes
+    sec
+    rts
+    .endp
+
+.proc boss_clear_footprint
+    ldy #0
+    lda #MAP_FLOOR
+    sta (boss_tl_ptr),y        ; TL
+    lda boss_tl_ptr
+    clc
+    adc #1
+    sta map_ptr
+    lda boss_tl_ptr+1
+    adc #0
+    sta map_ptr+1
+    lda #MAP_FLOOR
+    sta (map_ptr),y            ; TR
+    lda boss_tl_ptr
+    clc
+    adc #<map_width
+    sta map_ptr
+    lda boss_tl_ptr+1
+    adc #>map_width
+    sta map_ptr+1
+    lda #MAP_FLOOR
+    sta (map_ptr),y            ; BL
+    lda map_ptr
+    clc
+    adc #1
+    sta map_ptr
+    lda map_ptr+1
+    adc #0
+    sta map_ptr+1
+    lda #MAP_FLOOR
+    sta (map_ptr),y            ; BR
+    rts
+    .endp
+
+.proc boss_write_footprint
+    jsr fast_map_ptr
+    mwa map_ptr boss_tl_ptr
+    ldy #0
+    lda #MAP_BOSS_TL
+    sta (map_ptr),y
+    lda map_ptr
+    clc
+    adc #1
+    sta tmp_addr1
+    lda map_ptr+1
+    adc #0
+    sta tmp_addr1+1
+    lda #MAP_BOSS_TR
+    sta (tmp_addr1),y
+    lda boss_tl_ptr
+    clc
+    adc #<map_width
+    sta tmp_addr1
+    lda boss_tl_ptr+1
+    adc #>map_width
+    sta tmp_addr1+1
+    lda #MAP_BOSS_BL
+    sta (tmp_addr1),y
+    lda tmp_addr1
+    clc
+    adc #1
+    sta tmp_addr2
+    lda tmp_addr1+1
+    adc #0
+    sta tmp_addr2+1
+    lda #MAP_BOSS_BR
+    sta (tmp_addr2),y
+    lda tmp_x
+    sta boss_map_x
+    lda tmp_y
+    sta boss_map_y
+    rts
+    .endp
+
+.proc boss_try_east
+    lda boss_map_x
+    clc
+    adc #1
+    sta tmp_x
+    lda boss_map_y
+    sta tmp_y
+    jsr boss_cell_ok
+    bcc bte_no
+    inc tmp_x
+    jsr boss_cell_ok
+    bcc bte_no
+    dec tmp_x
+    inc tmp_y
+    jsr boss_cell_ok
+    bcc bte_no
+    inc tmp_x
+    jsr boss_cell_ok
+    bcc bte_no
+    lda boss_map_x
+    clc
+    adc #1
+    sta tmp_x
+    lda boss_map_y
+    sta tmp_y
+    jsr boss_clear_footprint
+    jsr boss_write_footprint
+    blit_screen()
+    sec
+    rts
+bte_no
+    clc
+    rts
+    .endp
+
+.proc boss_try_west
+    lda boss_map_x
+    beq btw_no            ; already at left edge
+    sec
+    sbc #1
+    sta tmp_x
+    lda boss_map_y
+    sta tmp_y
+    jsr boss_cell_ok
+    bcc btw_no
+    inc tmp_x
+    jsr boss_cell_ok
+    bcc btw_no
+    dec tmp_x
+    inc tmp_y
+    jsr boss_cell_ok
+    bcc btw_no
+    inc tmp_x
+    jsr boss_cell_ok
+    bcc btw_no
+    lda boss_map_x
+    sec
+    sbc #1
+    sta tmp_x
+    lda boss_map_y
+    sta tmp_y
+    jsr boss_clear_footprint
+    jsr boss_write_footprint
+    blit_screen()
+    sec
+    rts
+btw_no
+    clc
+    rts
+    .endp
+
+.proc boss_try_south
+    lda boss_map_x
+    sta tmp_x
+    lda boss_map_y
+    clc
+    adc #1
+    sta tmp_y
+    jsr boss_cell_ok
+    bcc bts_no
+    inc tmp_x
+    jsr boss_cell_ok
+    bcc bts_no
+    dec tmp_x
+    inc tmp_y
+    jsr boss_cell_ok
+    bcc bts_no
+    inc tmp_x
+    jsr boss_cell_ok
+    bcc bts_no
+    lda boss_map_x
+    sta tmp_x
+    lda boss_map_y
+    clc
+    adc #1
+    sta tmp_y
+    jsr boss_clear_footprint
+    jsr boss_write_footprint
+    blit_screen()
+    sec
+    rts
+bts_no
+    clc
+    rts
+    .endp
+
+.proc boss_try_north
+    lda boss_map_y
+    beq btn_no            ; already at top
+    lda boss_map_x
+    sta tmp_x
+    lda boss_map_y
+    sec
+    sbc #1
+    sta tmp_y
+    jsr boss_cell_ok
+    bcc btn_no
+    inc tmp_x
+    jsr boss_cell_ok
+    bcc btn_no
+    dec tmp_x
+    inc tmp_y
+    jsr boss_cell_ok
+    bcc btn_no
+    inc tmp_x
+    jsr boss_cell_ok
+    bcc btn_no
+    lda boss_map_x
+    sta tmp_x
+    lda boss_map_y
+    sec
+    sbc #1
+    sta tmp_y
+    jsr boss_clear_footprint
+    jsr boss_write_footprint
+    blit_screen()
+    sec
+    rts
+btn_no
+    clc
+    rts
+    .endp    
 
 ; Handle arrow hitting a monster (relocated from $6B80 block)
 .proc arrow_hit_monster
