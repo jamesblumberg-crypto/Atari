@@ -558,7 +558,7 @@ not_boss
     sta (dir_ptr),y
 
     ; HUD refresh comes in step 5:
-    ; jsr update_key_display
+    jsr update_key_display
 
     rts
     .endp

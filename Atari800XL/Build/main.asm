@@ -289,6 +289,7 @@ skip_monster_tables
 	; Draw initial screen before game loop
 	blit_screen()
 	jsr update_gem_display      ; Blank slots until gems are found
+	jsr update_key_display	  ; Blank slots until keys are found
 
 game
 	mva RTCLK2 clock
@@ -976,24 +977,24 @@ loop
 	blit_char #UI_AMULET_SE_ICON_RIGHT screen_ptr #34
 
 	; Keys
-	sbw screen_ptr #(screen_char_width * 2)
-	blit_char #UI_BLUE_KEY_ICON screen_ptr #26
-	blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
+	; sbw screen_ptr #(screen_char_width * 2)
+	; blit_char #UI_BLUE_KEY_ICON screen_ptr #26
+	; blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
 
-	blit_char #UI_BLACK_KEY_CAP_LEFT screen_ptr #35
-	blit_char #UI_BLACK_KEY_ICON_LEFT screen_ptr #36
-	blit_char #UI_BLACK_KEY_ICON_RIGHT screen_ptr #37
-	blit_char #UI_BLACK_KEY_CAP_RIGHT screen_ptr #38
+	; blit_char #UI_BLACK_KEY_CAP_LEFT screen_ptr #35
+	; blit_char #UI_BLACK_KEY_ICON_LEFT screen_ptr #36
+	; blit_char #UI_BLACK_KEY_ICON_RIGHT screen_ptr #37
+	; blit_char #UI_BLACK_KEY_CAP_RIGHT screen_ptr #38
 
-	adw screen_ptr #screen_char_width
-	blit_char #UI_RED_KEY_ICON screen_ptr #26
-	blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
-	blit_char #UI_WHITE_KEY_ICON screen_ptr #36
-	blit_char #UI_KEY_ICON_RIGHT screen_ptr #37
+	; adw screen_ptr #screen_char_width
+	; blit_char #UI_RED_KEY_ICON screen_ptr #26
+	; blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
+	; blit_char #UI_WHITE_KEY_ICON screen_ptr #36
+	; blit_char #UI_KEY_ICON_RIGHT screen_ptr #37
 
-	adw screen_ptr #screen_char_width
-	blit_char #UI_GOLD_KEY_ICON screen_ptr #26
-	blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
+	; adw screen_ptr #screen_char_width
+	; blit_char #UI_GOLD_KEY_ICON screen_ptr #26
+	; blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
 
 	rts
 	.endp
@@ -1063,6 +1064,78 @@ gold_blank
 	rts
 	.endp
 
+; Refresh key icons from has_keys (rows 7-9, left + right of amulet)
+; Layout:
+;    row 7: blue (26-27), black (35-38)
+;    row 8: red (26-27), white (36-37)
+;    row 9: gold (26-27)
+.proc update_key_display
+    ; --- row 7: blue + black ---
+	mwa #(screen + 7 * screen_char_width) screen_ptr
+
+	lda has_keys
+	and #KEY_BLUE
+	beq blue_blank
+	blit_char #UI_BLUE_KEY_ICON screen_ptr #26
+	blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
+	jmp black_slot
+blue_blank
+	blit_char #0 screen_ptr #26
+	blit_char #0 screen_ptr #27
+
+black_slot
+	lda has_keys
+	and #KEY_BLACK
+	beq black_blank
+	blit_char #UI_BLACK_KEY_CAP_LEFT screen_ptr #35
+	blit_char #UI_BLACK_KEY_ICON_LEFT screen_ptr #36
+	blit_char #UI_BLACK_KEY_ICON_RIGHT screen_ptr #37
+	blit_char #UI_BLACK_KEY_CAP_RIGHT screen_ptr #38
+	jmp row8
+black_blank
+	blit_char #0 screen_ptr #35
+	blit_char #0 screen_ptr #36
+	blit_char #0 screen_ptr #37
+	blit_char #0 screen_ptr #38
+
+row8
+	mwa #(screen + 8 * screen_char_width) screen_ptr
+
+	lda has_keys
+	and #KEY_RED
+	beq red_blank
+	blit_char #UI_RED_KEY_ICON screen_ptr #26
+	blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
+	jmp white_slot
+red_blank
+	blit_char #0 screen_ptr #26
+	blit_char #0 screen_ptr #27
+
+white_slot
+	lda has_keys
+	and #KEY_WHITE
+	beq white_blank
+	blit_char #UI_WHITE_KEY_ICON screen_ptr #36
+	blit_char #UI_KEY_ICON_RIGHT screen_ptr #37
+	jmp row9
+white_blank
+	blit_char #0 screen_ptr #36
+	blit_char #0 screen_ptr #37
+
+row9
+	mwa #(screen + 9 * screen_char_width) screen_ptr
+
+	lda has_keys
+	and #KEY_GOLD
+	beq gold_blank
+	blit_char #UI_GOLD_KEY_ICON screen_ptr #26
+	blit_char #UI_KEY_ICON_RIGHT screen_ptr #27
+	rts
+gold_blank
+	blit_char #0 screen_ptr #26
+	blit_char #0 screen_ptr #27
+	rts
+	.endp
 
 .proc blit_screen
 	map_offset()
