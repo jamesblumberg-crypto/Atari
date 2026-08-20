@@ -21,6 +21,9 @@
     mwa #occupied_rooms occupied_rooms_ptr
     mwa #powers_of_two pow2_ptr
 
+    lda #0
+    sta keys_dropped_this_floor
+
     clear_room_gen_state
     fill_map
 
@@ -1161,8 +1164,11 @@ c32_loop
 	lda map_ptr+1
 	adc #0
 	sta map_ptr+1
-	lda #MAP_FLOOR      ; still floor tile
+	lda #MAP_DOOR       ; KayBee Toys door (locked until Magic Key)
 	sta (map_ptr),y
+	mwa map_ptr kaybee_door_ptr
+	lda #0
+	sta kaybee_door_open
 
 	lda player_xp
 	clc
@@ -1512,6 +1518,7 @@ kill_monster
     ldy #0
     lda #MAP_FLOOR
     sta (map_ptr),y
+    jsr try_drop_floor_key
 survived
     rts
     .endp

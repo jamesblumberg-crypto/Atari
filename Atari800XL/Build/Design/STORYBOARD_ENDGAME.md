@@ -155,7 +155,11 @@ You currently have 3 ribbons populated and the monster PNG has blank spaces – 
 
 ## Implementation Priority
 
-1. Key drop logic + Magic Key flag + KayBee Toys door check + status text  
+1. Key drop logic + Magic Key flag + KayBee Toys door check + status text  **DONE 2026-08-19**
+   - Floors 1–3: monsters drop keys (1 WHITE, 2 RED, 3 GOLD then BLACK)
+   - Floor 4 boss still drops BLUE beside the well
+   - All five → `has_magic_key`, status `MAGIC KEY`
+   - Boss BR cell becomes the KayBee door; fire + Magic Key opens it, else `NEED MAGIC KEY` + beep
 2. Amulet → powered bow (missile color)  
 3. Wife PMG data (from characters_missy.png) + placement in rescue room  
 4. Outdoor charset switch + tree maze map  

@@ -44,3 +44,9 @@ HPOSM2 = $D006  ; Horizontal position missile 2
 HPOSM3 = $D007  ; Horizontal position missile 3
 SIZEM  = $D00C  ; Size register for all missiles
 HITCLR = $D01E  ; Collision clear register
+
+; POKEY (locked-door beep)
+AUDF1  = $D200
+AUDC1  = $D201
+AUDCTL = $D208
+SKCTL  = $D20F

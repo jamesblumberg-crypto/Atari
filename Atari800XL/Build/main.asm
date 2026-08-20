@@ -135,6 +135,10 @@ player_xp            = $e8
 player_level         = $e9
 has_gems             = $ea    ; bitfield: blue/gold/red/black/white (see GEM_* in labels.asm)
 has_keys             = $f6	  ; bitfield: blue/red/gold/white/black keys
+has_magic_key        = $f7    ; 1 = all five keys merged into Magic Key
+kaybee_door_open     = $f8    ; 1 = KayBee door has been unlocked
+kaybee_door_ptr      = $f9    ; 16-bit map address of the KayBee door (0 = none)
+keys_dropped_this_floor = $fb ; monster key drops so far on this floor
 item_tile            = $eb    ; Map tile id while place_one_item runs (must not share tmp)
 occ_bitmap           = $ec    ; Scratch for get/set_room_occupied (must not share tmp)
 boss_tl_ptr          = $f0    ; 16-bit map address of boss top-left cell
@@ -169,6 +173,8 @@ black 				= $00
 peach 				= $2c
 blue 				= $92
 gold 				= $2a
+
+	icl 'status_chars.asm'
 	
 	mwa #map map_ptr
 	
@@ -227,6 +233,11 @@ clear_all_missiles
 	sta arrow_active        ; No arrow in flight
 	sta has_gems            ; No gems collected yet
 	sta has_keys            ; No keys collected yet
+	sta has_magic_key       ; Magic Key not formed yet
+	sta kaybee_door_open
+	sta kaybee_door_ptr
+	sta kaybee_door_ptr+1
+	sta keys_dropped_this_floor
 	sta boss_alive          ; No floor-4 boss until floor 4
 	lda #0
 	sta monster_contact_cooldown ; Clears the value of monster_contact_cooldown to ensure monsters can damage immediately if player starts next to them
@@ -239,6 +250,12 @@ clear_all_missiles
 	
 	mva #123 rand
 	mva #201 rand16
+
+	; Enable POKEY for the locked-door beep
+	lda #3
+	sta SKCTL
+	lda #0
+	sta AUDCTL
 	
 	mwa #powers_of_two pow2_ptr
 	mwa #occupied_rooms occupied_rooms_ptr
@@ -1619,6 +1636,193 @@ adjacent_found:
 ;	.endp
 
 ; Build guard: this must remain below $C000 (OS ROM area).
+
+; ---------------------------------------
+; Endgame step 1: keys, Magic Key, KayBee
+; ---------------------------------------
+
+; IN: map_ptr = cell just cleared to MAP_FLOOR (monster death).
+; Floors 1-2: first kill drops a key. Floor 3: first two kills.
+; Floor 4+ : no monster drops (blue key comes from the boss well).
+.proc try_drop_floor_key
+	lda dungeon_floor
+	beq tdfk_no
+	cmp #4
+	bcs tdfk_no
+	cmp #3
+	beq tdfk_floor3
+	lda keys_dropped_this_floor
+	bne tdfk_no
+	jmp tdfk_drop
+tdfk_floor3
+	lda keys_dropped_this_floor
+	cmp #2
+	bcs tdfk_no
+tdfk_drop
+	inc keys_dropped_this_floor
+	ldy #0
+	lda #MAP_KEY
+	sta (map_ptr),y
+tdfk_no
+	rts
+	.endp
+
+; Pickup at dir_ptr: OR the floor's key bit, refresh HUD, maybe form Magic Key.
+; Floor 1 WHITE, 2 RED, 3 GOLD then BLACK, 4+ BLUE.
+.proc apply_picked_key
+	lda dungeon_floor
+	cmp #1
+	bne apk_not1
+	lda #KEY_WHITE
+	jmp apk_or
+apk_not1
+	cmp #2
+	bne apk_not2
+	lda #KEY_RED
+	jmp apk_or
+apk_not2
+	cmp #3
+	bne apk_not3
+	lda has_keys
+	and #KEY_GOLD
+	bne apk_black
+	lda #KEY_GOLD
+	jmp apk_or
+apk_black
+	lda #KEY_BLACK
+	jmp apk_or
+apk_not3
+	lda #KEY_BLUE
+apk_or
+	ora has_keys
+	sta has_keys
+	jsr update_key_display
+	jsr check_form_magic_key
+	rts
+	.endp
+
+.proc check_form_magic_key
+	lda has_magic_key
+	bne cfm_done
+	lda has_keys
+	cmp #KEY_ALL
+	bne cfm_done
+	lda #1
+	sta has_magic_key
+	jsr show_status_magic
+cfm_done
+	rts
+	.endp
+
+; If dir_ptr is the KayBee door: show status, open with Magic Key or refuse.
+; Carry set = handled (caller must not run normal open_door).
+.proc try_kaybee_door
+	lda kaybee_door_ptr
+	ora kaybee_door_ptr+1
+	beq tkd_not
+	lda kaybee_door_ptr
+	cmp dir_ptr
+	bne tkd_not
+	lda kaybee_door_ptr+1
+	cmp dir_ptr+1
+	bne tkd_not
+
+	jsr show_status_kaybee
+	lda has_magic_key
+	beq tkd_locked
+	ldy #0
+	lda #MAP_DOORWAY
+	sta (dir_ptr),y
+	lda #1
+	sta kaybee_door_open
+	sec
+	rts
+tkd_locked
+	jsr show_status_need
+	jsr beep_locked
+	sec
+	rts
+tkd_not
+	clc
+	rts
+	.endp
+
+.proc show_status_kaybee
+	mwa #msg_kaybee tmp_addr1
+	jmp show_status
+	.endp
+
+.proc show_status_need
+	mwa #msg_need_key tmp_addr1
+	jmp show_status
+	.endp
+
+.proc show_status_magic
+	mwa #msg_magic_key tmp_addr1
+	jmp show_status
+	.endp
+
+; Write 0-terminated-by-$FF string at status_line col 2. Cols 1-22 cleared to space.
+.proc show_status
+	lda #STATUS_CHAR_SPACE
+	ldy #1
+ss_fill
+	sta status_line,y
+	iny
+	cpy #23
+	bne ss_fill
+	ldy #0
+	ldx #2
+ss_copy
+	lda (tmp_addr1),y
+	cmp #$FF
+	beq ss_done
+	sta status_line,x
+	iny
+	inx
+	cpx #23
+	bcc ss_copy
+ss_done
+	rts
+	.endp
+
+.proc beep_locked
+	lda #3
+	sta SKCTL
+	lda #0
+	sta AUDCTL
+	lda #20
+	sta AUDF1
+	lda #$A8
+	sta AUDC1
+	ldx #8
+	jsr delay
+	lda #0
+	sta AUDC1
+	rts
+	.endp
+
+msg_kaybee
+	.byte STATUS_CHAR_K, STATUS_CHAR_A, STATUS_CHAR_Y
+	.byte STATUS_CHAR_B, STATUS_CHAR_E, STATUS_CHAR_E
+	.byte STATUS_CHAR_SPACE
+	.byte STATUS_CHAR_T, STATUS_CHAR_O, STATUS_CHAR_Y, STATUS_CHAR_S
+	.byte $FF
+
+msg_need_key
+	.byte STATUS_CHAR_N, STATUS_CHAR_E, STATUS_CHAR_E, STATUS_CHAR_D
+	.byte STATUS_CHAR_SPACE
+	.byte STATUS_CHAR_M, STATUS_CHAR_A, STATUS_CHAR_G, STATUS_CHAR_I, STATUS_CHAR_C
+	.byte STATUS_CHAR_SPACE
+	.byte STATUS_CHAR_K, STATUS_CHAR_E, STATUS_CHAR_Y
+	.byte $FF
+
+msg_magic_key
+	.byte STATUS_CHAR_M, STATUS_CHAR_A, STATUS_CHAR_G, STATUS_CHAR_I, STATUS_CHAR_C
+	.byte STATUS_CHAR_SPACE
+	.byte STATUS_CHAR_K, STATUS_CHAR_E, STATUS_CHAR_Y
+	.byte $FF
+
 MAIN_BANK_END_GUARD
 
 ; Arrow routines moved to $6C00 to keep executable code below $C000.
@@ -1630,7 +1834,6 @@ MAIN_BANK_END_GUARD
 	icl 'pmgdata.asm'
 	icl 'map_gen.asm'
 	icl 'input.asm'
-	icl 'status_chars.asm'
 
 	icl 'charset_dungeon_a.asm'
 	icl 'charset_dungeon_b.asm'
@@ -2036,6 +2239,10 @@ found_floor
 	inc dungeon_floor
 	lda #0
 	sta arrow_active
+	sta keys_dropped_this_floor
+	sta kaybee_door_open
+	sta kaybee_door_ptr
+	sta kaybee_door_ptr+1
 
 	new_map()
 	jsr setup_floor_monsters    ; new ribbon for this depth
@@ -2053,6 +2260,7 @@ skip_place_bow
 	jsr place_floor_boss
 	blit_screen()
 	jsr update_gem_display
+	jsr update_key_display
 
 	rts
 	.endp
