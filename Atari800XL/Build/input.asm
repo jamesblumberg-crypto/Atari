@@ -149,9 +149,11 @@ check_item
     jmp check_passable          ; Continue to move onto the tile after pickup
 
 check_key
-    cmp #MAP_KEY_BLUE           ; is the blue key on the floor?
-    bne check_gem               ; No, check for gems
-    jsr pickup_key              ; Yes, pick up the key!
+    cmp #MAP_KEY_BLUE           ; any floor key? (ids 6-10)
+    bcc check_gem
+    cmp #(MAP_KEY_BLACK + 1)
+    bcs check_gem
+    jsr pickup_key              ; Yes — color from dungeon_floor in apply_picked_key
     jmp check_passable          ; Continue to move onto the tile after pickup
 
 check_gem

@@ -797,14 +797,22 @@ done
 	jsr blit_one_tile
 	.endm
 
-; draw one map tile as two screen chars
-; keys share UI_KEY_ICON_RIGHT, so they cannot use plain asl pairs
+; Draw one map tile as two screen chars.
+; Keys cannot use plain asl pairs (shared teeth / black 2-char body).
 .proc blit_one_tile
-	lda (map_ptr),y     ; map tile id (Y is 0 from blit_screen)
+	lda (map_ptr),y			; map tile id (Y is 0 from blit_screen)
 	cmp #MAP_KEY_BLUE
 	beq draw_key_blue
+	cmp #MAP_KEY_RED
+	beq draw_key_red
+	cmp #MAP_KEY_GOLD
+	beq draw_key_gold
+	cmp #MAP_KEY_WHITE
+	beq draw_key_white
+	cmp #MAP_KEY_BLACK
+	beq draw_key_black
 
-	; -- normal tiles: left = id*2, right = id*2+1 --
+	; --- normal tiles: left = id*2, right = id*2+1 ---
 	asl
 	jsr fix_color
 	sta (screen_ptr),y
@@ -817,12 +825,33 @@ done
 	jmp advance
 
 draw_key_blue
-; same pairing as the HUD: blue bow + shared teeth
-	lda #UI_BLUE_KEY_ICON ; char 12
+	lda #UI_BLUE_KEY_ICON
+	jmp key_left
+draw_key_red
+	lda #UI_RED_KEY_ICON
+	jmp key_left
+draw_key_gold
+	lda #UI_GOLD_KEY_ICON		; already has +128 in labels.asm
+	jmp key_left
+draw_key_white
+	lda #UI_WHITE_KEY_ICON
+	; fall through
+
+key_left
 	jsr fix_color
 	sta (screen_ptr),y
 	inc16 screen_ptr
-	lda #UI_KEY_ICON_RIGHT ; char 11 (not 13!)
+	lda #UI_KEY_ICON_RIGHT		; shared teeth for blue/red/gold/white
+	jsr fix_color
+	sta (screen_ptr),y
+	jmp advance
+
+draw_key_black
+	lda #UI_BLACK_KEY_ICON_LEFT
+	jsr fix_color
+	sta (screen_ptr),y
+	inc16 screen_ptr
+	lda #UI_BLACK_KEY_ICON_RIGHT
 	jsr fix_color
 	sta (screen_ptr),y
 
@@ -1695,10 +1724,28 @@ tdfk_floor3
 	cmp #2
 	bcs tdfk_no
 tdfk_drop
-	inc keys_dropped_this_floor
 	ldy #0
-	lda #MAP_KEY
+	lda dungeon_floor
+	cmp #1
+	bne tdfk_not1
+	lda #MAP_KEY_WHITE
+	jmp tdfk_place
+tdfk_not1
+	cmp #2
+	bne tdfk_not2
+	lda #MAP_KEY_RED
+	jmp tdfk_place
+tdfk_not2
+	; floor 3: first drop gold, second black
+	lda keys_dropped_this_floor
+	bne tdfk_black
+	lda #MAP_KEY_GOLD
+	jmp tdfk_place
+tdfk_black
+	lda #MAP_KEY_BLACK
+tdfk_place
 	sta (map_ptr),y
+	inc keys_dropped_this_floor
 tdfk_no
 	rts
 	.endp
