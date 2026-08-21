@@ -30,13 +30,10 @@ KEY_RED                 = %00000010
 KEY_GOLD                = %00000100
 KEY_WHITE               = %00001000
 KEY_BLACK               = %00010000
+KEY_ALL                 = %00011111
 
 ; Floor key item (map tile - chars 12-13 via blit_tile asl)
-MAP_KEY_BLUE            = 6 ; boss drop only
-MAP_KEY_RED             = 7
-MAP_KEY_GOLD            = 8
-MAP_KEY_WHITE           = 9 
-MAP_KEY_BLACK           = 10
+MAP_KEY_BLUE            = 6
 
 ; Floor-4 stationary boss: 2x2 map tiles (each tile = 2 chars in live slots 88-95)
 MAP_BOSS_TL             = 44

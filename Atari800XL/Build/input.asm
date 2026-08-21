@@ -77,7 +77,10 @@ done
 check_door
     cmp #MAP_DOOR               ; Check if it's a door
     bne check_doorway           ; Skip to next check
-    open_door()                 ; Open the door
+    jsr try_kaybee_door         ; KayBee Toys door: Magic Key or refuse
+    bcs kaybee_done             ; Carry set = already handled
+    open_door()                 ; Normal dungeon door
+kaybee_done
     rts
 
 check_doorway
@@ -329,10 +332,12 @@ monster_dead
     ; Check if player leveled up
     jsr check_level_up
 
-    ; Remove monster from map
+    ; Remove monster from map (maybe drop this floor's key)
     ldy #0
     lda #MAP_FLOOR
     sta (dir_ptr),y
+    mwa dir_ptr map_ptr
+    jsr try_drop_floor_key
     rts
 
 player_dead
@@ -547,19 +552,12 @@ not_boss
     rts
     .endp
 
-; pick up blue key at dir_ptr. sets KEY_BLUE in has_keys, clears map tile
+; Pick up the floor key at dir_ptr. Color comes from dungeon_floor (see apply_picked_key).
 .proc pickup_key
-    lda #KEY_BLUE
-    ora has_keys
-    sta has_keys
-
     ldy #0
     lda #MAP_FLOOR
     sta (dir_ptr),y
-
-    ; HUD refresh comes in step 5:
-    jsr update_key_display
-
+    jsr apply_picked_key
     rts
     .endp
 
