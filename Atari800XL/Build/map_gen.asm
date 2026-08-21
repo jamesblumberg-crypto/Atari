@@ -889,32 +889,42 @@ floor_gem_bit
 ; 	copy_monster_colors monsters_b_colors cur_char_colors_b starting_monster
 ; 	rts
 ; 	.endp
-; floor - which 16-char ribbon to load from monsters_*.png 
-; floor 1 - ribbon 0 (chars 0-15)
-; floor 2 - ribbon 1 (chars 16-31)
-; floor 3 - ribbon 2 (chars 32-47, scorpion at 32/33)
-; floor 4+ - ribbon 3 (offset 384 = char 48 = tops of 2x2 band, map still 1 tile tall)
+; floors 1-6 only
+; 1 - ribbon 0 (my ribbon 1)
+; 2 - ribbon 1 (my ribbon 2)
+; 3 - ribbon 2 (my ribbon 3)
+; 4 - ribbon 3 (my ribbon 4 / 2x2 boss band - one of the dragons)
+; 5 - ribbon 0 (my ribbon 1 again)
+; 6 - ribbon 1 (my ribbon 2; KayBee + Missy Later)
 .proc setup_floor_monsters
     lda dungeon_floor
-    beq use_ribbon0 ; safety: treat 0 as floor 1
     cmp #1
-    beq use_ribbon0
+    beq use_r0
     cmp #2
-    beq use_ribbon1
+    beq use_r1
     cmp #3
-    beq use_ribbon2
-    ; floor 4, 5, ...
-    lda #3
-    jmp store_ribbon
-
-use_ribbon0
+    beq use_r2
+    cmp #4
+    beq use_r3
+    cmp #5
+    beq use_r0 ; same as floor 1
+    cmp #6
+    beq use_r1 ; same as floor 2
+    ; safety if floor > 6 or 0
     lda #0
     jmp store_ribbon
-use_ribbon1
+
+use_r0
+    lda #0
+    jmp store_ribbon
+use_r1
     lda #1
     jmp store_ribbon
-use_ribbon2
+use_r2
     lda #2
+    jmp store_ribbon
+use_r3
+    lda #3
 
 store_ribbon
     sta starting_monster

@@ -765,19 +765,55 @@ done
 .endp
 
 .macro blit_tile
-	lda (map_ptr),y			; Load the tile from the map
-	asl						; Multiply by two to get left character
-	jsr fix_color			; Apply color adjustment (now a procedure)
-	sta (screen_ptr),y		; Store the left character
-	inc16 screen_ptr		; Advance the screen pointer
+	; lda (map_ptr),y			; Load the tile from the map
+	; asl						; Multiply by two to get left character
+	; jsr fix_color			; Apply color adjustment (now a procedure)
+	; sta (screen_ptr),y		; Store the left character
+	; inc16 screen_ptr		; Advance the screen pointer
+	; lda (map_ptr),y
+	; asl
+	; add #1
+	; jsr fix_color			; Apply color adjustment (now a procedure)
+	; sta (screen_ptr),y		; Store the right character
+	; adw map_ptr #1			; Advance the map pointer
+	; adw screen_ptr #1		; Advance the screen pointer
+	jsr blit_one_tile
+	.endm
+
+; draw one map tile as two screen chars
+; keys share UI_KEY_ICON_RIGHT, so they cannot use plain asl pairs
+.proc blit_one_tile
+	lda (map_ptr),y     ; map tile id (Y is 0 from blit_screen)
+	cmp #MAP_KEY_BLUE
+	beq draw_key_blue
+
+	; -- normal tiles: left = id*2, right = id*2+1 --
+	asl
+	jsr fix_color
+	sta (screen_ptr),y
+	inc16 screen_ptr
 	lda (map_ptr),y
 	asl
 	add #1
-	jsr fix_color			; Apply color adjustment (now a procedure)
-	sta (screen_ptr),y		; Store the right character
-	adw map_ptr #1			; Advance the map pointer
-	adw screen_ptr #1		; Advance the screen pointer
-	.endm
+	jsr fix_color
+	sta (screen_ptr),y
+	jmp advance
+
+draw_key_blue
+; same pairing as the HUD: blue bow + shared teeth
+	lda #UI_BLUE_KEY_ICON ; char 12
+	jsr fix_color
+	sta (screen_ptr),y
+	inc16 screen_ptr
+	lda #UI_KEY_ICON_RIGHT ; char 11 (not 13!)
+	jsr fix_color
+	sta (screen_ptr),y
+
+advance
+	adw map_ptr #1
+	adw screen_ptr #1
+	rts
+	.endp
 
 .macro blit_circle_line body, map_space, screen_space
 	mwa map_ptr tmp_addr1
