@@ -921,6 +921,8 @@ loop
 	mwa #status_line status_ptr
 	mwa #screen screen_ptr
 
+	; Top frame on status_line — dungeon CHBASE (dli1). Corners live at
+	; 106-111 (copies); keys occupy dungeon 10-15.
 	blit_char #UI_NW_BORDER status_ptr #0
 	blit_char_row #UI_HORIZ_BORDER status_ptr #1 #23
 	blit_char #UI_TOP_TEE status_ptr #23
@@ -936,11 +938,14 @@ loop
 	dex
 	bne loop
 
-	blit_char #UI_SW_BORDER screen_ptr #0
+	; Bottom frame is the trailing antic4 line AFTER dli2, which switches
+	; to outdoor CHBASE. Outdoor has the real corners at 10-15 (dungeon
+	; 10-15 are keys). Use outdoor-native indices here.
+	blit_char #UI_SW_BORDER_OUT screen_ptr #0
 	blit_char_row #UI_HORIZ_BORDER screen_ptr #1 #23
-	blit_char #UI_BOTTOM_TEE screen_ptr #23
+	blit_char #UI_BOTTOM_TEE_OUT screen_ptr #23
 	blit_char_row #UI_HORIZ_BORDER screen_ptr #24 #39
-	blit_char #UI_SE_BORDER screen_ptr #39
+	blit_char #UI_SE_BORDER_OUT screen_ptr #39
 	
 	rts
 	.endp
