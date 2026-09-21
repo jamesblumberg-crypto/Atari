@@ -1,8 +1,13 @@
 ; Atari 800XL Assembly Source File
-; Main program file (split into main_p0..p4 for GitHub MCP upload size limits;
-; MADS concatenates via icl -- identical object to the former monolithic main.asm)
-	icl 'main_p0.asm'
-	icl 'main_p1.asm'
-	icl 'main_p2.asm'
-	icl 'main_p3.asm'
-	icl 'main_p4.asm'
+; Split into main_sXX.asm for GitHub MCP upload size limits.
+; MADS icl concatenates -- identical to monolithic main.asm.
+	icl 'main_s00.asm'
+	icl 'main_s01.asm'
+	icl 'main_s02.asm'
+	icl 'main_s03.asm'
+	icl 'main_s04.asm'
+	icl 'main_s05.asm'
+	icl 'main_s06.asm'
+	icl 'main_s07.asm'
+	icl 'main_s08.asm'
+	icl 'main_s09.asm'
