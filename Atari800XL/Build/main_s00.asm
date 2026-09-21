@@ -42,6 +42,8 @@ room_pos_doors		= $ae90 ; 64 bytes
 room_type_doors		= $aed0 ; 16 bytes
 charset_dungeon_a_colors = $aee0 ; 16 bytes
 charset_dungeon_b_colors = $aef0 ; 16 bytes
+charset_outdoor_a_colors = $af00 ; 16 bytes
+charset_outdoor_b_colors = $af10 ; 16 bytes
 monsters_a_colors   = $af20 ; 51 bytes
 monsters_b_colors   = $af53 ; 51 bytes
 
