@@ -53,19 +53,19 @@ GEM_BLACK               = %00001000
 GEM_WHITE               = %00010000
 GEM_ALL                 = %00011111
 
-; Frame lines. Vert=1, horiz=4 (solid blue+white bar, synced dungeon/outdoor).
-; Top (status / dungeon CHBASE): corner copies at 106-111 (dungeon 10-15 = keys).
-; Bottom (trailing antic4 / outdoor CHBASE after dli2): native outdoor 10-15.
+; Frame lines. Vert=1, horiz=4 (solid blue+white bar).
+; Status + bottom trailing antic4 use outdoor CHBASE (corners 10-15).
+; Playfield uses dungeon (keys at 10-18); dungeon 106-111 still hold corner copies.
 UI_VERT_BORDER          = 1
 UI_HORIZ_BORDER         = 4
-UI_TOP_TEE              = 106   ; dungeon copy of outdoor 10
-UI_NW_BORDER            = 108   ; dungeon copy of outdoor 12
-UI_NE_BORDER            = 109   ; dungeon copy of outdoor 13
+UI_TOP_TEE              = 10    ; outdoor native
+UI_NW_BORDER            = 12    ; outdoor native
+UI_NE_BORDER            = 13    ; outdoor native
 UI_BOTTOM_TEE_OUT       = 11    ; outdoor native
 UI_SW_BORDER_OUT        = 14    ; outdoor native
 UI_SE_BORDER_OUT        = 15    ; outdoor native
 
-; Key icons (chars 10-18) — HUD and floor keys via blit_one_tile
+; Key icons (chars 10-18) — HUD and floor keys via blit_one_tile (dungeon CHBASE)
 UI_WHITE_KEY_ICON		= 10
 UI_KEY_ICON_RIGHT		= 11
 UI_BLUE_KEY_ICON		= 12
@@ -75,6 +75,8 @@ UI_BLACK_KEY_CAP_LEFT	= 15
 UI_BLACK_KEY_ICON_LEFT	= 16
 UI_BLACK_KEY_ICON_RIGHT	= 17
 UI_BLACK_KEY_CAP_RIGHT	= 18
+; Merged Magic Key HUD glyph (gold key art + color bit)
+UI_MAGIC_KEY_ICON		= 14 + 128
 
 UI_MELEE_ICON_LEFT 		= 26
 UI_MELEE_ICON_RIGHT 	= 27
