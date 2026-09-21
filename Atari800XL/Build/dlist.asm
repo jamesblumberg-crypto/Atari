@@ -28,11 +28,11 @@ loop
 	rts
 
 dlist
-	; DLI on the last blank line so status_line (next) uses the dungeon
-	; charset — that's where STATUS_CHAR_A-Z live. Previous DLI was on
-	; the status line itself, so the title bar kept the outdoor set.
-	.byte blank8, blank8, blank8 + NMIEN_DLI
-	.byte antic4 + lms, <status_line, >status_line
+	; Status keeps outdoor CHBASE (A-Z at 86-111; frame corners 10-15).
+	; DLI on the status line fires at its last scanline → dungeon from
+	; the first playfield line. Bottom antic4 returns to outdoor via dli2.
+	.byte blank8, blank8, blank8
+	.byte antic4 + lms + NMIEN_DLI, <status_line, >status_line
 	.byte antic5 + lms, <screen, >screen
 	.byte antic5, antic5, antic5, antic5, antic5
 	.byte antic5, antic5, antic5, antic5, antic5 + NMIEN_DLI, antic4

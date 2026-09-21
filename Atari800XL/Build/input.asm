@@ -111,6 +111,18 @@ do_melee_action
     .endp
 
 .proc close_door
+    ; Leave KayBee Toys doorway open (do not re-lock)
+    lda kaybee_door_ptr
+    ora kaybee_door_ptr+1
+    beq cd_do
+    lda kaybee_door_ptr
+    cmp dir_ptr
+    bne cd_do
+    lda kaybee_door_ptr+1
+    cmp dir_ptr+1
+    bne cd_do
+    rts                         ; this cell is the KayBee door
+cd_do
     lda #MAP_DOOR               ; Load in the door tile
     sti dir_ptr                 ; Swap doorway for door
     rts
@@ -153,7 +165,7 @@ check_key
     bcc check_gem
     cmp #(MAP_KEY_BLACK + 1)
     bcs check_gem
-    jsr pickup_key              ; Yes — color from dungeon_floor in apply_picked_key
+    jsr pickup_key              ; Yes — MAP_KEY_* tile → KEY_* bit in apply_picked_key
     jmp check_passable          ; Continue to move onto the tile after pickup
 
 check_gem
@@ -195,6 +207,15 @@ close_not_south
 close_move_east
     inc player_x
 close_coords_done
+    ; Don't close KayBee Toys doorway when walking away
+    lda kaybee_door_ptr
+    cmp tmp_addr1
+    bne close_do
+    lda kaybee_door_ptr+1
+    cmp tmp_addr1+1
+    bne close_do
+    rts                         ; leaving the KayBee doorway
+close_do
     lda #MAP_DOOR               ; Load door tile
     sta (tmp_addr1),y           ; Close the door at the old position
     rts
@@ -554,11 +575,14 @@ not_boss
     rts
     .endp
 
-; Pick up the floor key at dir_ptr. Color comes from dungeon_floor (see apply_picked_key).
+; Pick up the floor key at dir_ptr. Tile id (MAP_KEY_*) passed in A to apply_picked_key.
 .proc pickup_key
     ldy #0
+    lda (dir_ptr),y             ; MAP_KEY_* before clearing
+    pha
     lda #MAP_FLOOR
     sta (dir_ptr),y
+    pla
     jsr apply_picked_key
     rts
     .endp
