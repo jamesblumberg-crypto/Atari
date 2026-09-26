@@ -921,8 +921,8 @@ loop
 	mwa #status_line status_ptr
 	mwa #screen screen_ptr
 
-	; Top frame on status_line — dungeon CHBASE (dli1). Corners live at
-	; 106-111 (copies); keys occupy dungeon 10-15.
+	; Top frame on status_line — outdoor CHBASE (CHBAS until dli1).
+	; Corners are outdoor 10-15; dungeon 10-15 are keys.
 	blit_char #UI_NW_BORDER status_ptr #0
 	blit_char_row #UI_HORIZ_BORDER status_ptr #1 #23
 	blit_char #UI_TOP_TEE status_ptr #23
